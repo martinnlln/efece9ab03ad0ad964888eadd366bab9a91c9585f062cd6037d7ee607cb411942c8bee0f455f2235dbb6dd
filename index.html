@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WIF/USDT Predictor - Upgraded</title>
+
+  <!-- TFJS and Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
+
+  <style>
+    body{background:#070707;color:#e6e6e6;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;}
+    .container{max-width:1200px;margin:18px auto;padding:12px}
+    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .card{background:#0f0f10;padding:10px;border-radius:8px;border:1px solid #222;margin-bottom:12px}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:12px}
+    canvas{height:420px !important}
+    button{padding:8px 12px;border-radius:6px;border:none;background:#2ea44f;color:#fff;cursor:pointer}
+    button.secondary{background:#444}
+    .log{height:160px;overflow:auto;background:#070707;border:1px solid #222;padding:8px;font-family:monospace;font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:6px;text-align:left;border-bottom:1px solid #111;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>WIF/USDT Predictor — Upgraded</h2>
+      <div>
+        <button id="btnTrain" onclick="predictor.trainAllModels()">Train (walk-forward)</button>
+        <button class="secondary" onclick="predictor.runBacktest()">Backtest</button>
+        <button class="secondary" onclick="predictor.exportResults()">Export</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <canvas id="mainChart"></canvas>
+      </div>
+
+      <div class="card">
+        <div style="margin-bottom:8px"><strong>Status</strong></div>
+        <div id="statusBox">Initializing...</div>
+        <hr />
+        <div style="margin-top:8px"><strong>Logs</strong></div>
+        <div id="logWindow" class="log"></div>
+        <hr />
+        <div><strong>Models</strong></div>
+        <div id="modelsList"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Recent Predictions</h3>
+      <table>
+        <thead><tr><th>Time</th><th>Price</th><th>Signal</th><th>Conf</th><th>Pred move</th><th>Result</th></tr></thead>
+        <tbody id="predTable"><tr><td colspan="6" style="color:#888">No predictions yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+/* ============================
+   Upgraded RealWIFPredictor
+   ============================ */
+
+class RealWIFPredictor {
+  constructor() {
+    this.config = {
+      symbol: 'WIFUSDT',
+      interval: '1m',
+      keepCandles: 5000,
+      predictionWindowMinutes: 5,
+      walkForwardWindow: 1000,     // training window size in samples
+      validationWindow: 200,       // validation window following training window
+      stepSize: 200,               // roll forward by this many samples
+      minSamplesToTrain: 800,
+      ensembleThresholdPct: 0.2,   // ensemble expected return threshold (0.2% = 0.002)
+      lookbackForSequence: 10      // for LSTM sequences
+    };
+
+    this.data = { candles: [], candles5m: [], candles15m: [], orderbook: { bids: [], asks: [] } };
+    this.indicators = {};
+    this.models = {};         // trained tfjs/model objects (in-memory)
+    this.modelStats = {};     // {name:{accuracy,rmse,weight}}
+    this.predictions = [];
+    this.chart = null;
+    this.isTraining = false;
+    this.logLines = [];
+  }
+
+  log(msg, level='info') {
+    const t = new Date().toLocaleTimeString();
+    this.logLines.push(`[${t}] ${msg}`);
+    if (this.logLines.length > 500) this.logLines.shift();
+    document.getElementById('logWindow').innerText = this.logLines.join('\n');
+    console[level === 'error' ? 'error' : 'log'](msg);
+  }
+
+  setStatus(s) { document.getElementById('statusBox').innerText = s; }
+
+  async initialize() {
+    this.setStatus('Loading historical candles...');
+    this.log('Initializing predictor...');
+
+    try {
+      await this.loadHistorical();
+      this.initChart();
+      await this.connectWS();
+      this.initModelUI();
+      this.setStatus('Ready — press Train to start walk-forward training');
+      this.log('Initialization complete');
+    } catch (e) {
+      this.log('Init error: ' + e.message, 'error');
+      this.setStatus('Initialization failed');
+    }
+  }
+
+  /* -----------------------
+     Historical data loader
+     ----------------------- */
+  async loadHistorical() {
+    const limit = 1500; // we'll fetch multiple times in descending order
+    const maxFetches = 4; // 1500*4=6000
+    const all = [];
+    for (let i=0;i<maxFetches;i++) {
+      const resp = await fetch(`https://api.binance.com/api/v3/klines?symbol=${this.config.symbol}&interval=${this.config.interval}&limit=${limit}`);
+      if (!resp.ok) throw new Error('Failed fetching klines');
+      const json = await resp.json();
+      const mapped = json.map(d => ({
+        time: d[0],
+        open: +d[1], high:+d[2], low:+d[3], close:+d[4],
+        volume:+d[5], trades:+d[8]
+      }));
+      all.push(...mapped);
+      // small delay to be polite
+      await new Promise(r => setTimeout(r, 180));
+    }
+    // dedupe by time and sort
+    const uniq = Array.from(new Map(all.map(c => [c.time, c])).values()).sort((a,b)=>a.time-b.time);
+    this.data.candles = uniq.slice(-this.config.keepCandles);
+    this.log(`Loaded ${this.data.candles.length} 1m candles`);
+    // build aggregated multi-timeframe candles
+    this.rebuildMultiTimeframe();
+    this.computeIndicators();
+  }
+
+  rebuildMultiTimeframe() {
+    this.data.candles5m = this.aggregateCandles(5);
+    this.data.candles15m = this.aggregateCandles(15);
+  }
+
+  aggregateCandles(mins) {
+    // group by floored timestamp
+    const out = [];
+    const ms = mins * 60 * 1000;
+    for (let c of this.data.candles) {
+      const bucket = Math.floor(c.time / ms) * ms;
+      let last = out.length ? out[out.length-1] : null;
+      if (!last || last.time !== bucket) {
+        out.push({ time: bucket, open:c.open, high:c.high, low:c.low, close:c.close, volume:c.volume, trades:c.trades });
+      } else {
+        last.high = Math.max(last.high, c.high);
+        last.low = Math.min(last.low, c.low);
+        last.close = c.close;
+        last.volume += c.volume;
+        last.trades += c.trades;
+      }
+    }
+    return out;
+  }
+
+  /* -----------------------
+     WebSocket feed
+     ----------------------- */
+  async connectWS() {
+    return new Promise((resolve) => {
+      const url = `wss://stream.binance.com:9443/ws/${this.config.symbol.toLowerCase()}@kline_${this.config.interval}`;
+      this.ws = new WebSocket(url);
+      this.ws.onopen = () => { this.log('WS open'); resolve(); };
+      this.ws.onmessage = (ev) => { this.onWS(JSON.parse(ev.data)); };
+      this.ws.onerror = (e) => { this.log('WS error', 'error'); };
+      this.ws.onclose = () => { this.log('WS closed — reconnecting in 5s'); setTimeout(()=>this.connectWS(),5000); };
+    });
+  }
+
+  onWS(data) {
+    if (data.e === 'kline') {
+      const k = data.k;
+      const newCandle = { time:k.t, open:+k.o, high:+k.h, low:+k.l, close:+k.c, volume:+k.v, trades:k.n };
+      // upsert
+      const idx = this.data.candles.findIndex(c=>c.time===newCandle.time);
+      if (idx>=0) this.data.candles[idx] = newCandle; else this.data.candles.push(newCandle);
+      if (this.data.candles.length > this.config.keepCandles) this.data.candles.shift();
+      // update multi-timeframe too
+      this.rebuildMultiTimeframe();
+      this.computeIndicators();
+      this.updateChart();
+      // if models exist, predict
+      if (Object.keys(this.models).length) this.makePrediction();
+    } else if (data.e === 'depthUpdate') {
+      // simplified orderbook top levels
+      if (data.b) this.data.orderbook.bids = data.b.map(b=>[+b[0],+b[1]]).slice(0,20);
+      if (data.a) this.data.orderbook.asks = data.a.map(a=>[+a[0],+a[1]]).slice(0,20);
+    } else if (data.e === 'trade') {
+      // can be used for micro features if wanted
+    }
+  }
+
+  /* -----------------------
+     Indicators (basic)
+     ----------------------- */
+  computeIndicators() {
+    const c = this.data.candles;
+    if (c.length < 30) return;
+    const closes = c.map(x=>x.close);
+    this.indicators.ema9 = this.ema(closes,9);
+    this.indicators.ema21 = this.ema(closes,21);
+    this.indicators.rsi14 = this.rsi(closes,14);
+    this.indicators.bb = this.bollinger(closes,20,2);
+    this.indicators.atr14 = this.atr(c.map(x=>x.high), c.map(x=>x.low), closes,14);
+    this.indicators.vwap = this.vwap(c.map(x=>x.close), c.map(x=>x.volume));
+  }
+
+  ema(data, period) {
+    const out = new Array(data.length).fill(null);
+    const k = 2/(period+1);
+    let sum=0;
+    for (let i=0;i<period;i++) sum+=data[i];
+    out[period-1]=sum/period;
+    for (let i=period;i<data.length;i++) out[i]=data[i]*k + out[i-1]*(1-k);
+    return out;
+  }
+
+  sma(data, period) {
+    const out = new Array(data.length).fill(null);
+    let sum=0;
+    for (let i=0;i<data.length;i++) {
+      sum += data[i];
+      if (i>=period) sum -= data[i-period];
+      if (i>=period-1) out[i]=sum/period;
+    }
+    return out;
+  }
+
+  rsi(data, period=14) {
+    const out=new Array(data.length).fill(null);
+    const gains=[],losses=[];
+    for (let i=1;i<data.length;i++){
+      const d = data[i]-data[i-1];
+      gains.push(Math.max(0,d));
+      losses.push(Math.max(0,-d));
+    }
+    let avgGain = gains.slice(0,period).reduce((a,b)=>a+b,0)/period;
+    let avgLoss = losses.slice(0,period).reduce((a,b)=>a+b,0)/period;
+    for (let i=period;i<gains.length;i++){
+      avgGain = (avgGain*(period-1)+gains[i])/period;
+      avgLoss = (avgLoss*(period-1)+losses[i])/period;
+      const rs = avgGain/(avgLoss||1e-9);
+      out[i+1]=100-(100/(1+rs));
+    }
+    return out;
+  }
+
+  bollinger(data, period=20, dev=2) {
+    const mid = this.sma(data,period);
+    const upper = new Array(data.length).fill(null);
+    const lower = new Array(data.length).fill(null);
+    for (let i=period-1;i<data.length;i++){
+      const slice = data.slice(i-period+1,i+1);
+      const mean = mid[i];
+      const variance = slice.reduce((s,v)=>s+(v-mean)*(v-mean),0)/period;
+      const sd = Math.sqrt(variance);
+      upper[i]=mean+dev*sd; lower[i]=mean-dev*sd;
+    }
+    return {upper,mid,lower};
+  }
+
+  atr(high, low, close, period=14) {
+    const tr = [high[0]-low[0]];
+    for (let i=1;i<high.length;i++){
+      tr.push(Math.max(high[i]-low[i], Math.abs(high[i]-close[i-1]), Math.abs(low[i]-close[i-1])));
+    }
+    const atr = new Array(tr.length).fill(null);
+    let sum = 0;
+    for (let i=0;i<period;i++) sum+=tr[i];
+    atr[period-1]=sum/period;
+    for (let i=period;i<tr.length;i++) atr[i] = (atr[i-1]*(period-1)+tr[i])/period;
+    return atr;
+  }
+
+  vwap(prices, volumes) {
+    const vwap = new Array(prices.length).fill(null);
+    let cumPV=0, cumV=0;
+    for (let i=0;i<prices.length;i++){
+      cumPV += prices[i]*volumes[i];
+      cumV += volumes[i];
+      vwap[i] = cumV ? cumPV/cumV : prices[i];
+    }
+    return vwap;
+  }
+
+  /* -----------------------
+     Feature engineering
+     ----------------------- */
+  buildFeaturesLabels() {
+    // Build features per 1m candle row. We produce:
+    // - returns over last 1..5 mins
+    // - normalized volume vs 20-min AVG
+    // - RSI (scaled 0..1)
+    // - MACD histogram approx (ema12-ema26)
+    // - EMA gaps
+    // - Bollinger position (0..1)
+    // - VWAP divergence
+    // - ATR normalized
+    // - orderbook imbalance (top10)
+    // Label: future return in predictionWindowMinutes minutes
+    const c = this.data.candles;
+    const N = c.length;
+    const pw = this.config.predictionWindowMinutes;
+    const features = [];
+    const labels = [];
+
+    // precompute arrays
+    const closes = c.map(x=>x.close);
+    const volumes = c.map(x=>x.volume);
+    const ema9 = this.indicators.ema9 || this.ema(closes,9);
+    const ema21 = this.indicators.ema21 || this.ema(closes,21);
+    const rsi14 = this.indicators.rsi14 || this.rsi(closes,14);
+    const bb = this.indicators.bb || this.bollinger(closes,20,2);
+    const vwap = this.indicators.vwap || this.vwap(closes, volumes);
+    const atr = this.indicators.atr14 || this.atr(c.map(x=>x.high), c.map(x=>x.low), closes, 14);
+
+    for (let i=60;i < N - pw; i++) {
+      // skip rows that lack indicators
+      const current = c[i];
+      const fv = [];
+      // returns
+      for (let r=1;r<=5;r++) fv.push((current.close - c[i-r].close)/c[i-r].close);
+      // vol relative
+      const avgVol20 = volumes.slice(Math.max(0,i-20), i).reduce((a,b)=>a+b,0)/20 || 1;
+      fv.push(current.volume / avgVol20);
+      // RSI
+      fv.push((rsi14[i] || 50)/100);
+      // EMA gaps
+      fv.push((current.close - (ema9[i]||current.close)) / current.close);
+      fv.push((current.close - (ema21[i]||current.close)) / current.close);
+      // Bollinger pos
+      if (bb.upper[i] && bb.lower[i]) fv.push((current.close - bb.lower[i]) / (bb.upper[i]-bb.lower[i]||1)); else fv.push(0.5);
+      // VWAP divergence
+      fv.push((current.close - (vwap[i]||current.close)) / current.close);
+      // ATR normalized
+      fv.push((atr[i] || 0) / (current.close || 1));
+      // trades normalized
+      fv.push(current.trades / 1000);
+      // Multi-timeframe features: last 5m and 15m close returns if exist
+      const idx5 = this.findNearestIndex(this.data.candles5m, current.time);
+      const idx15 = this.findNearestIndex(this.data.candles15m, current.time);
+      if (idx5>1) fv.push((this.data.candles5m[idx5].close - this.data.candles5m[idx5-1].close)/this.data.candles5m[idx5-1].close); else fv.push(0);
+      if (idx15>1) fv.push((this.data.candles15m[idx15].close - this.data.candles15m[idx15-1].close)/this.data.candles15m[idx15-1].close); else fv.push(0);
+      // Orderbook imbalance top 5 (if available)
+      const topBids = this.data.orderbook.bids ? this.data.orderbook.bids.slice(0,5) : [];
+      const topAsks = this.data.orderbook.asks ? this.data.orderbook.asks.slice(0,5) : [];
+      const bidVol = topBids.reduce((s,a)=>s+a[1],0), askVol = topAsks.reduce((s,a)=>s+a[1],0);
+      fv.push((bidVol - askVol) / Math.max(bidVol+askVol,1));
+      //--- label: future return
+      const futureClose = c[i + pw].close;
+      const futRet = (futureClose - current.close) / current.close;
+      features.push(fv);
+      labels.push(futRet);
+    }
+
+    return {features, labels};
+  }
+
+  findNearestIndex(arr, time) {
+    // arr contains {time,...}, find index with time <= given time (simple)
+    for (let i=arr.length-1;i>=0;i--) if (arr[i].time <= time) return i;
+    return -1;
+  }
+
+  /* -----------------------
+     Scaling helpers
+     ----------------------- */
+  computeScaler(X) {
+    // X: array(samples) of arrays(features)
+    const m = X.length, d = X[0].length;
+    const mean = new Array(d).fill(0);
+    const std = new Array(d).fill(0);
+    for (let j=0;j<d;j++) {
+      for (let i=0;i<m;i++) mean[j]+=X[i][j];
+      mean[j] /= m;
+      for (let i=0;i<m;i++) std[j] += Math.pow(X[i][j]-mean[j],2);
+      std[j] = Math.sqrt(std[j]/m) || 1e-6;
+    }
+    return {mean,std};
+  }
+
+  applyScaler(X, scaler) {
+    const out = X.map(row => row.map((v,j)=> (v - scaler.mean[j]) / scaler.std[j]));
+    return out;
+  }
+
+  /* =========================
+     Walk-forward training
+     ========================= */
+  async trainAllModels() {
+    if (this.isTraining) { this.log('Already training'); return; }
+    this.isTraining = true;
+    document.getElementById('btnTrain').disabled = true;
+    this.setStatus('Preparing features...');
+    this.log('Starting walk-forward training...');
+
+    // Build dataset
+    const {features, labels} = this.buildFeaturesLabels();
+    if (features.length < this.config.minSamplesToTrain) {
+      this.log(`Not enough samples (${features.length}) to train`, 'error');
+      this.setStatus('Insufficient samples');
+      this.isTraining = false; document.getElementById('btnTrain').disabled = false; return;
+    }
+
+    // Walk-forward windows
+    const win = this.config.walkForwardWindow;
+    const val = this.config.validationWindow;
+    const step = this.config.stepSize;
+    const results = {}; // accumulate metrics per model
+
+    let windows = 0;
+    for (let start = 0; start + win + val < features.length; start += step) {
+      windows++;
+      const trainX = features.slice(start, start+win);
+      const trainY = labels.slice(start, start+win);
+      const valX = features.slice(start+win, start+win+val);
+      const valY = labels.slice(start+win, start+win+val);
+
+      // scaler using train only
+      const scaler = this.computeScaler(trainX);
+      const sTrainX = this.applyScaler(trainX, scaler);
+      const sValX = this.applyScaler(valX, scaler);
+
+      // Convert to tensors where needed and train each model (or fine-tune)
+      // We'll train lightweight models here per window and average metrics.
+
+      // 1) Linear (classical gradient descent implemented in JS)
+      const linStats = this.trainLinearSimple(sTrainX, trainY, sValX, valY);
+      this.accumulateResult(results, 'linear', linStats);
+
+      // 2) Ridge (L2)
+      const ridgeStats = this.trainLinearSimple(sTrainX, trainY, sValX, valY, {lambda:0.01});
+      this.accumulateResult(results, 'ridge', ridgeStats);
+
+      // 3) MLP (tfjs) - small network with early stopping on val loss
+      const mlpStats = await this.trainOrFineTuneTF('mlp', sTrainX, trainY, sValX, valY);
+      this.accumulateResult(results, 'mlp', mlpStats);
+
+      // 4) LSTM (tfjs) - reshape sequences
+      const lstmStats = await this.trainOrFineTuneTF('lstm', sTrainX, trainY, sValX, valY, {lstm:true});
+      this.accumulateResult(results, 'lstm', lstmStats);
+
+      // progress
+      this.setStatus(`Walk-forward windows: ${windows} completed`);
+      this.log(`Window ${windows}: linear acc ${ (linStats.accuracy*100).toFixed(2)}% | mlp acc ${(mlpStats.accuracy*100).toFixed(2)}%`);
+      // small break to yield to UI
+      await new Promise(r=>setTimeout(r,50));
+    }
+
+    // aggregate results to create persistent model objects (re-train on full data using best hyperparams)
+    const aggregated = {};
+    for (const [k,v] of Object.entries(results)) {
+      aggregated[k] = {
+        accuracy: v.accSum / v.count,
+        rmse: v.rmseSum / v.count
+      };
+    }
+    this.modelStats = {}; // assign weights based on accuracy
+    const totalAcc = Object.values(aggregated).reduce((a,b)=>a + b.accuracy, 0) || 1;
+    for (const [k,v] of Object.entries(aggregated)) {
+      this.modelStats[k] = { accuracy: v.accuracy, rmse: v.rmse, weight: v.accuracy / totalAcc };
+    }
+
+    // Finally, train final models on the entire dataset (fast single-run fit)
+    this.log('Training final models on full dataset (for serving)...');
+    // compute scaler on all train set (we'll use last 80% as train for final)
+    const split = Math.floor(features.length * 0.8);
+    const fullScaler = this.computeScaler(features.slice(0, split));
+    const fullTrainX = this.applyScaler(features.slice(0, split), fullScaler);
+    const fullTrainY = labels.slice(0, split);
+    const fullTestX = this.applyScaler(features.slice(split), fullScaler);
+    const fullTestY = labels.slice(split);
+
+    // retrain and keep model objects
+    this.models = {};
+    await this.trainLinearRetain('linear', fullTrainX, fullTrainY, fullTestX, fullTestY);
+    await this.trainLinearRetain('ridge', fullTrainX, fullTrainY, fullTestX, fullTestY, {lambda:0.01});
+    await this.trainTFModelRetain('mlp', fullTrainX, fullTrainY, fullTestX, fullTestY);
+    await this.trainTFModelRetain('lstm', fullTrainX, fullTrainY, fullTestX, fullTestY, {lstm:true});
+
+    // update UI and model list
+    this.initModelUI();
+    this.setStatus('Training complete');
+    this.log('Walk-forward training finished. Models stored and ready for live predictions.');
+    this.isTraining = false;
+    document.getElementById('btnTrain').disabled = false;
+  }
+
+  accumulateResult(results, key, stats) {
+    if (!results[key]) results[key] = {accSum:0, rmseSum:0, count:0};
+    results[key].accSum += stats.accuracy;
+    results[key].rmseSum += stats.rmse;
+    results[key].count += 1;
+  }
+
+  trainLinearSimple(X, Y, Xval, Yval, opts={lambda:0}) {
+    // Simple linear model via gradient descent (small)
+    const nFeat = X[0].length;
+    const weights = new Array(nFeat).fill(0).map(()=> (Math.random()-0.5)*0.01);
+    let bias = 0;
+    const lr = opts.lambda ? 0.001 : 0.01;
+    const epochs=120;
+    for (let ep=0;ep<epochs;ep++){
+      for (let i=0;i<X.length;i++){
+        const pred = X[i].reduce((s,v,j)=>s + weights[j]*v, bias);
+        const err = pred - Y[i];
+        for (let j=0;j<nFeat;j++) weights[j] -= lr * (err * X[i][j] + opts.lambda * weights[j]);
+        bias -= lr * err;
+      }
+    }
+    // evaluate on Xval
+    const preds = Xval.map(r=> r.reduce((s,v,j)=>s + weights[j]*v, bias));
+    const rmse = Math.sqrt(preds.reduce((s,p,i)=>s+Math.pow(p-Yval[i],2),0)/preds.length);
+    const acc = preds.reduce((s,p,i)=> s + (Math.sign(p)===Math.sign(Yval[i])?1:0), 0) / preds.length;
+    return {rmse,accuracy:acc,weights,bias};
+  }
+
+  async trainOrFineTuneTF(key, X, Y, Xval, Yval, options={lstm:false}) {
+    // We'll create a small model and train quickly to obtain validation metrics
+    const numFeat = X[0].length;
+    let trainXT, trainYT, valXT, valYT;
+    if (options.lstm) {
+      // reshape to [samples-lookback, lookback, features]
+      const lb = this.config.lookbackForSequence;
+      const seqX = [], seqY = [];
+      for (let i=lb;i<X.length;i++){ seqX.push(X.slice(i-lb,i)); seqY.push(Y[i]); }
+      const seqValX = [], seqValY = [];
+      for (let i=lb;i<Xval.length;i++){ seqValX.push(Xval.slice(i-lb,i)); seqValY.push(Yval[i]); }
+      if (seqX.length<10 || seqValX.length<5) return {rmse:1, accuracy:0}; // skip if too small
+      trainXT = tf.tensor(seqX);
+      trainYT = tf.tensor2d(seqY, [seqY.length,1]);
+      valXT = tf.tensor(seqValX);
+      valYT = tf.tensor2d(seqValY, [seqValY.length,1]);
+    } else {
+      trainXT = tf.tensor2d(X);
+      trainYT = tf.tensor2d(Y, [Y.length,1]);
+      valXT = tf.tensor2d(Xval);
+      valYT = tf.tensor2d(Yval, [Yval.length,1]);
+    }
+
+    // build model
+    let model = tf.sequential();
+    if (options.lstm) {
+      model.add(tf.layers.lstm({units:32, inputShape:[trainXT.shape[1], trainXT.shape[2]]}));
+      model.add(tf.layers.dropout({rate:0.2}));
+      model.add(tf.layers.dense({units:16, activation:'relu'}));
+      model.add(tf.layers.dense({units:1}));
+    } else {
+      model.add(tf.layers.dense({units:64, activation:'relu', inputShape:[numFeat]}));
+      model.add(tf.layers.dropout({rate:0.2}));
+      model.add(tf.layers.dense({units:32, activation:'relu'}));
+      model.add(tf.layers.dense({units:1}));
+    }
+    model.compile({optimizer: tf.train.adam(0.001), loss:'meanSquaredError'});
+
+    // early stopping callback (simple)
+    let bestVal = Infinity, bestEpoch = 0, wait = 0, patience=6;
+    const epochs=60, batch=32;
+    for (let ep=0;ep<epochs;ep++){
+      await model.fit(trainXT, trainYT, {epochs:1, batchSize:batch, shuffle:true});
+      const evals = await model.evaluate(valXT, valYT,{batchSize:batch});
+      const valLoss = evals.dataSync ? evals.dataSync()[0] : (await evals.array())[0];
+      if (valLoss < bestVal) { bestVal = valLoss; bestEpoch = ep; wait = 0; }
+      else { wait++; if (wait >= patience) break; }
+    }
+
+    // predictions and metrics
+    const preds = await model.predict(valXT).array();
+    const flat = preds.map(p=>p[0]);
+    const rmse = Math.sqrt(flat.reduce((s,p,i)=>s+Math.pow(p-Yval[i],2),0)/flat.length);
+    const acc = flat.reduce((s,p,i)=> s + (Math.sign(p)===Math.sign(Yval[i])?1:0), 0) / flat.length;
+
+    // dispose small tensors (we will re-train final persistent model later)
+    trainXT.dispose(); trainYT.dispose(); valXT.dispose(); valYT.dispose();
+    model.dispose();
+
+    return {rmse,accuracy:acc};
+  }
+
+  /* -----------------------
+     Final model training & retain
+     ----------------------- */
+  async trainLinearRetain(key, Xtrain, Ytrain, Xtest, Ytest, opts={lambda:0}) {
+    const stats = this.trainLinearSimple(Xtrain, Ytrain, Xtest, Ytest, opts);
+    // store a simple JS model for fast predict
+    this.models[key] = { type:'linear', weights: stats.weights, bias: stats.bias, lambda: opts.lambda || 0 };
+    this.modelStats[key] = { accuracy: stats.accuracy, rmse: stats.rmse, weight: (stats.accuracy || 0.01) };
+    this.log(`Retained linear model ${key} acc ${(stats.accuracy*100).toFixed(2)}%`);
+  }
+
+  async trainTFModelRetain(key, Xtrain, Ytrain, Xtest, Ytest, options={lstm:false}) {
+    // Using same architecture as above but trained on full training split
+    let trainXT, trainYT, testXT, testYT;
+    if (options.lstm) {
+      const lb = this.config.lookbackForSequence;
+      const seqX = [], seqY = [];
+      for (let i=lb;i<Xtrain.length;i++){ seqX.push(Xtrain.slice(i-lb,i)); seqY.push(Ytrain[i]); }
+      const seqTestX = [], seqTestY = [];
+      for (let i=lb;i<Xtest.length;i++){ seqTestX.push(Xtest.slice(i-lb,i)); seqTestY.push(Ytest[i]); }
+      trainXT = tf.tensor(seqX); trainYT = tf.tensor2d(seqY,[seqY.length,1]);
+      testXT = tf.tensor(seqTestX); testYT = tf.tensor2d(seqTestY,[seqTestY.length,1]);
+    } else {
+      trainXT = tf.tensor2d(Xtrain); trainYT = tf.tensor2d(Ytrain,[Ytrain.length,1]);
+      testXT = tf.tensor2d(Xtest); testYT = tf.tensor2d(Ytest,[Ytest.length,1]);
+    }
+
+    const numFeat = trainXT.shape[trainXT.shape.length-1];
+    const model = tf.sequential();
+    if (options.lstm) {
+      model.add(tf.layers.lstm({units:48, inputShape:[trainXT.shape[1], trainXT.shape[2]]}));
+      model.add(tf.layers.dropout({rate:0.2}));
+      model.add(tf.layers.dense({units:16, activation:'relu'}));
+      model.add(tf.layers.dense({units:1}));
+    } else {
+      model.add(tf.layers.dense({units:128, activation:'relu', inputShape:[numFeat]}));
+      model.add(tf.layers.dropout({rate:0.2}));
+      model.add(tf.layers.dense({units:64, activation:'relu'}));
+      model.add(tf.layers.dense({units:1}));
+    }
+    model.compile({optimizer: tf.train.adam(0.0008), loss:'meanSquaredError'});
+
+    // early stopping: monitor val_loss via validationSplit
+    await model.fit(trainXT, trainYT, { epochs:80, batchSize:32, validationSplit:0.1,
+      callbacks: { onEpochEnd: async (ep, logs)=> {
+        if (ep % 10 === 0) this.log(`${key} epoch ${ep} loss ${logs.loss.toFixed(6)} val ${logs.val_loss?.toFixed(6)}`);
+      } }
+    });
+
+    const preds = await model.predict(testXT).array();
+    const flat = preds.map(p=>p[0]);
+    const rmse = Math.sqrt(flat.reduce((s,p,i)=>s+Math.pow(p-testYT.arraySync()[i][0],2),0)/flat.length);
+    const acc = flat.reduce((s,p,i)=> s + (Math.sign(p)===Math.sign(testYT.arraySync()[i][0])?1:0), 0) / flat.length;
+
+    this.models[key] = { type:'tf', model }; // keep model for live predictions
+    this.modelStats[key] = { accuracy: acc, rmse: rmse, weight: acc || 0.01 };
+
+    this.log(`Retained TF model ${key} acc ${(acc*100).toFixed(2)}% rmse ${rmse.toFixed(6)}`);
+
+    // don't dispose model here (we want to keep it). Dispose temp tensors:
+    trainXT.dispose(); trainYT.dispose(); testXT.dispose(); testYT.dispose();
+  }
+
+  /* -----------------------
+     Live prediction
+     ----------------------- */
+  async makePrediction() {
+    // Build features & take last row
+    const {features} = this.buildFeaturesLabels();
+    if (!features.length) return;
+    const last = features[features.length-1];
+    // scaler: compute using last ~80% for consistency (could be persisted)
+    const {features: fullF, labels: _} = this.buildFeaturesLabels();
+    const cut = Math.floor(fullF.length * 0.8);
+    const scaler = this.computeScaler(fullF.slice(0, cut));
+    const sLast = this.applyScaler([last], scaler)[0];
+
+    // get model predictions and weights
+    let totalW = 0;
+    const preds = {};
+    for (const [k,m] of Object.entries(this.models)) {
+      try {
+        let p = 0;
+        if (m.type === 'linear') {
+          p = sLast.reduce((s,v,j)=> s + v*(m.weights[j]||0), m.bias||0);
+        } else if (m.type === 'tf') {
+          // for LSTM models we need sequence: replicate last lookback if necessary
+          if (m.model.inputs[0].shape.length === 3) {
+            // build last sequence from features
+            const lb = this.config.lookbackForSequence;
+            // fallback: repeat last row lb times (better would be to track history)
+            const seq = new Array(lb).fill(sLast);
+            const t = tf.tensor([seq]);
+            p = (await m.model.predict(t).array())[0][0];
+            t.dispose();
+          } else {
+            const t = tf.tensor2d([sLast]);
+            p = (await m.model.predict(t).array())[0][0];
+            t.dispose();
+          }
+        }
+        const weight = (this.modelStats[k] && this.modelStats[k].accuracy) ? this.modelStats[k].accuracy : 0.1;
+        preds[k] = {pred: p, weight};
+        totalW += weight;
+      } catch (e) { this.log('Predict error ' + k + ' ' + e.message, 'error'); }
+    }
+
+    // ensemble: weighted average
+    let ensemble = 0;
+    for (const [k,v] of Object.entries(preds)) ensemble += v.pred * (v.weight / totalW || 0);
+    // determine signal
+    const threshold = this.config.ensembleThresholdPct / 100; // convert pct to fraction (we keep config small)
+    let signal = 'HOLD', confidence = 0;
+    if (ensemble > threshold) { signal = 'BUY'; confidence = Math.min(100, ensemble*10000); }
+    else if (ensemble < -threshold) { signal = 'SELL'; confidence = Math.min(100, Math.abs(ensemble)*10000); }
+
+    // store and update UI
+    const priceNow = this.data.candles[this.data.candles.length-1].close;
+    const rec = {time: Date.now(), price: priceNow, ensemble, signal, confidence, preds};
+    this.predictions.push(rec);
+    if (this.predictions.length>200) this.predictions.shift();
+    this.updatePredTable();
+    this.updateChart(true);
+  }
+
+  updatePredTable() {
+    const rows = this.predictions.slice(-10).reverse().map(p=>{
+      const t = new Date(p.time).toLocaleTimeString();
+      const res = '-';
+      return `<tr><td>${t}</td><td>${p.price.toFixed(6)}</td><td>${p.signal}</td><td>${p.confidence.toFixed(1)}%</td><td>${(p.ensemble*100).toFixed(3)}%</td><td>${res}</td></tr>`;
+    }).join('');
+    document.getElementById('predTable').innerHTML = rows || '<tr><td colspan="6">No predictions</td></tr>';
+  }
+
+  /* -----------------------
+     Backtest (uses ensemble weights)
+     ----------------------- */
+  async runBacktest() {
+    if (!this.models || Object.keys(this.models).length === 0) { alert('Train models first'); return; }
+    this.log('Starting backtest...');
+    const {features, labels} = this.buildFeaturesLabels();
+    if (!features.length) { alert('No features'); return; }
+    // simple strategy using last trained model weights stored in modelStats
+    // scale using first 80% as train
+    const split = Math.floor(features.length * 0.8);
+    const scaler = this.computeScaler(features.slice(0, split));
+    const sFeatures = this.applyScaler(features, scaler);
+
+    let capital = 10000, position = 0; // longs positive units
+    let trades=0, wins=0;
+    for (let i=split;i<sFeatures.length-1;i++) {
+      // build last feature
+      const f = sFeatures[i];
+      // model ensemble predict
+      let totalW=0; let ens=0;
+      for (const [k,m] of Object.entries(this.models)) {
+        let p=0;
+        if (m.type==='linear') p = f.reduce((s,v,j)=>s + v*(m.weights[j]||0), m.bias||0);
+        else if (m.type==='tf') {
+          // treat tf model as static: feed 2D
+          const t = tf.tensor2d([f]); p = (await m.model.predict(t).array())[0][0]; t.dispose();
+        }
+        const w = (this.modelStats[k] && this.modelStats[k].accuracy) ? this.modelStats[k].accuracy : 0.1;
+        ens += p * w; totalW += w;
+      }
+      ens = ens / (totalW || 1);
+      const threshold = this.config.ensembleThresholdPct / 100;
+      const currentPrice = this.data.candles[i + 60].close || this.data.candles[this.data.candles.length-1].close;
+      if (ens > threshold && position <= 0) { // go long
+        position = capital / currentPrice;
+        trades++;
+      } else if (ens < -threshold && position >= 0) { // go short (we'll keep simple)
+        if (position > 0) { capital = position * currentPrice; position = 0; }
+        position = -capital / currentPrice;
+        trades++;
+      }
+      // update capital using next candle as exit mark
+      const nextPrice = this.data.candles[Math.min(this.data.candles.length-1, i + 61)].close;
+      if (position>0) capital = position * nextPrice;
+      else capital = capital + (position * (currentPrice - nextPrice));
+      // win counting
+      const actualReturn = labels[i];
+      if ((ens>0 && actualReturn>0) || (ens<0 && actualReturn<0)) wins++;
+    }
+    const ret = (capital - 10000) / 10000 * 100;
+    this.log(`Backtest finished: trades ${trades}, wins ${wins}, return ${ret.toFixed(2)}%`);
+    alert(`Backtest: trades ${trades}, wins ${wins}, return ${ret.toFixed(2)}%`);
+  }
+
+  /* -----------------------
+     Helpers & UI
+     ----------------------- */
+  initChart() {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    this.chart = new Chart(ctx, {
+      type:'candlestick',
+      data:{datasets:[{label:this.config.symbol,data:[]}]},
+      options:{
+        plugins:{legend:{display:false}},
+        parsing:false,
+        scales:{x:{type:'time'}, y:{position:'right'}}
+      }
+    });
+    this.updateChart();
+  }
+
+  updateChart(includeSignals=false) {
+    if (!this.chart) return;
+    const cands = this.data.candles.slice(-400).map(c => ({x:c.time, o:c.open, h:c.high, l:c.low, c:c.close}));
+    const ds = [{label:this.config.symbol, type:'candlestick', data:cands}];
+
+    // add simple VWAP/EMA lines if available
+    const times = this.data.candles.slice(-400).map(c=>c.time);
+    if (this.indicators.ema9) {
+      const emaPts = this.indicators.ema9.slice(-400).map((v,i)=> v ? {x:times[i], y:v} : null).filter(Boolean);
+      ds.push({label:'EMA9', type:'line', data:emaPts, borderColor:'#9c27b0', borderWidth:1, pointRadius:0});
+    }
+    if (this.indicators.vwap) {
+      const vpts = this.indicators.vwap.slice(-400).map((v,i)=> v ? {x:times[i], y:v} : null).filter(Boolean);
+      ds.push({label:'VWAP', type:'line', data:vpts, borderColor:'#ff9800', borderWidth:1, pointRadius:0});
+    }
+
+    // signals
+    if (includeSignals && this.predictions.length) {
+      const buys = this.predictions.filter(p=>p.signal==='BUY').slice(-40).map(p=>({x:p.time,y:p.price}));
+      const sells = this.predictions.filter(p=>p.signal==='SELL').slice(-40).map(p=>({x:p.time,y:p.price}));
+      if (buys.length) ds.push({label:'Buy', type:'scatter', data:buys, pointStyle:'triangle', pointRadius:8});
+      if (sells.length) ds.push({label:'Sell', type:'scatter', data:sells, pointStyle:'triangleDown', pointRadius:8});
+    }
+
+    this.chart.data.datasets = ds;
+    this.chart.update('none');
+  }
+
+  initModelUI() {
+    const div = document.getElementById('modelsList');
+    div.innerHTML = '';
+    for (const k of ['linear','ridge','mlp','lstm']) {
+      const stat = this.modelStats[k];
+      const html = `<div style="padding:8px;border-radius:6px;background:#0b0b0b;margin-bottom:6px">
+        <strong>${k}</strong> — ${stat ? ( (stat.accuracy*100).toFixed(2)+'% acc' ) : 'not trained'}
+      </div>`;
+      div.insertAdjacentHTML('beforeend', html);
+    }
+  }
+
+  exportResults() {
+    const data = {
+      config: this.config,
+      modelStats: this.modelStats,
+      predictions: this.predictions,
+      logs: this.logLines.slice(-500)
+    };
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=`wif-predict-${Date.now()}.json`; a.click();
+    URL.revokeObjectURL(url);
+    this.log('Exported results');
+  }
+
+} // end class
+
+/* =========================
+   Start
+   ========================= */
+const predictor = new RealWIFPredictor();
+window.addEventListener('DOMContentLoaded', ()=> predictor.initialize());
+
+// expose some functions to global for buttons
+window.predictor = predictor;
+</script>
+</body>
+</html>
