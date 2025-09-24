@@ -3,744 +3,1445 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Crypto Prediction Model</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/tensorflow@4.10.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.3/build/global/luxon.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://unpkg.com/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.min.js"></script>
-    <script src="httpshttps://unpkg.com/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
-
+    <title>Advanced WIF/USDT ML Predictor</title>
     <style>
-        :root {
-            --bg-color: #1a1a1a;
-            --primary-text: #e0e0e0;
-            --secondary-text: #b0b0b0;
-            --border-color: #333;
-            --accent-color: #00bcd4;
-            --success-color: #4caf50;
-            --danger-color: #f44336;
-            --card-bg: #2c2c2c;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--primary-text);
+        * {
             margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            padding: 0;
+            box-sizing: border-box;
         }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
         .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .status-item {
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.active {
+            background: #4caf50;
+        }
+        
+        .status-indicator.training {
+            background: #ff9800;
+        }
+        
+        .status-indicator.error {
+            background: #f44336;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .grid {
             display: grid;
-            grid-template-columns: 1fr 350px;
+            grid-template-columns: 1fr 1fr;
             gap: 20px;
-            height: 95vh;
+            margin-bottom: 30px;
         }
-        .main-content {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            height: 100%;
+        
+        @media (max-width: 1200px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            height: 100%;
-        }
+        
         .card {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 20px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            display: flex;
-            flex-direction: column;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
-        h1, h2, h3 {
-            color: var(--primary-text);
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
-            margin-top: 0;
+        
+        .card h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+            font-size: 1.5em;
         }
-        .controls {
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
+            margin-top: 20px;
         }
+        
+        .metric {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
         button {
-            background-color: var(--accent-color);
-            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
+            padding: 12px 25px;
+            border-radius: 25px;
             cursor: pointer;
             font-size: 1em;
-            transition: background-color 0.3s, transform 0.1s;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
+        
         button:hover {
-            background-color: #0097a7;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
-        button:active {
-            transform: scale(0.98);
-        }
+        
         button:disabled {
-            background-color: #555;
+            opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
         }
-        .log-console {
-            flex-grow: 1;
-            background-color: #111;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            padding: 15px;
-            overflow-y: auto;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9em;
-            color: var(--secondary-text);
-            white-space: pre-wrap;
-        }
-        .log-console .log-entry { margin-bottom: 5px; }
-        .log-console .info { color: #87ceeb; }
-        .log-console .success { color: var(--success-color); }
-        .log-console .error { color: var(--danger-color); }
-        .log-console .warn { color: #ffa500; }
-        .chart-container {
-            position: relative;
-            flex-grow: 1;
-        }
-        #predictionTable {
+        
+        .prediction-table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
         }
-        #predictionTable th, #predictionTable td {
+        
+        .prediction-table th,
+        .prediction-table td {
+            padding: 12px;
             text-align: left;
-            padding: 8px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        #predictionTable th { color: var(--accent-color); }
-        .buy { color: var(--success-color); }
-        .sell { color: var(--danger-color); }
-        .hold { color: var(--secondary-text); }
+        
+        .prediction-table th {
+            background: rgba(102, 126, 234, 0.2);
+            font-weight: 600;
+        }
+        
+        .prediction-table tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .up {
+            color: #4caf50;
+        }
+        
+        .down {
+            color: #f44336;
+        }
+        
+        .logs {
+            background: #0a0a0a;
+            border-radius: 10px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+        
+        .log-entry.error {
+            border-left-color: #f44336;
+            color: #ff6b6b;
+        }
+        
+        .log-entry.success {
+            border-left-color: #4caf50;
+            color: #69f0ae;
+        }
+        
+        .log-entry.warning {
+            border-left-color: #ff9800;
+            color: #ffd54f;
+        }
+        
+        .feature-importance {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .feature-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .feature-name {
+            width: 150px;
+            font-size: 0.9em;
+        }
+        
+        .feature-progress {
+            flex: 1;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .feature-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        select, input {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 1em;
+        }
+        
+        .model-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .model-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .model-card.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .model-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .model-accuracy {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <div class="main-content">
-            <div class="card">
-                <h1>WIF/USDT Advanced Prediction Model</h1>
-                <p>An upgraded client-side system using multi-timeframe data, advanced features, and walk-forward validation for improved time-series forecasting.</p>
-            </div>
-            <div class="card chart-container">
-                <canvas id="candleChart"></canvas>
+        <div class="header">
+            <h1>🚀 Advanced WIF/USDT ML Predictor</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator" id="wsStatus"></div>
+                    <span>WebSocket: <span id="wsStatusText">Disconnected</span></span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" id="dataStatus"></div>
+                    <span>Data: <span id="dataCount">0</span> candles</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" id="modelStatus"></div>
+                    <span>Models: <span id="modelStatusText">Not Trained</span></span>
+                </div>
+                <div class="status-item">
+                    <span>Last Update: <span id="lastUpdate">Never</span></span>
+                </div>
             </div>
         </div>
 
-        <div class="sidebar">
-            <div class="card controls">
-                <button id="fetchDataBtn">1. Fetch Market Data</button>
-                <button id="trainModelsBtn" disabled>2. Train Models (Walk-Forward)</button>
-                <button id="predictNextBtn" disabled>3. Predict Next Candle</button>
-            </div>
+        <div class="controls">
+            <button id="startBtn">🎯 Start System</button>
+            <button id="trainBtn" disabled>🧠 Train Models</button>
+            <button id="predictBtn" disabled>📊 Predict Next</button>
+            <button id="backtestBtn" disabled>📈 Run Backtest</button>
+            <button id="exportBtn" disabled>💾 Export Models</button>
+            <button id="importBtn">📁 Import Models</button>
+            <select id="timeframe">
+                <option value="1m">1 Minute</option>
+                <option value="5m">5 Minutes</option>
+                <option value="15m">15 Minutes</option>
+                <option value="1h">1 Hour</option>
+            </select>
+            <select id="dataDepth">
+                <option value="1500">1.5K Candles</option>
+                <option value="5000">5K Candles</option>
+                <option value="10000">10K Candles</option>
+                <option value="20000">20K Candles</option>
+            </select>
+        </div>
+
+        <div class="grid">
             <div class="card">
-                <h2>Live Prediction</h2>
-                <table id="predictionTable">
+                <h2>📈 Price Chart</h2>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🎯 Predictions</h2>
+                <div class="chart-container">
+                    <canvas id="predictionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🤖 Model Performance</h2>
+            <div class="model-cards">
+                <div class="model-card" id="mlpCard">
+                    <h3>MLP Neural Net</h3>
+                    <div class="model-accuracy" id="mlpAccuracy">--</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="model-card" id="lstmCard">
+                    <h3>LSTM</h3>
+                    <div class="model-accuracy" id="lstmAccuracy">--</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="model-card" id="transformerCard">
+                    <h3>Transformer</h3>
+                    <div class="model-accuracy" id="transformerAccuracy">--</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="model-card" id="cnnCard">
+                    <h3>CNN</h3>
+                    <div class="model-accuracy" id="cnnAccuracy">--</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="model-card" id="ensembleCard">
+                    <h3>Ensemble</h3>
+                    <div class="model-accuracy" id="ensembleAccuracy">--</div>
+                    <div class="metric-label">Combined</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="trainingProgress" style="width: 0%">
+                    <span id="trainingProgressText">Ready</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📊 Performance Metrics</h2>
+                <div class="metrics-grid">
+                    <div class="metric">
+                        <div class="metric-value" id="accuracy">--</div>
+                        <div class="metric-label">Accuracy %</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="precision">--</div>
+                        <div class="metric-label">Precision</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="recall">--</div>
+                        <div class="metric-label">Recall</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="f1Score">--</div>
+                        <div class="metric-label">F1 Score</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="rmse">--</div>
+                        <div class="metric-label">RMSE</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="sharpe">--</div>
+                        <div class="metric-label">Sharpe Ratio</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px; color: #667eea;">Feature Importance</h3>
+                <div class="feature-importance" id="featureImportance">
+                    </div>
+            </div>
+            
+            <div class="card">
+                <h2>📋 Recent Predictions</h2>
+                <table class="prediction-table">
                     <thead>
-                        <tr><th>Model</th><th>Prediction</th></tr>
+                        <tr>
+                            <th>Time</th>
+                            <th>Current</th>
+                            <th>Predicted</th>
+                            <th>Direction</th>
+                            <th>Confidence</th>
+                            <th>Result</th>
+                        </tr>
                     </thead>
-                    <tbody>
-                        <tr><td>MLP</td><td id="mlpPred">-</td></tr>
-                        <tr><td>LSTM</td><td id="lstmPred">-</td></tr>
-                        <tr><td><b>Ensemble</b></td><td id="ensemblePred">-</td></tr>
-                        <tr><td><b>Signal</b></td><td id="finalSignal">-</td></tr>
-                    </tbody>
+                    <tbody id="predictionTableBody">
+                        </tbody>
                 </table>
             </div>
-            <div class="card" style="flex-grow: 1;">
-                <h2>Log Console</h2>
-                <div class="log-console" id="logConsole"></div>
-            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔍 System Logs</h2>
+            <div class="logs" id="logs"></div>
         </div>
     </div>
 
-<script>
-// ===================================================================================
-// 0. CONFIGURATION & GLOBAL STATE
-// ===================================================================================
-const CONFIG = {
-    // API & Data
-    symbol: 'WIFUSDT',
-    interval: '1m',
-    limit: 5000, // Increased data depth
-    binanceApiUrl: 'https://api.binance.com/api/v3/klines',
-    
-    // Feature Engineering
-    predictionHorizon: 5, // Predict close price 5 minutes from now
-    sequenceLength: 60, // Use last 60 minutes of data to predict
-    multiTimeframes: [5, 15], // Aggregate 1m data into 5m and 15m
-    
-    // Model Training
-    trainTestSplit: 0.8,
-    walkForwardSteps: 100, // How many steps to backtest in walk-forward validation
-    retrainFrequency: 20, // Retrain the model every 20 new candles
-    epochs: 10,
-    batchSize: 32,
-    learningRate: 0.001,
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.19.0/dist/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
 
-    // Signal Generation
-    signalThreshold: 0.0015, // 0.15% predicted price change to trigger a signal
-    volatilityFilterThreshold: 0.001, // Minimum rolling volatility to consider a signal
-};
+    <script>
+        // --- START OF COMPLETED SCRIPT ---
 
-let rawData = [];
-let features = [];
-let labels = [];
-let chart = null;
-let models = { mlp: null, lstm: null };
-let modelWeights = { mlp: 0.5, lstm: 0.5 }; // Ensemble weights
-let scaler = null;
-
-// UI Elements
-const fetchDataBtn = document.getElementById('fetchDataBtn');
-const trainModelsBtn = document.getElementById('trainModelsBtn');
-const predictNextBtn = document.getElementById('predictNextBtn');
-const logConsole = document.getElementById('logConsole');
-
-// ===================================================================================
-// 1. LOGGING & UI UTILITIES
-// ===================================================================================
-function log(message, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${type}`;
-    entry.textContent = `[${timestamp}] ${message}`;
-    logConsole.appendChild(entry);
-    logConsole.scrollTop = logConsole.scrollHeight;
-}
-
-function setButtonsState(isLoading) {
-    fetchDataBtn.disabled = isLoading;
-    trainModelsBtn.disabled = isLoading || rawData.length === 0;
-    predictNextBtn.disabled = isLoading || !models.mlp || !models.lstm;
-}
-
-// ===================================================================================
-// 2. DATA FETCHING & PREPARATION
-// ===================================================================================
-async function fetchData() {
-    setButtonsState(true);
-    log(`Fetching ${CONFIG.limit} candles for ${CONFIG.symbol}...`);
-    try {
-        const response = await fetch(`${CONFIG.binanceApiUrl}?symbol=${CONFIG.symbol}&interval=${CONFIG.interval}&limit=${Math.min(CONFIG.limit, 1500)}`);
-        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-        const data = await response.json();
-        
-        rawData = data.map(d => ({
-            time: d[0] / 1000,
-            open: parseFloat(d[1]),
-            high: parseFloat(d[2]),
-            low: parseFloat(d[3]),
-            close: parseFloat(d[4]),
-            volume: parseFloat(d[5]),
-        }));
-        
-        log(`Successfully fetched ${rawData.length} data points.`, 'success');
-        await processData();
-        initializeChart();
-        setButtonsState(false);
-
-    } catch (error) {
-        log(`Failed to fetch data: ${error.message}`, 'error');
-        setButtonsState(false);
-    }
-}
-
-function aggregateTimeframe(data, minutes) {
-    const aggregated = [];
-    let currentCandle = null;
-
-    for (const candle of data) {
-        const candleTime = luxon.DateTime.fromSeconds(candle.time);
-        const startOfInterval = candleTime.startOf('minute').minus({ minutes: candleTime.minute % minutes });
-
-        if (!currentCandle || currentCandle.time !== startOfInterval.toSeconds()) {
-            if (currentCandle) aggregated.push(currentCandle);
-            currentCandle = {
-                time: startOfInterval.toSeconds(),
-                open: candle.open,
-                high: candle.high,
-                low: candle.low,
-                close: candle.close,
-                volume: candle.volume,
-            };
-        } else {
-            currentCandle.high = Math.max(currentCandle.high, candle.high);
-            currentCandle.low = Math.min(currentCandle.low, candle.low);
-            currentCandle.close = candle.close;
-            currentCandle.volume += candle.volume;
-        }
-    }
-    if (currentCandle) aggregated.push(currentCandle);
-    return aggregated;
-}
-
-// ===================================================================================
-// 3. TECHNICAL INDICATORS & FEATURE ENGINEERING
-// ===================================================================================
-const Indicators = {
-    ema: (data, period) => {
-        const k = 2 / (period + 1);
-        let ema = data.slice(0, period).reduce((sum, d) => sum + d.close, 0) / period;
-        const emas = Array(period - 1).fill(null);
-        emas.push(ema);
-        for (let i = period; i < data.length; i++) {
-            ema = (data[i].close * k) + (ema * (1 - k));
-            emas.push(ema);
-        }
-        return emas;
-    },
-    rsi: (data, period) => {
-        const rsis = Array(period).fill(null);
-        let gains = 0, losses = 0;
-        for (let i = 1; i <= period; i++) {
-            const change = data[i].close - data[i-1].close;
-            change > 0 ? gains += change : losses -= change;
-        }
-        let avgGain = gains / period;
-        let avgLoss = losses / period;
-
-        for (let i = period + 1; i < data.length; i++) {
-            const change = data[i].close - data[i-1].close;
-            gains = change > 0 ? change : 0;
-            losses = change < 0 ? -change : 0;
-            avgGain = (avgGain * (period - 1) + gains) / period;
-            avgLoss = (avgLoss * (period - 1) + losses) / period;
-            if (avgLoss === 0) {
-                rsis.push(100);
-            } else {
-                const rs = avgGain / avgLoss;
-                rsis.push(100 - (100 / (1 + rs)));
+        // Global State Management
+        const state = {
+            ws: null,
+            candles: [],
+            features: [],
+            labels: [],
+            models: {},
+            predictions: [],
+            isTraining: false,
+            isConnected: false,
+            metrics: {},
+            priceChart: null,
+            predictionChart: null,
+            featureNames: [
+                'Return 1P', 'Return 5P', 'Return 20P', 'Vol Ratio', 'Volatility',
+                'Price/EMA9', 'Price/EMA21', 'Price/EMA50', 'EMA9/EMA21', 'EMA21/EMA50',
+                'RSI', 'MACD Line', 'MACD Hist', '%B', 'BB Width', 'ATR/Price', 'Price/VWAP',
+                'Stoch %K', 'Stoch %D', 'Spread', 'Hour', 'Day'
+            ],
+            config: {
+                symbol: 'WIFUSDT',
+                timeframe: '1m',
+                dataDepth: 1500,
+                sequenceLength: 60,
+                predictionHorizon: 5,
+                trainSplit: 0.8,
+                batchSize: 64,
+                epochs: 15,
+                learningRate: 0.001,
+                confidenceThreshold: 0.6,
+                maxCandles: 50000,
+                labelThreshold: 0.001 // 0.1% price move for UP/DOWN label
             }
-        }
-        return rsis;
-    },
-    vwap: (data) => {
-        let cumulativeTPV = 0;
-        let cumulativeVolume = 0;
-        return data.map(d => {
-            const typicalPrice = (d.high + d.low + d.close) / 3;
-            cumulativeTPV += typicalPrice * d.volume;
-            cumulativeVolume += d.volume;
-            return cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : typicalPrice;
-        });
-    },
-    bollingerBands: (data, period, stdDev) => {
-        const bands = Array(period - 1).fill(null);
-        for (let i = period - 1; i < data.length; i++) {
-            const slice = data.slice(i - period + 1, i + 1);
-            const closes = slice.map(d => d.close);
-            const sma = closes.reduce((a, b) => a + b) / period;
-            const std = Math.sqrt(closes.map(c => Math.pow(c - sma, 2)).reduce((a, b) => a + b) / period);
-            bands.push({
-                middle: sma,
-                upper: sma + std * stdDev,
-                lower: sma - std * stdDev,
-                percentB: (data[i].close - (sma - std * stdDev)) / ((sma + std * stdDev) - (sma - std * stdDev))
-            });
-        }
-        return bands;
-    },
-};
-
-async function processData() {
-    log('Starting feature engineering...');
-    const data = [...rawData];
-
-    // 1. Multi-Timeframe Data Aggregation
-    const data5m = aggregateTimeframe(data, 5);
-    const data15m = aggregateTimeframe(data, 15);
-    log(`Aggregated data: ${data5m.length} (5m), ${data15m.length} (15m) candles.`);
-
-    // 2. Calculate Indicators on base timeframe (1m)
-    const ema12 = Indicators.ema(data, 12);
-    const ema26 = Indicators.ema(data, 26);
-    const rsi14 = Indicators.rsi(data, 14);
-    const vwap = Indicators.vwap(data);
-    const bb20 = Indicators.bollingerBands(data, 20, 2);
-
-    // 3. Create a unified feature set
-    let processed = data.map((d, i) => ({
-        ...d,
-        ema12: ema12[i],
-        ema26: ema26[i],
-        rsi14: rsi14[i],
-        vwap: vwap[i],
-        bb_upper: bb20[i]?.upper,
-        bb_lower: bb20[i]?.lower,
-        bb_percentB: bb20[i]?.percentB,
-    }));
-    
-    // 4. Align and add multi-timeframe features
-    // This is a simple alignment. More complex methods could be used.
-    function alignData(base, featureData) {
-        let featureIndex = 0;
-        return base.map(d => {
-            while(featureData[featureIndex + 1] && featureData[featureIndex + 1].time <= d.time) {
-                featureIndex++;
-            }
-            return featureData[featureIndex];
-        });
-    }
-
-    const aligned5m = alignData(processed, aggregateTimeframe(data, 5));
-    const aligned15m = alignData(processed, aggregateTimeframe(data, 15));
-    const rsi5m = Indicators.rsi(aligned5m, 14);
-    const rsi15m = Indicators.rsi(aligned15m, 14);
-
-    // 5. Build the final feature vector for each time step
-    const featureSet = [];
-    const labelSet = [];
-    const minLength = 100; // Ensure we have enough data for lookbacks
-
-    for (let i = minLength; i < processed.length - CONFIG.predictionHorizon; i++) {
-        const current = processed[i];
-        if ([current.ema12, current.rsi14, current.bb_upper, rsi5m[i], rsi15m[i]].some(v => v === null || v === undefined)) {
-            continue; // Skip if any indicator is not ready
-        }
-        
-        // --- Advanced Feature Creation ---
-        const featureVector = [
-            // Price-based features
-            (current.close - current.open) / current.open, // Pct change in candle
-            (current.high - current.low) / current.low,   // Volatility in candle
-            
-            // Returns (Multi-horizon)
-            (current.close / processed[i-1].close) - 1,
-            (current.close / processed[i-5].close) - 1,
-            (current.close / processed[i-15].close) - 1,
-            (current.close / processed[i-60].close) - 1,
-
-            // Indicator-based features
-            (current.ema12 - current.ema26) / current.ema26, // MACD-like
-            current.rsi14 / 100,
-            (current.close - current.vwap) / current.vwap, // VWAP distance
-            current.bb_percentB, // Position within Bollinger Bands
-
-            // Multi-Timeframe features
-            rsi5m[i] / 100,
-            rsi15m[i] / 100,
-
-            // Volatility features (Rolling Std Dev of returns)
-            tf.moments(processed.slice(i-20, i).map(p => (p.close / p.open) - 1)).variance,
-            
-            // Simulated Market Microstructure (Order Book Imbalance)
-            // A simple proxy: High volume on up-candle vs down-candle
-            (current.close > current.open ? 1 : -1) * current.volume / processed[i-1].volume,
-        ];
-
-        featureSet.push(featureVector);
-        
-        // The label is the future percent change
-        const futurePrice = processed[i + CONFIG.predictionHorizon].close;
-        const label = (futurePrice - current.close) / current.close;
-        labelSet.push(label);
-    }
-    
-    // 6. Normalization
-    const featuresTensor = tf.tensor2d(featureSet);
-    const mean = featuresTensor.mean(0);
-    const std = tf.moments(featuresTensor, 0).variance.sqrt();
-    scaler = { mean, std }; // Save for later use on new data
-    const normalizedFeatures = featuresTensor.sub(mean).div(std);
-
-    features = await normalizedFeatures.array();
-    labels = labelSet;
-    
-    log(`Feature engineering complete. Created ${features.length} feature vectors.`, 'success');
-}
-
-
-// ===================================================================================
-// 4. MODEL DEFINITION & TRAINING
-// ===================================================================================
-
-function createMLPModel(inputShape) {
-    const model = tf.sequential();
-    model.add(tf.layers.dense({ inputShape: [inputShape], units: 128, activation: 'relu' }));
-    model.add(tf.layers.dropout({ rate: 0.3 }));
-    model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
-    model.add(tf.layers.dropout({ rate: 0.3 }));
-    model.add(tf.layers.dense({ units: 1, activation: 'linear' })); // Linear activation for regression
-    
-    model.compile({
-        optimizer: tf.train.adam(CONFIG.learningRate),
-        loss: 'meanSquaredError' // MSE is standard for regression
-    });
-    return model;
-}
-
-function createLSTMModel(inputShape) {
-    const model = tf.sequential();
-    // LSTM is designed for sequences [timesteps, features]
-    model.add(tf.layers.lstm({ 
-        units: 64, 
-        inputShape: [inputShape[0], inputShape[1]], 
-        returnSequences: true 
-    }));
-    model.add(tf.layers.dropout({ rate: 0.3 }));
-    model.add(tf.layers.lstm({ units: 32, returnSequences: false }));
-    model.add(tf.layers.dropout({ rate: 0.3 }));
-    model.add(tf.layers.dense({ units: 1, activation: 'linear' }));
-
-    model.compile({
-        optimizer: tf.train.adam(CONFIG.learningRate),
-        loss: 'meanSquaredError'
-    });
-    return model;
-    /* **NOTE on where a Transformer would go:**
-    A Transformer model would replace the LSTM layers. It would involve creating custom
-    layers for multi-head self-attention and positional encoding. This is significantly
-    more complex but can be more powerful for capturing long-range dependencies.
-    Due to the complexity, LSTM is a more practical choice for a browser environment.
-    */
-}
-
-function prepareDataForModel(modelType, X, Y) {
-    if (modelType === 'mlp') {
-        return { X_train: tf.tensor2d(X), Y_train: tf.tensor1d(Y) };
-    }
-    if (modelType === 'lstm') {
-        // Create sequences for LSTM
-        const X_seq = [], Y_seq = [];
-        for (let i = 0; i < X.length - CONFIG.sequenceLength; i++) {
-            X_seq.push(X.slice(i, i + CONFIG.sequenceLength));
-            Y_seq.push(Y[i + CONFIG.sequenceLength - 1]);
-        }
-        return { 
-            X_train: tf.tensor3d(X_seq), 
-            Y_train: tf.tensor1d(Y_seq) 
         };
-    }
-}
 
-async function trainModelsWalkForward() {
-    setButtonsState(true);
-    log('Starting Walk-Forward Validation training...');
-
-    /*
-    **NOTE on Walk-Forward Validation:**
-    A true backtest would loop from `splitIndex` to the end, training and predicting one step at a time.
-    This is too slow for a browser. This implementation simulates it by performing ONE walk-forward
-    training run on the most recent data block. A real backend would run the full loop.
-    */
-    
-    const splitIndex = Math.floor(features.length * CONFIG.trainTestSplit);
-    const X_train_full = features.slice(0, splitIndex);
-    const Y_train_full = labels.slice(0, splitIndex);
-    const X_test = features.slice(splitIndex);
-    const Y_test = labels.slice(splitIndex);
-
-    // --- Train MLP ---
-    log('Training MLP model...');
-    const mlpData = prepareDataForModel('mlp', X_train_full, Y_train_full);
-    models.mlp = createMLPModel(features[0].length);
-    await models.mlp.fit(mlpData.X_train, mlpData.Y_train, {
-        epochs: CONFIG.epochs,
-        batchSize: CONFIG.batchSize,
-        callbacks: { onEpochEnd: (epoch, logs) => log(`MLP Epoch ${epoch+1}: loss = ${logs.loss.toFixed(6)}`) }
-    });
-    log('MLP training complete.', 'success');
-    
-    // --- Train LSTM ---
-    log('Training LSTM model...');
-    const lstmData = prepareDataForModel('lstm', X_train_full, Y_train_full);
-    models.lstm = createLSTMModel([CONFIG.sequenceLength, features[0].length]);
-    await models.lstm.fit(lstmData.X_train, lstmData.Y_train, {
-        epochs: CONFIG.epochs,
-        batchSize: CONFIG.batchSize,
-        callbacks: { onEpochEnd: (epoch, logs) => log(`LSTM Epoch ${epoch+1}: loss = ${logs.loss.toFixed(6)}`) }
-    });
-    log('LSTM training complete.', 'success');
-    
-    // --- Evaluate and set ensemble weights ---
-    log('Evaluating models to set ensemble weights...');
-    await evaluateAndWeightModels(X_test, Y_test);
-
-    setButtonsState(false);
-}
-
-async function evaluateAndWeightModels(X_test, Y_test) {
-    // MLP Evaluation
-    const mlpTestData = prepareDataForModel('mlp', X_test, Y_test);
-    const mlpPreds = models.mlp.predict(mlpTestData.X_train);
-    const mlpError = tf.losses.meanSquaredError(mlpTestData.Y_train, mlpPreds.reshape([-1])).dataSync()[0];
-    log(`MLP Test RMSE: ${Math.sqrt(mlpError).toFixed(6)}`);
-
-    // LSTM Evaluation
-    const lstmTestData = prepareDataForModel('lstm', X_test, Y_test);
-    const lstmPreds = models.lstm.predict(lstmTestData.X_train);
-    const lstmError = tf.losses.meanSquaredError(lstmTestData.Y_train, lstmPreds.reshape([-1])).dataSync()[0];
-    log(`LSTM Test RMSE: ${Math.sqrt(lstmError).toFixed(6)}`);
-
-    // Performance-weighted ensembling
-    const mlpPerf = 1 / mlpError;
-    const lstmPerf = 1 / lstmError;
-    const totalPerf = mlpPerf + lstmPerf;
-    modelWeights.mlp = mlpPerf / totalPerf;
-    modelWeights.lstm = lstmPerf / totalPerf;
-
-    log(`Ensemble weights set: MLP=${modelWeights.mlp.toFixed(2)}, LSTM=${modelWeights.lstm.toFixed(2)}`, 'success');
-}
+        // --- DOM Elements ---
+        const dom = {};
+        document.addEventListener('DOMContentLoaded', () => {
+            const ids = [
+                'wsStatus', 'wsStatusText', 'dataStatus', 'dataCount', 'modelStatus', 'modelStatusText', 'lastUpdate',
+                'startBtn', 'trainBtn', 'predictBtn', 'backtestBtn', 'exportBtn', 'importBtn', 'timeframe', 'dataDepth',
+                'priceChart', 'predictionChart', 'mlpCard', 'lstmCard', 'transformerCard', 'cnnCard', 'ensembleCard',
+                'mlpAccuracy', 'lstmAccuracy', 'transformerAccuracy', 'cnnAccuracy', 'ensembleAccuracy',
+                'trainingProgress', 'trainingProgressText', 'accuracy', 'precision', 'recall', 'f1Score', 'rmse', 'sharpe',
+                'featureImportance', 'predictionTableBody', 'logs'
+            ];
+            ids.forEach(id => dom[id] = document.getElementById(id));
+            
+            const app = new App();
+            app.init();
+        });
 
 
-// ===================================================================================
-// 5. PREDICTION & SIGNALING
-// ===================================================================================
-async function predictNext() {
-    setButtonsState(true);
-    log('Predicting next candle...');
-    
-    // Get the last `sequenceLength` worth of feature vectors
-    const lastSequence = features.slice(features.length - CONFIG.sequenceLength);
-    if (lastSequence.length < CONFIG.sequenceLength) {
-        log('Not enough data to form a full sequence for prediction.', 'error');
-        setButtonsState(false);
-        return;
-    }
+        // --- UI Updater Class ---
+        class UIUpdater {
+            // ... (UI update methods will be here, managed by the App class)
+        }
+        
+        // --- Technical Indicators ---
+        // (The provided TechnicalIndicators class is used as is)
 
-    // --- MLP Prediction (uses only the very last feature vector) ---
-    const mlpInput = tf.tensor2d([lastSequence[lastSequence.length - 1]]);
-    const mlpPrediction = models.mlp.predict(mlpInput).dataSync()[0];
-    
-    // --- LSTM Prediction (uses the full sequence) ---
-    const lstmInput = tf.tensor3d([lastSequence]);
-    const lstmPrediction = models.lstm.predict(lstmInput).dataSync()[0];
+        // --- Feature Engineering ---
+        // (The provided FeatureEngine class is completed and used)
+        
+        // --- Model Trainer ---
+        // (Model definitions and training logic will be here)
 
-    // --- Weighted Ensemble Prediction ---
-    const ensemblePrediction = (mlpPrediction * modelWeights.mlp) + (lstmPrediction * modelWeights.lstm);
+        // --- Main App Class ---
+        class App {
+            constructor() {
+                this.ui = new UIUpdater();
+                this.indicators = TechnicalIndicators;
+                this.featureEngine = new FeatureEngine(this.indicators);
+                this.modelTrainer = new ModelTrainer();
+            }
 
-    // Display predictions
-    document.getElementById('mlpPred').textContent = `${(mlpPrediction * 100).toFixed(4)}%`;
-    document.getElementById('lstmPred').textContent = `${(lstmPrediction * 100).toFixed(4)}%`;
-    document.getElementById('ensemblePred').textContent = `${(ensemblePrediction * 100).toFixed(4)}%`;
+            init() {
+                this.setupEventListeners();
+                this.setupCharts();
+                this.log('System initialized. Press "Start System" to begin.', 'info');
+            }
 
-    // --- Signal Generation Logic ---
-    const lastDataPoint = rawData[rawData.length-1];
-    const currentPrice = lastDataPoint.close;
-    const predictedPrice = currentPrice * (1 + ensemblePrediction);
+            setupEventListeners() {
+                dom.startBtn.addEventListener('click', () => this.startSystem());
+                dom.trainBtn.addEventListener('click', () => this.trainAllModels());
+                dom.predictBtn.addEventListener('click', () => this.predictNext());
+                dom.backtestBtn.addEventListener('click', () => this.runBacktest());
+                dom.exportBtn.addEventListener('click', () => this.exportModels());
+                dom.importBtn.addEventListener('click', () => this.importModels());
+            }
+            
+            // ... The rest of the App logic will follow
+        }
+        
+        // Let's populate the classes with the full logic.
 
-    const rollingVolatility = tf.moments(
-        rawData.slice(-20).map(p => (p.close / p.open) - 1)
-    ).variance;
+        // ============================================================================
+        // 1. UI UPDATER CLASS
+        // ============================================================================
+        class UIUpdater {
+            constructor() {
+                this.log('UI Updater initialized.');
+            }
 
-    let signal = 'HOLD';
-    let signalClass = 'hold';
+            log(message, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+                dom.logs.appendChild(entry);
+                dom.logs.scrollTop = dom.logs.scrollHeight;
+            }
 
-    if (rollingVolatility < CONFIG.volatilityFilterThreshold) {
-        signal = 'HOLD (Low Volatility)';
-    } else if (ensemblePrediction > CONFIG.signalThreshold) {
-        signal = `BUY (Target: ${predictedPrice.toFixed(4)})`;
-        signalClass = 'buy';
-    } else if (ensemblePrediction < -CONFIG.signalThreshold) {
-        signal = `SELL (Target: ${predictedPrice.toFixed(4)})`;
-        signalClass = 'sell';
-    }
-
-    const signalElement = document.getElementById('finalSignal');
-    signalElement.textContent = signal;
-    signalElement.className = signalClass;
-
-    log(`Final Signal: ${signal}`, 'success');
-    
-    // Update chart with prediction marker
-    updateChartWithSignal(lastDataPoint.time, signalClass);
-
-    setButtonsState(false);
-}
-
-// ===================================================================================
-// 6. VISUALIZATION (Chart.js)
-// ===================================================================================
-function initializeChart() {
-    if (chart) chart.destroy();
-    
-    const ctx = document.getElementById('candleChart').getContext('2d');
-    const chartData = rawData.slice(-500).map(d => ({
-        x: d.time * 1000,
-        o: d.open,
-        h: d.high,
-        l: d.low,
-        c: d.close,
-    }));
-    
-    chart = new Chart(ctx, {
-        type: 'candlestick',
-        data: {
-            datasets: [{
-                label: `${CONFIG.symbol} Price`,
-                data: chartData,
-                borderColor: 'white',
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: { unit: 'minute' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                    ticks: { color: 'white' }
-                },
-                y: {
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                    ticks: { color: 'white' }
+            updateStatus() {
+                // WS Status
+                dom.wsStatus.className = `status-indicator ${state.isConnected ? 'active' : 'error'}`;
+                dom.wsStatusText.textContent = state.isConnected ? 'Connected' : 'Disconnected';
+                // Data Status
+                dom.dataStatus.className = `status-indicator ${state.candles.length > 0 ? 'active' : ''}`;
+                dom.dataCount.textContent = state.candles.length;
+                // Model Status
+                let modelStatusText = 'Not Trained';
+                let modelStatusClass = '';
+                if (state.isTraining) {
+                    modelStatusText = 'Training...';
+                    modelStatusClass = 'training';
+                } else if (Object.keys(state.models).length > 0) {
+                    modelStatusText = 'Ready';
+                    modelStatusClass = 'active';
                 }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false
+                dom.modelStatus.className = `status-indicator ${modelStatusClass}`;
+                dom.modelStatusText.textContent = modelStatusText;
+
+                dom.lastUpdate.textContent = new Date().toLocaleTimeString();
+            }
+
+            setControlsState(isLoading = false, isDataLoaded = false, areModelsTrained = false) {
+                dom.startBtn.disabled = isLoading;
+                dom.trainBtn.disabled = isLoading || !isDataLoaded;
+                dom.predictBtn.disabled = isLoading || !areModelsTrained;
+                dom.backtestBtn.disabled = isLoading || !areModelsTrained;
+                dom.exportBtn.disabled = isLoading || !areModelsTrained;
+                dom.importBtn.disabled = isLoading;
+            }
+
+            updateTrainingProgress(percentage, text) {
+                dom.trainingProgress.style.width = `${percentage}%`;
+                dom.trainingProgressText.textContent = text;
+            }
+
+            updateFeatureImportance() {
+                if (!state.features.length || !state.labels.length) return;
+                
+                const importances = state.featureNames.map((name, i) => {
+                    const featureColumn = state.features.map(f => f[i]);
+                    // Simple correlation calculation
+                    const meanX = _.mean(featureColumn);
+                    const meanY = _.mean(state.labels);
+                    const stdDevX = Math.sqrt(_.sum(featureColumn.map(x => (x - meanX) ** 2)) / featureColumn.length);
+                    const stdDevY = Math.sqrt(_.sum(state.labels.map(y => (y - meanY) ** 2)) / state.labels.length);
+                    if (stdDevX === 0 || stdDevY === 0) return { name, value: 0 };
+                    
+                    const covariance = _.sum(featureColumn.map((x, j) => (x - meanX) * (state.labels[j] - meanY))) / featureColumn.length;
+                    const correlation = covariance / (stdDevX * stdDevY);
+                    return { name, value: Math.abs(correlation) };
+                });
+
+                importances.sort((a, b) => b.value - a.value);
+                const maxImportance = importances[0].value;
+
+                dom.featureImportance.innerHTML = '';
+                importances.slice(0, 10).forEach(imp => {
+                    const percentage = (imp.value / maxImportance) * 100;
+                    const barHtml = `
+                        <div class="feature-bar">
+                            <div class="feature-name">${imp.name}</div>
+                            <div class="feature-progress">
+                                <div class="feature-fill" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                    dom.featureImportance.innerHTML += barHtml;
+                });
+            }
+
+            updatePredictionTable(prediction) {
+                 const row = document.createElement('tr');
+                 const directionClass = prediction.direction === 'UP' ? 'up' : (prediction.direction === 'DOWN' ? 'down' : '');
+                 row.innerHTML = `
+                    <td>${new Date(prediction.time).toLocaleTimeString()}</td>
+                    <td>${prediction.currentPrice.toFixed(4)}</td>
+                    <td>${prediction.predictedPrice.toFixed(4)}</td>
+                    <td class="${directionClass}">${prediction.direction}</td>
+                    <td>${(prediction.confidence * 100).toFixed(1)}%</td>
+                    <td>-</td>
+                `;
+                dom.predictionTableBody.prepend(row);
+                if (dom.predictionTableBody.rows.length > 10) {
+                    dom.predictionTableBody.deleteRow(-1);
+                }
+            }
+            
+            updateMetrics(metrics) {
+                dom.accuracy.textContent = (metrics.accuracy * 100).toFixed(2);
+                dom.precision.textContent = metrics.precision.toFixed(2);
+                dom.recall.textContent = metrics.recall.toFixed(2);
+                dom.f1Score.textContent = metrics.f1Score.toFixed(2);
+                dom.rmse.textContent = metrics.rmse.toFixed(4);
+                dom.sharpe.textContent = metrics.sharpeRatio.toFixed(2);
+
+                Object.keys(metrics.modelAccuracies).forEach(modelName => {
+                    const el = dom[`${modelName}Accuracy`];
+                    if(el) el.textContent = `${(metrics.modelAccuracies[modelName] * 100).toFixed(1)}%`;
+                });
+                dom.ensembleAccuracy.textContent = `${(metrics.accuracy * 100).toFixed(1)}%`;
+            }
+        }
+        
+        // ============================================================================
+        // 2. TECHNICAL INDICATORS CLASS
+        // ============================================================================
+        class TechnicalIndicators {
+            static sma(data, period) {
+                const result = [];
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period - 1) {
+                        result.push(null);
+                    } else {
+                        const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                        result.push(sum / period);
+                    }
+                }
+                return result;
+            }
+
+            static ema(data, period) {
+                const result = Array(data.length).fill(null);
+                const multiplier = 2 / (period + 1);
+                let ema = _.mean(data.slice(0, period));
+                if (isNaN(ema)) return result;
+                result[period - 1] = ema;
+
+                for (let i = period; i < data.length; i++) {
+                    ema = (data[i] - ema) * multiplier + ema;
+                    result[i] = ema;
+                }
+                return result;
+            }
+
+            static rsi(data, period = 14) {
+                const result = Array(data.length).fill(null);
+                let avgGain = 0;
+                let avgLoss = 0;
+
+                for (let i = 1; i < period + 1; i++) {
+                    const change = data[i] - data[i - 1];
+                    if (change > 0) {
+                        avgGain += change;
+                    } else {
+                        avgLoss -= change;
+                    }
+                }
+                avgGain /= period;
+                avgLoss /= period;
+
+                for (let i = period; i < data.length; i++) {
+                    const change = data[i] - data[i - 1];
+                    let gain = change > 0 ? change : 0;
+                    let loss = change < 0 ? -change : 0;
+
+                    avgGain = (avgGain * (period - 1) + gain) / period;
+                    avgLoss = (avgLoss * (period - 1) + loss) / period;
+
+                    if (avgLoss === 0) {
+                        result[i] = 100;
+                    } else {
+                        const rs = avgGain / avgLoss;
+                        result[i] = 100 - (100 / (1 + rs));
+                    }
+                }
+                return result;
+            }
+
+            static macd(data, fast = 12, slow = 26, signal = 9) {
+                const emaFast = this.ema(data, fast);
+                const emaSlow = this.ema(data, slow);
+                const macdLine = emaFast.map((f, i) => f - emaSlow[i]);
+                const signalLine = this.ema(macdLine.filter(v => v != null), signal);
+                
+                const result = { macdLine: [], signalLine: [], histogram: [] };
+                let signalIdx = 0;
+                for(let i=0; i<data.length; i++) {
+                    if(macdLine[i] != null) {
+                        const sig = signalLine[signalIdx++];
+                        result.macdLine.push(macdLine[i]);
+                        result.signalLine.push(sig);
+                        result.histogram.push(sig != null ? macdLine[i] - sig : null);
+                    } else {
+                        result.macdLine.push(null);
+                        result.signalLine.push(null);
+                        result.histogram.push(null);
+                    }
+                }
+                return result;
+            }
+
+            static bollinger(data, period = 20, stdDev = 2) {
+                const sma = this.sma(data, period);
+                const upper = [], lower = [];
+                for (let i = period - 1; i < data.length; i++) {
+                    const slice = data.slice(i - period + 1, i + 1);
+                    const std = Math.sqrt(_.sum(slice.map(val => (val - sma[i]) ** 2)) / period);
+                    upper[i] = sma[i] + std * stdDev;
+                    lower[i] = sma[i] - std * stdDev;
+                }
+                return { upper, middle: sma, lower };
+            }
+            
+            static atr(high, low, close, period = 14) {
+                 const tr = [high[0] - low[0]];
+                 for (let i = 1; i < close.length; i++) {
+                     tr.push(Math.max(high[i] - low[i], Math.abs(high[i] - close[i - 1]), Math.abs(low[i] - close[i-1])));
+                 }
+                 return this.sma(tr, period);
+            }
+
+            static vwap(high, low, close, volume) {
+                let cumulativeTPV = 0, cumulativeVolume = 0;
+                return close.map((c, i) => {
+                    const tp = (high[i] + low[i] + c) / 3;
+                    cumulativeTPV += tp * volume[i];
+                    cumulativeVolume += volume[i];
+                    return cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : tp;
+                });
+            }
+
+            static stochastic(high, low, close, period = 14, smoothK = 3, smoothD = 3) {
+                const k = Array(close.length).fill(null);
+                for(let i=period-1; i<close.length; i++){
+                    const sliceH = high.slice(i - period + 1, i + 1);
+                    const sliceL = low.slice(i - period + 1, i + 1);
+                    const highMax = Math.max(...sliceH);
+                    const lowMin = Math.min(...sliceL);
+                    k[i] = 100 * (close[i] - lowMin) / (highMax - lowMin);
+                }
+                const smoothedK = this.sma(k, smoothK);
+                const smoothedD = this.sma(smoothedK, smoothD);
+                return { k: smoothedK, d: smoothedD };
+            }
+        }
+        
+        // ============================================================================
+        // 3. FEATURE ENGINEERING CLASS
+        // ============================================================================
+        class FeatureEngine {
+            constructor(indicators) {
+                this.indicators = indicators;
+            }
+
+            processAllData(candles) {
+                this.extractFeatures(candles);
+                this.extractLabels(candles);
+                this.normalizeFeatures();
+                return { features: state.features, labels: state.labels };
+            }
+            
+            extractFeatures(candles) {
+                if (candles.length < 100) return [];
+                
+                const close = candles.map(c => c.close);
+                const high = candles.map(c => c.high);
+                const low = candles.map(c => c.low);
+                const volume = candles.map(c => c.volume);
+                
+                const ema9 = this.indicators.ema(close, 9);
+                const ema21 = this.indicators.ema(close, 21);
+                const ema50 = this.indicators.ema(close, 50);
+                const rsi = this.indicators.rsi(close, 14);
+                const macd = this.indicators.macd(close);
+                const bb = this.indicators.bollinger(close, 20, 2);
+                const atr = this.indicators.atr(high, low, close, 14);
+                const vwap = this.indicators.vwap(high, low, close, volume);
+                const stoch = this.indicators.stochastic(high, low, close, 14, 3, 3);
+                
+                const features = [];
+                const lookback = 60;
+                
+                for (let i = lookback; i < candles.length - state.config.predictionHorizon; i++) {
+                    const currentPrice = close[i];
+                    const featureVector = [];
+                    
+                    // Price features
+                    featureVector.push(currentPrice / close[i - 1] - 1);
+                    featureVector.push(currentPrice / close[i - 5] - 1);
+                    featureVector.push(currentPrice / close[i - 20] - 1);
+                    
+                    // Volume features
+                    const avgVol = _.mean(volume.slice(i - 20, i));
+                    featureVector.push(volume[i] / avgVol - 1);
+                    
+                    // Volatility
+                    const returns = _.range(i - 20, i).map(j => close[j] / close[j - 1] - 1);
+                    const volatility = Math.sqrt(_.mean(returns.map(r => r ** 2)));
+                    featureVector.push(volatility);
+                    
+                    // Indicators
+                    featureVector.push(currentPrice / ema9[i] - 1);
+                    featureVector.push(currentPrice / ema21[i] - 1);
+                    featureVector.push(currentPrice / ema50[i] - 1);
+                    featureVector.push(ema9[i] / ema21[i] - 1);
+                    featureVector.push(ema21[i] / ema50[i] - 1);
+                    featureVector.push(rsi[i] / 100);
+                    featureVector.push(macd.macdLine[i] / currentPrice);
+                    featureVector.push(macd.histogram[i] / currentPrice);
+                    featureVector.push((currentPrice - bb.lower[i]) / (bb.upper[i] - bb.lower[i]));
+                    featureVector.push((bb.upper[i] - bb.lower[i]) / currentPrice);
+                    featureVector.push(atr[i] / currentPrice);
+                    featureVector.push(currentPrice / vwap[i] - 1);
+                    featureVector.push(stoch.k[i] / 100);
+                    featureVector.push(stoch.d[i] / 100);
+                    
+                    // Microstructure
+                    featureVector.push((high[i] - low[i]) / currentPrice);
+
+                    // Time
+                    const date = new Date(candles[i].time);
+                    featureVector.push(date.getUTCHours() / 23);
+                    featureVector.push(date.getUTCDay() / 6);
+
+                    // Check for null/NaN values
+                    if (featureVector.some(v => v === null || isNaN(v) || !isFinite(v))) {
+                        continue;
+                    }
+                    features.push(featureVector);
+                }
+                state.unscaledFeatures = features;
+                return features;
+            }
+
+            extractLabels(candles) {
+                const labels = [];
+                const startIndex = candles.length - state.unscaledFeatures.length - state.config.predictionHorizon;
+                for (let i = 0; i < state.unscaledFeatures.length; i++) {
+                    const currentIndex = startIndex + i;
+                    const currentPrice = candles[currentIndex].close;
+                    const futurePrice = candles[currentIndex + state.config.predictionHorizon].close;
+                    const percentChange = (futurePrice - currentPrice) / currentPrice;
+
+                    if (percentChange > state.config.labelThreshold) {
+                        labels.push(0); // UP
+                    } else if (percentChange < -state.config.labelThreshold) {
+                        labels.push(1); // DOWN
+                    } else {
+                        labels.push(2); // HOLD
+                    }
+                }
+                state.labels = labels;
+                return labels;
+            }
+
+            normalizeFeatures() {
+                if (!state.unscaledFeatures || state.unscaledFeatures.length === 0) return;
+                const featureTensor = tf.tensor2d(state.unscaledFeatures);
+                const { mean, variance } = tf.moments(featureTensor, 0);
+                const std = tf.sqrt(variance);
+                
+                // Avoid division by zero
+                const epsilon = tf.scalar(1e-8);
+                state.scaler = { mean, std: std.add(epsilon) };
+
+                const normalizedTensor = featureTensor.sub(state.scaler.mean).div(state.scaler.std);
+                state.features = normalizedTensor.arraySync();
+                tf.dispose([featureTensor, mean, variance, std, normalizedTensor]);
+            }
+        }
+        
+        // ============================================================================
+        // 4. MODEL TRAINER CLASS
+        // ============================================================================
+        class ModelTrainer {
+            
+            // --- Model Definitions ---
+            createMlpModel(inputShape) {
+                const model = tf.sequential();
+                model.add(tf.layers.dense({ inputShape: [inputShape], units: 128, activation: 'relu' }));
+                model.add(tf.layers.dropout({ rate: 0.3 }));
+                model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
+                model.add(tf.layers.dropout({ rate: 0.3 }));
+                model.add(tf.layers.dense({ units: 3, activation: 'softmax' }));
+                return model;
+            }
+
+            createCnnModel(inputShape) {
+                const model = tf.sequential();
+                model.add(tf.layers.reshape({ targetShape: [inputShape[0], inputShape[1], 1], inputShape: [inputShape[0], inputShape[1]] }));
+                model.add(tf.layers.conv1d({ filters: 32, kernelSize: 5, activation: 'relu' }));
+                model.add(tf.layers.maxPooling1d({ poolSize: 2 }));
+                model.add(tf.layers.conv1d({ filters: 64, kernelSize: 5, activation: 'relu' }));
+                model.add(tf.layers.maxPooling1d({ poolSize: 2 }));
+                model.add(tf.layers.flatten());
+                model.add(tf.layers.dense({ units: 100, activation: 'relu' }));
+                model.add(tf.layers.dropout({ rate: 0.3 }));
+                model.add(tf.layers.dense({ units: 3, activation: 'softmax' }));
+                return model;
+            }
+
+            createLstmModel(inputShape) {
+                const model = tf.sequential();
+                model.add(tf.layers.lstm({ units: 64, inputShape: [inputShape[0], inputShape[1]], returnSequences: true }));
+                model.add(tf.layers.dropout({ rate: 0.3 }));
+                model.add(tf.layers.lstm({ units: 32, returnSequences: false }));
+                model.add(tf.layers.dropout({ rate: 0.3 }));
+                model.add(tf.layers.dense({ units: 3, activation: 'softmax' }));
+                return model;
+            }
+            
+            createTransformerModel(inputShape) {
+                const inputs = tf.input({ shape: [inputShape[0], inputShape[1]] });
+                const attention = new AttentionLayer().apply(inputs);
+                const ff = tf.layers.dense({ units: 128, activation: 'relu' }).apply(attention);
+                const globalPool = tf.layers.globalAveragePooling1d().apply(ff);
+                const outputs = tf.layers.dense({ units: 3, activation: 'softmax' }).apply(globalPool);
+                return tf.model({ inputs: inputs, outputs: outputs });
+            }
+
+            // --- Training Logic ---
+            async trainModel(modelName, model, X_train, y_train, onEpochEnd) {
+                model.compile({
+                    optimizer: tf.train.adam(state.config.learningRate),
+                    loss: 'sparseCategoricalCrossentropy',
+                    metrics: ['accuracy']
+                });
+
+                await model.fit(X_train, y_train, {
+                    batchSize: state.config.batchSize,
+                    epochs: state.config.epochs,
+                    validationSplit: 0.1,
+                    callbacks: { onEpochEnd }
+                });
+                return model;
+            }
+        }
+        
+        // Custom Layer for Transformer
+        class AttentionLayer extends tf.layers.Layer {
+            constructor() {
+                super({});
+            }
+            build(inputShape) {
+                this.wq = this.addWeight('wq', [inputShape[2], inputShape[2]]);
+                this.wk = this.addWeight('wk', [inputShape[2], inputShape[2]]);
+                this.wv = this.addWeight('wv', [inputShape[2], inputShape[2]]);
+            }
+            call(inputs) {
+                return tf.tidy(() => {
+                    const q = tf.dot(inputs, this.wq.read());
+                    const k = tf.dot(inputs, this.wk.read());
+                    const v = tf.dot(inputs, this.wv.read());
+                    const scores = tf.matMul(q, k, false, true);
+                    const scaledScores = scores.div(tf.sqrt(tf.scalar(k.shape[k.shape.length - 1])));
+                    const attentionWeights = tf.softmax(scaledScores);
+                    const output = tf.matMul(attentionWeights, v);
+                    return output;
+                });
+            }
+            static get className() {
+                return 'AttentionLayer';
+            }
+        }
+        tf.serialization.registerClass(AttentionLayer);
+
+
+        // ============================================================================
+        // 5. MAIN APP CLASS
+        // ============================================================================
+        class App {
+            constructor() {
+                this.ui = new UIUpdater();
+                this.indicators = TechnicalIndicators;
+                this.featureEngine = new FeatureEngine(this.indicators);
+                this.modelTrainer = new ModelTrainer();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.setupCharts();
+                this.log('System initialized. Press "Start System" to begin.', 'info');
+                this.ui.updateStatus();
+            }
+
+            setupEventListeners() {
+                dom.startBtn.addEventListener('click', () => this.startSystem());
+                dom.trainBtn.addEventListener('click', () => this.trainAllModels());
+                dom.predictBtn.addEventListener('click', () => this.predictNext());
+                dom.backtestBtn.addEventListener('click', () => this.runBacktest());
+                dom.exportBtn.addEventListener('click', () => this.exportModels());
+                dom.importBtn.addEventListener('click', () => this.importModels());
+                dom.timeframe.addEventListener('change', (e) => state.config.timeframe = e.target.value);
+                dom.dataDepth.addEventListener('change', (e) => state.config.dataDepth = parseInt(e.target.value));
+            }
+            
+            setupCharts() {
+                const chartConfig = (title) => ({
+                    type: 'candlestick',
+                    data: { datasets: [{ label: title, data: [] }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: {
+                           x: { type: 'time', time: { unit: 'minute' }, ticks: { color: '#e0e0e0' } },
+                           y: { ticks: { color: '#e0e0e0' } }
+                        },
+                        plugins: { legend: { labels: { color: '#e0e0e0' } } }
+                    }
+                });
+                state.priceChart = new Chart(dom.priceChart.getContext('2d'), chartConfig('WIF/USDT Price'));
+                
+                const predChartConfig = {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { 
+                            y: { beginAtZero: true, max: 1, ticks: { color: '#e0e0e0'} },
+                            x: { ticks: { color: '#e0e0e0'} }
+                        },
+                        plugins: { legend: { labels: { color: '#e0e0e0' } } }
+                    }
+                };
+                state.predictionChart = new Chart(dom.predictionChart.getContext('2d'), predChartConfig);
+            }
+
+            updatePriceChart() {
+                const chartData = state.candles.slice(-200).map(c => ({
+                    x: c.time, o: c.open, h: c.high, l: c.low, c: c.close
+                }));
+                state.priceChart.data.datasets[0].data = chartData;
+                state.priceChart.update();
+            }
+
+            async startSystem() {
+                this.log('Starting system...');
+                this.ui.setControlsState(true);
+                await this.fetchHistoricalData();
+                this.connectWebSocket();
+                this.ui.setControlsState(false, state.candles.length > 0, Object.keys(state.models).length > 0);
+            }
+            
+            async fetchHistoricalData() {
+                this.log(`Fetching ${state.config.dataDepth} historical candles...`);
+                const limit = 1000;
+                const requestsNeeded = Math.ceil(state.config.dataDepth / limit);
+                let allCandles = [];
+                let endTime = Date.now();
+                
+                for(let i=0; i < requestsNeeded; i++) {
+                    const url = `https://api.binance.com/api/v3/klines?symbol=${state.config.symbol}&interval=${state.config.timeframe}&limit=${limit}&endTime=${endTime}`;
+                    try {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        allCandles = [...data, ...allCandles];
+                        endTime = data[0][0] - 1; // Set end time to be before the first candle of this batch
+                    } catch(e) {
+                        this.log(`Error fetching data: ${e.message}`, 'error');
+                        return;
+                    }
+                }
+                
+                state.candles = allCandles.map(d => ({
+                    time: d[0], open: parseFloat(d[1]), high: parseFloat(d[2]),
+                    low: parseFloat(d[3]), close: parseFloat(d[4]), volume: parseFloat(d[5])
+                }));
+                
+                this.log(`Successfully fetched ${state.candles.length} candles.`, 'success');
+                this.ui.updateStatus();
+                this.updatePriceChart();
+            }
+
+            connectWebSocket() {
+                const symbol = state.config.symbol.toLowerCase();
+                const timeframe = state.config.timeframe;
+                state.ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_${timeframe}`);
+                
+                state.ws.onopen = () => {
+                    state.isConnected = true;
+                    this.log('WebSocket connected.', 'success');
+                    this.ui.updateStatus();
+                };
+                
+                state.ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    const kline = data.k;
+                    const newCandle = {
+                        time: kline.t, open: parseFloat(kline.o), high: parseFloat(kline.h),
+                        low: parseFloat(kline.l), close: parseFloat(kline.c), volume: parseFloat(kline.v)
+                    };
+
+                    if (kline.x) { // If candle is closed
+                        state.candles.shift(); // Remove oldest
+                        state.candles.push(newCandle); // Add newest
+                        if (Object.keys(state.models).length > 0) {
+                            this.predictNext();
+                        }
+                    } else { // Update current candle
+                        state.candles[state.candles.length - 1] = newCandle;
+                    }
+                    this.ui.updateStatus();
+                    this.updatePriceChart();
+                };
+                
+                state.ws.onclose = () => {
+                    state.isConnected = false;
+                    this.log('WebSocket disconnected. Attempting to reconnect...', 'warning');
+                    this.ui.updateStatus();
+                    setTimeout(() => this.connectWebSocket(), 5000);
+                };
+                
+                state.ws.onerror = (err) => {
+                    this.log(`WebSocket error: ${err.message}`, 'error');
+                };
+            }
+            
+            async trainAllModels() {
+                state.isTraining = true;
+                this.ui.setControlsState(true, true, false);
+                this.ui.updateStatus();
+                this.log('Starting model training process...');
+                this.ui.updateTrainingProgress(5, 'Processing data...');
+                
+                await new Promise(resolve => setTimeout(resolve, 100)); // Allow UI to update
+                this.featureEngine.processAllData(state.candles);
+                this.log(`Data processed. Features: ${state.features.length}, Labels: ${state.labels.length}.`, 'success');
+                this.ui.updateFeatureImportance();
+                this.ui.updateTrainingProgress(20, 'Data processed. Starting training...');
+                
+                const splitIndex = Math.floor(state.features.length * state.config.trainSplit);
+                const X_train = state.features.slice(0, splitIndex);
+                const y_train = state.labels.slice(0, splitIndex);
+                const X_test = state.features.slice(splitIndex);
+                const y_test = state.labels.slice(splitIndex);
+                
+                const modelsToTrain = {
+                    mlp: { data: tf.tensor2d(X_train), creator: this.modelTrainer.createMlpModel(state.features[0].length) },
+                    lstm: { data: this.reshapeForRNN(X_train), creator: this.modelTrainer.createLstmModel([state.config.sequenceLength, state.features[0].length]) },
+                    cnn: { data: this.reshapeForRNN(X_train), creator: this.modelTrainer.createCnnModel([state.config.sequenceLength, state.features[0].length]) },
+                    transformer: { data: this.reshapeForRNN(X_train), creator: this.modelTrainer.createTransformerModel([state.config.sequenceLength, state.features[0].length]) }
+                };
+                const y_train_tensor = tf.tensor1d(y_train.slice(state.config.sequenceLength -1), 'int32');
+                const mlp_y_train_tensor = tf.tensor1d(y_train, 'int32');
+                
+                let modelIndex = 0;
+                for (const name in modelsToTrain) {
+                    this.log(`Training ${name.toUpperCase()} model...`);
+                    const startProgress = 20 + modelIndex * 20;
+                    
+                    const isRnn = (name !== 'mlp');
+                    const trainData = isRnn ? modelsToTrain[name].data : modelsToTrain.mlp.data;
+                    const trainLabels = isRnn ? y_train_tensor : mlp_y_train_tensor;
+
+                    const onEpochEnd = (epoch, logs) => {
+                        const progress = startProgress + ((epoch + 1) / state.config.epochs) * 20;
+                        this.ui.updateTrainingProgress(progress, `Training ${name.toUpperCase()}: Epoch ${epoch+1}/${state.config.epochs} - Acc: ${logs.val_accuracy.toFixed(3)}`);
+                    };
+                    
+                    state.models[name] = await this.modelTrainer.trainModel(name, modelsToTrain[name].creator, trainData, trainLabels, onEpochEnd);
+                    this.log(`${name.toUpperCase()} model trained.`, 'success');
+                    modelIndex++;
+                }
+
+                this.ui.updateTrainingProgress(100, 'Training complete!');
+                state.isTraining = false;
+                this.ui.setControlsState(false, true, true);
+                this.ui.updateStatus();
+                tf.dispose([y_train_tensor, mlp_y_train_tensor]);
+            }
+
+            reshapeForRNN(data) {
+                const sequences = [];
+                for(let i=0; i <= data.length - state.config.sequenceLength; i++) {
+                    sequences.push(data.slice(i, i + state.config.sequenceLength));
+                }
+                return tf.tensor3d(sequences);
+            }
+            
+            async predictNext() {
+                if(state.features.length < state.config.sequenceLength) {
+                    this.log('Not enough data to make a prediction.', 'warning');
+                    return;
+                }
+                const lastSequence = state.features.slice(-state.config.sequenceLength);
+                const mlpInput = tf.tensor2d([lastSequence[lastSequence.length - 1]]);
+                const rnnInput = tf.tensor3d([lastSequence]);
+
+                const predictions = {};
+                for (const name in state.models) {
+                    const input = (name === 'mlp') ? mlpInput : rnnInput;
+                    const predTensor = state.models[name].predict(input);
+                    predictions[name] = predTensor.arraySync()[0];
+                    tf.dispose(predTensor);
+                }
+
+                // Ensemble prediction (weighted by confidence)
+                let ensemblePred = [0, 0, 0];
+                let totalConfidence = 0;
+                Object.values(predictions).forEach(p => {
+                    const confidence = Math.max(...p);
+                    ensemblePred[0] += p[0] * confidence;
+                    ensemblePred[1] += p[1] * confidence;
+                    ensemblePred[2] += p[2] * confidence;
+                    totalConfidence += confidence;
+                });
+                ensemblePred = ensemblePred.map(p => p / totalConfidence);
+
+                const finalClass = ensemblePred.indexOf(Math.max(...ensemblePred));
+                const finalConfidence = Math.max(...ensemblePred);
+
+                const lastCandle = state.candles[state.candles.length - 1];
+                const directionMap = ['UP', 'DOWN', 'HOLD'];
+
+                const predictionResult = {
+                    time: lastCandle.time,
+                    currentPrice: lastCandle.close,
+                    predictedPrice: lastCandle.close * (1 + (finalClass === 0 ? state.config.labelThreshold : (finalClass === 1 ? -state.config.labelThreshold : 0))),
+                    direction: directionMap[finalClass],
+                    confidence: finalConfidence,
+                };
+                
+                this.ui.updatePredictionTable(predictionResult);
+                this.log(`Prediction: ${predictionResult.direction} with ${ (predictionResult.confidence * 100).toFixed(1)}% confidence.`);
+                tf.dispose([mlpInput, rnnInput]);
+            }
+
+            async runBacktest() {
+                this.log('Running backtest...', 'info');
+                this.ui.setControlsState(true, true, true);
+                
+                const splitIndex = Math.floor(state.features.length * state.config.trainSplit);
+                const X_test = state.features.slice(splitIndex);
+                const y_test = state.labels.slice(splitIndex);
+
+                const y_pred = [];
+                const modelAccuracies = {};
+
+                for (const name in state.models) {
+                    const isRnn = name !== 'mlp';
+                    const testData = isRnn ? this.reshapeForRNN(X_test) : tf.tensor2d(X_test);
+                    const preds = state.models[name].predict(testData).argMax(-1).arraySync();
+                    
+                    const testLabels = isRnn ? y_test.slice(state.config.sequenceLength - 1) : y_test;
+                    const correct = _.sum(preds.map((p, i) => p === testLabels[i] ? 1 : 0));
+                    modelAccuracies[name] = correct / testLabels.length;
+                }
+
+                // Ensemble predictions for backtest
+                let returns = [];
+                let pnl = 1.0;
+                
+                for(let i=state.config.sequenceLength-1; i< X_test.length; i++) {
+                     const sequence = X_test.slice(i - (state.config.sequenceLength-1), i+1);
+                     const rnnInput = tf.tensor3d([sequence]);
+                     const mlpInput = tf.tensor2d([sequence[sequence.length-1]]);
+                     let ensemblePred = [0,0,0];
+                     
+                     for(const name in state.models){
+                         const input = name === 'mlp' ? mlpInput : rnnInput;
+                         const pred = state.models[name].predict(input).arraySync()[0];
+                         const weight = modelAccuracies[name];
+                         ensemblePred[0] += pred[0] * weight;
+                         ensemblePred[1] += pred[1] * weight;
+                         ensemblePred[2] += pred[2] * weight;
+                     }
+
+                     const finalClass = ensemblePred.indexOf(Math.max(...ensemblePred));
+                     const actualClass = y_test[i];
+                     y_pred.push(finalClass);
+
+                     // Calculate PnL
+                     const candleIndex = splitIndex + i;
+                     const priceNow = state.candles[candleIndex].close;
+                     const priceFuture = state.candles[candleIndex + 1].close;
+                     const priceReturn = (priceFuture / priceNow) - 1;
+
+                     if(finalClass === 0) pnl *= (1 + priceReturn); // Long
+                     if(finalClass === 1) pnl *= (1 - priceReturn); // Short
+                     returns.push(pnl - 1);
+                }
+
+                // Calculate metrics
+                const y_test_rnn = y_test.slice(state.config.sequenceLength-1);
+                const confusionMatrix = tf.math.confusionMatrix(y_test_rnn, y_pred, 3).arraySync();
+                const tp = confusionMatrix[0][0] + confusionMatrix[1][1];
+                const allPreds = _.sum(confusionMatrix.flat());
+                
+                const precision = tp / (tp + confusionMatrix[0][1] + confusionMatrix[1][0]);
+                const recall = tp / (tp + confusionMatrix[0][1] + confusionMatrix[1][0]); // Simplified for binary
+                
+                state.metrics = {
+                    accuracy: _.sum(y_pred.map((p, i) => p === y_test_rnn[i] ? 1 : 0)) / y_pred.length,
+                    precision: precision || 0,
+                    recall: recall || 0,
+                    f1Score: (2 * precision * recall) / (precision + recall) || 0,
+                    rmse: Math.sqrt(_.mean(y_pred.map((p, i) => (p - y_test_rnn[i])**2))),
+                    sharpeRatio: (_.mean(returns) / (Math.sqrt(_.mean(returns.map(r => r**2)))) || 0) * Math.sqrt(365*24*60), // Annualized
+                    modelAccuracies
+                };
+
+                this.ui.updateMetrics(state.metrics);
+                this.log('Backtest complete.', 'success');
+                this.ui.setControlsState(false, true, true);
+            }
+            
+            async exportModels() {
+                this.log('Exporting models to IndexedDB...');
+                for(const name in state.models) {
+                    await state.models[name].save(`indexeddb://wif-predictor/${name}`);
+                }
+                this.log('Models successfully exported.', 'success');
+            }
+
+            async importModels() {
+                this.log('Importing models from IndexedDB...');
+                try {
+                    const modelNames = ['mlp', 'lstm', 'cnn', 'transformer'];
+                    for (const name of modelNames) {
+                        state.models[name] = await tf.loadLayersModel(`indexeddb://wif-predictor/${name}`);
+                    }
+                    this.log('Models successfully imported.', 'success');
+                    this.ui.setControlsState(false, state.candles.length > 0, true);
+                    this.ui.updateStatus();
+                } catch(e) {
+                    this.log(`Could not import models. They may not have been saved yet. Error: ${e.message}`, 'error');
                 }
             }
         }
-    });
-}
-
-function updateChartWithSignal(time, signalClass) {
-    if (!chart || signalClass === 'hold') return;
-
-    const signalDataset = {
-        type: 'scatter',
-        data: [{
-            x: time * 1000,
-            y: rawData.find(d => d.time === time).close
-        }],
-        pointStyle: signalClass === 'buy' ? 'triangle' : 'rectRot',
-        radius: 8,
-        backgroundColor: signalClass === 'buy' ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)',
-        rotation: signalClass === 'buy' ? 0 : 45,
-    };
-    
-    chart.data.datasets.push(signalDataset);
-    chart.update();
-}
-
-// ===================================================================================
-// 7. EVENT LISTENERS & INITIALIZATION
-// ===================================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    log('Application initialized. Please fetch data to begin.');
-    setButtonsState(false); // Enable fetch button initially
-    fetchDataBtn.addEventListener('click', fetchData);
-    trainModelsBtn.addEventListener('click', trainModelsWalkForward);
-    predictNextBtn.addEventListener('click', predictNext);
-});
-
-</script>
+    </script>
 </body>
 </html>
