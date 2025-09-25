@@ -3,321 +3,324 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Trading Assistant</title>
+    <title>Edge Crypto Trading Assistant</title>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js"></script>
     <style>
+        :root {
+            --bg-color: #131722; --pane-bg: #1e222d; --text-color: #d1d4dc;
+            --grid-color: rgba(255, 255, 255, 0.06); --bull-color: #26a69a; --bear-color: #ef5350;
+            --primary-accent: #2962ff; --secondary-accent: #e91e63;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: #121212;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px;
         }
-        #app-container {
-            max-width: 1200px;
-            margin: auto;
+        #app-container { display: flex; flex-direction: column; gap: 15px; max-width: 1400px; margin: auto; }
+        .controls { display: flex; gap: 20px; padding: 10px; background: var(--pane-bg); border-radius: 4px; align-items: center; flex-wrap: wrap; }
+        .controls label { font-weight: bold; }
+        #symbol-search, #timeframe-select {
+            padding: 8px; background: #363a45; color: var(--text-color);
+            border: 1px solid #555; border-radius: 4px;
         }
-        h1 {
-            text-align: center;
-            color: #00bfa5;
-        }
-        .controls {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .controls label {
-            font-weight: bold;
-        }
-        #symbol-search {
-            padding: 8px;
-            background: #2a2a2a;
-            color: #e0e0e0;
-            border: 1px solid #444;
-            border-radius: 4px;
-            width: 250px;
-        }
-        #chart-container {
-            width: 100%;
-            height: 600px;
-            border: 1px solid #444;
-            border-radius: 4px;
-        }
-        #info-panel {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #1a1a1a;
-            border-radius: 4px;
-            border: 1px solid #444;
-        }
-        #info-panel h2 {
-            margin-top: 0;
-            color: #00bfa5;
-        }
-        #signals-list {
-            list-style-type: none;
-            padding: 0;
-        }
-        #signals-list li {
-            padding: 5px 0;
-            border-bottom: 1px solid #333;
-        }
-        .signal-bullish { color: #26a69a; }
-        .signal-bearish { color: #ef5350; }
-        .loader {
-            text-align: center;
-            font-size: 1.2em;
-        }
+        #main-content { display: flex; gap: 15px; height: 75vh; }
+        #chart-panel { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; }
+        #chart-container, #rsi-pane, #macd-pane { position: relative; width: 100%; border-radius: 4px; background: var(--pane-bg); }
+        #chart-container { flex-grow: 5; }
+        #rsi-pane, #macd-pane { flex-grow: 2; }
+        .pane-title { position: absolute; top: 10px; left: 15px; z-index: 10; font-size: 0.8em; opacity: 0.7; }
+        #dashboard { width: 350px; background: var(--pane-bg); border-radius: 4px; padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .score-gauge { text-align: center; }
+        .gauge-circle { position: relative; width: 150px; height: 150px; margin: 20px auto; border-radius: 50%; background: conic-gradient(var(--bear-color) 0deg, var(--bull-color) 180deg); display: flex; align-items: center; justify-content: center; }
+        .gauge-inner { width: 120px; height: 120px; background: var(--pane-bg); border-radius: 50%; }
+        .gauge-pointer { width: 2px; height: 50%; background: var(--text-color); position: absolute; top: 0; left: 50%; transform-origin: bottom; transition: transform 0.5s ease; }
+        .gauge-score { position: absolute; font-size: 2.2em; font-weight: bold; }
+        #indicator-table { width: 100%; border-collapse: collapse; }
+        #indicator-table td { padding: 8px; border-bottom: 1px solid var(--grid-color); }
+        #indicator-table td:last-child { text-align: right; font-weight: bold; }
+        .loader { text-align: center; padding-top: 50px; font-size: 1.2em; }
+        .bullish { color: var(--bull-color); } .bearish { color: var(--bear-color); } .neutral { color: var(--text-color); }
     </style>
 </head>
 <body>
 
 <div id="app-container">
-    <h1>Client-Side Crypto Trading Assistant</h1>
-
     <div class="controls">
-        <label for="symbol-search">Select Trading Pair:</label>
+        <label for="symbol-search">Trading Pair:</label>
         <select id="symbol-search"></select>
-        
         <label for="timeframe-select">Timeframe:</label>
         <select id="timeframe-select">
-            <option value="1h" selected>1 Hour</option>
-            <option value="4h">4 Hours</option>
+            <option value="1h">1 Hour</option>
+            <option value="4h" selected>4 Hours</option>
             <option value="1d">1 Day</option>
             <option value="1w">1 Week</option>
         </select>
     </div>
 
-    <div id="chart-container"></div>
-    
-    <div id="info-panel">
-        <h2>Analysis & Signals</h2>
-        <div id="analysis-content" class="loader">Select a pair to begin analysis...</div>
+    <div id="main-content">
+        <div id="chart-panel">
+            <div id="chart-container"><div class="pane-title">Price Action</div></div>
+            <div id="rsi-pane"><div class="pane-title">RSI (14)</div></div>
+            <div id="macd-pane"><div class="pane-title">MACD (12, 26, 9)</div></div>
+        </div>
+        <div id="dashboard">
+            <div class="score-gauge">
+                <h3>Sentiment Score</h3>
+                <div class="gauge-circle">
+                    <div class="gauge-inner"></div>
+                    <div class="gauge-pointer" id="gauge-pointer"></div>
+                    <div id="gauge-score" class="neutral">--</div>
+                </div>
+            </div>
+            <h3>Indicator Dashboard</h3>
+            <table id="indicator-table"></table>
+            <div id="loader" class="loader">Loading...</div>
+        </div>
     </div>
 </div>
 
+<script id="worker" type="text/worker">
+    // Import the technicalindicators library inside the worker
+    self.importScripts('https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js');
+    const { SMA, RSI, MACD, IchimokuCloud } = self.technicalindicators;
+
+    self.onmessage = function(e) {
+        const { data } = e;
+        const closePrices = data.map(d => d.close);
+        const highPrices = data.map(d => d.high);
+        const lowPrices = data.map(d => d.low);
+
+        // --- Heavy Calculations ---
+        const rsi = RSI.calculate({ period: 14, values: closePrices });
+        const macd = MACD.calculate({ values: closePrices, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, SimpleMAOscillator: false, SimpleMASignal: false });
+        const sma200 = SMA.calculate({ period: 200, values: closePrices });
+        const ichimoku = IchimokuCloud.calculate({ high: highPrices, low: lowPrices, conversionPeriod: 9, basePeriod: 26, spanPeriod: 52, displacement: 26 });
+
+        // --- Composite Scoring Engine ---
+        let score = 50; // Start at neutral
+        let reasons = [];
+
+        // Rule 1: RSI (Weight: 25)
+        const latestRsi = rsi[rsi.length - 1];
+        if (latestRsi > 70) { score -= 25; reasons.push({ indicator: 'RSI', value: latestRsi.toFixed(2), sentiment: 'Bearish (Overbought)' }); }
+        else if (latestRsi < 30) { score += 25; reasons.push({ indicator: 'RSI', value: latestRsi.toFixed(2), sentiment: 'Bullish (Oversold)' }); }
+        else { reasons.push({ indicator: 'RSI', value: latestRsi.toFixed(2), sentiment: 'Neutral' }); }
+        
+        // Rule 2: MACD (Weight: 25)
+        const latestMacd = macd[macd.length - 1];
+        if (latestMacd.MACD > latestMacd.signal) { score += 15; }
+        if (latestMacd.MACD < latestMacd.signal) { score -= 15; }
+        if (latestMacd.histogram > 0) { score += 10; reasons.push({ indicator: 'MACD', value: latestMacd.MACD.toFixed(3), sentiment: 'Bullish' }); }
+        else { score -= 10; reasons.push({ indicator: 'MACD', value: latestMacd.MACD.toFixed(3), sentiment: 'Bearish' }); }
+        
+        // Rule 3: Trend (SMA 200) (Weight: 30)
+        const lastPrice = closePrices[closePrices.length - 1];
+        const latestSma200 = sma200[sma200.length-1];
+        if (lastPrice > latestSma200) { score += 30; reasons.push({ indicator: 'Trend (SMA 200)', value: latestSma200.toFixed(2), sentiment: 'Bullish (Price > MA)' });}
+        else { score -= 30; reasons.push({ indicator: 'Trend (SMA 200)', value: latestSma200.toFixed(2), sentiment: 'Bearish (Price < MA)' }); }
+
+        // Rule 4: Ichimoku Cloud (Weight: 20)
+        const latestIchi = ichimoku[ichimoku.length - 1];
+        const currentIchiSpanA = ichimoku[ichimoku.length - 1 - 26]?.spanA;
+        const currentIchiSpanB = ichimoku[ichimoku.length - 1 - 26]?.spanB;
+        if (currentIchiSpanA && currentIchiSpanB && lastPrice > currentIchiSpanA && lastPrice > currentIchiSpanB) {
+            score += 20;
+             reasons.push({ indicator: 'Ichimoku Cloud', value: 'Above Cloud', sentiment: 'Bullish' });
+        } else if (currentIchiSpanA && currentIchiSpanB && lastPrice < currentIchiSpanA && lastPrice < currentIchiSpanB) {
+            score -= 20;
+            reasons.push({ indicator: 'Ichimoku Cloud', value: 'Below Cloud', sentiment: 'Bearish' });
+        } else {
+             reasons.push({ indicator: 'Ichimoku Cloud', value: 'Inside Cloud', sentiment: 'Neutral' });
+        }
+        
+        // Normalize score to be between 0 and 100
+        score = Math.max(0, Math.min(100, score));
+
+        // Post results back to the main thread
+        self.postMessage({ rsi, macd, ichimoku, score, reasons });
+    };
+</script>
+
 <script>
-    // Destructure necessary libraries from the window object
+    // --- Main UI Thread Script ---
     const { createChart } = LightweightCharts;
-    const { SMA, RSI, MACD, BollingerBands } = technicalindicators;
 
     // DOM Elements
     const chartContainer = document.getElementById('chart-container');
+    const rsiPane = document.getElementById('rsi-pane');
+    const macdPane = document.getElementById('macd-pane');
     const symbolSearch = document.getElementById('symbol-search');
     const timeframeSelect = document.getElementById('timeframe-select');
-    const analysisContent = document.getElementById('analysis-content');
+    const loader = document.getElementById('loader');
+    const gaugePointer = document.getElementById('gauge-pointer');
+    const gaugeScore = document.getElementById('gauge-score');
+    const indicatorTable = document.getElementById('indicator-table');
 
-    // Chart instance
-    let chart;
-    let candlestickSeries;
+    // Chart instances and series
+    let mainChart, rsiChart, macdChart;
+    let candlestickSeries, rsiSeries, macdSeries, macdHistogramSeries, ichimokuSpanASeries, ichimokuSpanBSeries;
     
-    // --- Chart Setup ---
-    function initializeChart() {
-        if (chart) {
-            chart.remove();
-        }
-        chart = createChart(chartContainer, {
-            width: chartContainer.clientWidth,
-            height: chartContainer.clientHeight,
-            layout: {
-                backgroundColor: '#121212',
-                textColor: '#e0e0e0',
+    // Initialize Web Worker
+    const workerBlob = new Blob([document.getElementById('worker').textContent], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(workerBlob));
+    
+    function initCharts() {
+        // Main Price Chart
+        mainChart = createChart(chartContainer, getChartOptions());
+        candlestickSeries = mainChart.addCandlestickSeries({ upColor: 'var(--bull-color)', downColor: 'var(--bear-color)', borderWidth: 1, wickUpColor: 'var(--bull-color)', wickDownColor: 'var(--bear-color)' });
+        ichimokuSpanASeries = mainChart.addLineSeries({ color: 'rgba(38, 166, 154, 0.5)', lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false });
+        ichimokuSpanBSeries = mainChart.addLineSeries({ color: 'rgba(239, 83, 80, 0.5)', lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false });
+
+        // RSI Chart
+        rsiChart = createChart(rsiPane, getChartOptions(false));
+        rsiSeries = rsiChart.addLineSeries({ color: 'var(--primary-accent)', lineWidth: 2 });
+        const rsi70Line = { price: 70, color: 'var(--bear-color)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70' };
+        const rsi30Line = { price: 30, color: 'var(--bull-color)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30' };
+        rsiSeries.createPriceLine(rsi70Line);
+        rsiSeries.createPriceLine(rsi30Line);
+
+        // MACD Chart
+        macdChart = createChart(macdPane, getChartOptions(false));
+        macdSeries = macdChart.addLineSeries({ color: 'var(--primary-accent)', lineWidth: 2 });
+        const macdSignalSeries = macdChart.addLineSeries({ color: 'var(--secondary-accent)', lineWidth: 2 });
+        macdHistogramSeries = macdChart.addHistogramSeries({
+            color: 'rgba(255, 255, 255, 0.5)',
+            formatter: (bar) => {
+                const color = bar.value >= 0 ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)';
+                return { color };
             },
-            grid: {
-                vertLines: { color: 'rgba(255, 255, 255, 0.1)' },
-                horzLines: { color: 'rgba(255, 255, 255, 0.1)' },
-            },
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            timeScale: { timeVisible: true, secondsVisible: false },
         });
-        candlestickSeries = chart.addCandlestickSeries({
-            upColor: '#26a69a',
-            downColor: '#ef5350',
-            borderDownColor: '#ef5350',
-            borderUpColor: '#26a69a',
-            wickDownColor: '#ef5350',
-            wickUpColor: '#26a69a',
+
+        // Sync charts
+        mainChart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+            rsiChart.timeScale().setVisibleLogicalRange(range);
+            macdChart.timeScale().setVisibleLogicalRange(range);
         });
+        [rsiChart, macdChart].forEach(chart => chart.timeScale().subscribeVisibleLogicalRangeChange(range => mainChart.timeScale().setVisibleLogicalRange(range)));
     }
 
-    // --- Data Fetching ---
-    async function fetchBinanceSymbols() {
+    function getChartOptions(isMainChart = true) {
+        return {
+            layout: { backgroundColor: 'var(--pane-bg)', textColor: 'var(--text-color)' },
+            grid: { vertLines: { color: 'var(--grid-color)' }, horzLines: { color: 'var(--grid-color)' } },
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            timeScale: { timeVisible: true, secondsVisible: false, borderColor: 'var(--grid-color)' },
+            rightPriceScale: { borderColor: 'var(--grid-color)', visible: isMainChart },
+        }
+    }
+
+    async function fetchSymbols() {
         try {
-            // We use a proxy to avoid CORS issues if running locally.
-            // On GitHub Pages, direct calls might work but a proxy is more robust.
             const proxyUrl = 'https://api.allorigins.win/get?url=';
             const apiUrl = 'https://api.binance.com/api/v3/exchangeInfo';
             const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
             const data = await response.json();
-            const exchangeInfo = JSON.parse(data.contents);
-            
-            const usdtPairs = exchangeInfo.symbols
-                .filter(s => s.quoteAsset === 'USDT' && s.status === 'TRADING')
+            const info = JSON.parse(data.contents);
+            const usdtPairs = info.symbols
+                .filter(s => s.quoteAsset === 'USDT' && s.status === 'TRADING' && !s.symbol.includes('UP') && !s.symbol.includes('DOWN'))
                 .map(s => s.symbol);
-
-            symbolSearch.innerHTML = usdtPairs.map(symbol => `<option value="${symbol}">${symbol}</option>`).join('');
+            symbolSearch.innerHTML = usdtPairs.map(s => `<option value="${s}">${s}</option>`).join('');
             
-            // Load initial chart for the first symbol
-            loadChartData(usdtPairs[0], timeframeSelect.value);
-
-        } catch (error) {
-            console.error('Error fetching Binance symbols:', error);
-            analysisContent.innerHTML = 'Failed to load symbol list from Binance.';
-        }
+            // Load saved settings or default
+            const savedSymbol = localStorage.getItem('cryptoSymbol') || 'BTCUSDT';
+            const savedTf = localStorage.getItem('cryptoTf') || '4h';
+            symbolSearch.value = savedSymbol;
+            timeframeSelect.value = savedTf;
+            
+            loadData(savedSymbol, savedTf);
+        } catch (error) { console.error('Error fetching symbols:', error); }
     }
 
-    async function fetchChartData(symbol, timeframe) {
+    async function loadData(symbol, timeframe) {
+        loader.style.display = 'block';
+        indicatorTable.innerHTML = '';
+        gaugeScore.textContent = '--';
+        gaugeScore.className = 'neutral';
+        
         try {
-            analysisContent.innerHTML = `<div class="loader">Loading ${symbol} data...</div>`;
-            const limit = 500;
-            // Using the same proxy for candlestick data
             const proxyUrl = 'https://api.allorigins.win/get?url=';
-            const apiUrl = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${timeframe}&limit=${limit}`;
+            const apiUrl = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${timeframe}&limit=1000`;
             const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
             const data = await response.json();
             const klines = JSON.parse(data.contents);
 
             const chartData = klines.map(k => ({
-                time: k[0] / 1000, // Binance provides timestamp in ms, chart needs seconds
-                open: parseFloat(k[1]),
-                high: parseFloat(k[2]),
-                low: parseFloat(k[3]),
-                close: parseFloat(k[4]),
+                time: k[0] / 1000, open: parseFloat(k[1]), high: parseFloat(k[2]), low: parseFloat(k[3]), close: parseFloat(k[4]),
             }));
 
-            return chartData;
-        } catch (error) {
-            console.error(`Error fetching chart data for ${symbol}:`, error);
-            analysisContent.innerHTML = `Failed to load chart data for ${symbol}. Check console for errors.`;
-            return [];
-        }
-    }
+            candlestickSeries.setData(chartData);
+            worker.postMessage(chartData); // Send data to worker for processing
+            mainChart.timeScale().fitContent();
 
-    // --- Indicator Calculation & Plotting ---
-    function processDataAndPlot(data) {
-        if (!data || data.length === 0) return;
+            // Save selection
+            localStorage.setItem('cryptoSymbol', symbol);
+            localStorage.setItem('cryptoTf', timeframe);
 
-        candlestickSeries.setData(data);
-
-        // Calculate indicators
-        const closePrices = data.map(d => d.close);
-        
-        // SMA 50 & 200
-        const sma50 = SMA.calculate({ period: 50, values: closePrices });
-        const sma200 = SMA.calculate({ period: 200, values: closePrices });
-
-        // RSI
-        const rsi = RSI.calculate({ period: 14, values: closePrices });
-        
-        // MACD
-        const macdInput = {
-            values: closePrices,
-            fastPeriod: 12,
-            slowPeriod: 26,
-            signalPeriod: 9,
-            SimpleMAOscillator: false,
-            SimpleMASignal: false
-        };
-        const macd = MACD.calculate(macdInput);
-        
-        // Plot SMAs
-        plotLineSeries(sma50, data, 50, '#e91e63', 'SMA 50');
-        plotLineSeries(sma200, data, 200, '#2196f3', 'SMA 200');
-
-        // Analyze and generate signals
-        generateSignals(data, sma50, sma200, rsi, macd);
-        
-        chart.timeScale().fitContent();
-    }
-
-    function plotLineSeries(indicatorData, chartData, period, color, title) {
-        const lineData = indicatorData.map((value, index) => ({
-            time: chartData[index + period - 1].time,
-            value: value,
-        }));
-        const lineSeries = chart.addLineSeries({ color, lineWidth: 2, title });
-        lineSeries.setData(lineData);
+        } catch (error) { console.error(`Error fetching chart data for ${symbol}:`, error); }
     }
     
-    function generateSignals(chartData, sma50, sma200, rsi, macd) {
-        let signalsHTML = '<h3>Potential Setups:</h3><ul id="signals-list">';
-        const markers = [];
+    // Listen for results from the worker
+    worker.onmessage = function(e) {
+        const { rsi, macd, ichimoku, score, reasons } = e.data;
+        const chartData = candlestickSeries.data();
 
-        // --- 1. Golden Cross / Death Cross ---
-        const latestSma50 = sma50[sma50.length - 1];
-        const prevSma50 = sma50[sma50.length - 2];
-        const latestSma200 = sma200[sma200.length - (200 - 50) -1];
-        const prevSma200 = sma200[sma200.length - (200 - 50) - 2];
+        // Update RSI Pane
+        rsiSeries.setData(rsi.map((value, index) => ({ time: chartData[index + 14 - 1].time, value })));
 
-        if (prevSma50 < prevSma200 && latestSma50 > latestSma200) {
-            signalsHTML += `<li class="signal-bullish">📈 Golden Cross (SMA50 crossed above SMA200) - Potential Bullish Trend</li>`;
-            markers.push({ time: chartData[chartData.length - 1].time, position: 'belowBar', color: '#26a69a', shape: 'arrowUp', text: 'Golden Cross' });
-        }
-        if (prevSma50 > prevSma200 && latestSma50 < latestSma200) {
-            signalsHTML += `<li class="signal-bearish">📉 Death Cross (SMA50 crossed below SMA200) - Potential Bearish Trend</li>`;
-             markers.push({ time: chartData[chartData.length - 1].time, position: 'aboveBar', color: '#ef5350', shape: 'arrowDown', text: 'Death Cross' });
-        }
+        // Update MACD Pane
+        macdSeries.setData(macd.map((val, index) => ({ time: chartData[index + 26 - 1].time, value: val.MACD })));
+        macdSeries.applyOptions({ title: "MACD Line" });
+        macdSeries.chart().getSeries().get(1).setData(macd.map((val, index) => ({ time: chartData[index + 26 - 1].time, value: val.signal })));
+        macdSeries.chart().getSeries().get(1).applyOptions({ title: "Signal Line" });
+        macdHistogramSeries.setData(macd.map((val, index) => ({ time: chartData[index + 26 - 1].time, value: val.histogram })));
+        
+        // Update Ichimoku Cloud
+        const ichimokuAData = ichimoku.map((val, i) => ({ time: chartData[i + 52 - 1 + 26].time, value: val.spanA }));
+        const ichimokuBData = ichimoku.map((val, i) => ({ time: chartData[i + 52 - 1 + 26].time, value: val.spanB }));
+        ichimokuSpanASeries.setData(ichimokuAData);
+        ichimokuSpanBSeries.setData(ichimokuBData);
 
-        // --- 2. RSI Overbought / Oversold ---
-        const latestRsi = rsi[rsi.length - 1];
-        if (latestRsi > 70) {
-            signalsHTML += `<li class="signal-bearish">⚠️ RSI Overbought (${latestRsi.toFixed(2)}) - Market may be due for a pullback.</li>`;
-        }
-        if (latestRsi < 30) {
-            signalsHTML += `<li class="signal-bullish">✅ RSI Oversold (${latestRsi.toFixed(2)}) - Market may be due for a bounce.</li>`;
-        }
-
-        // --- 3. MACD Crossover ---
-        const latestMacd = macd[macd.length - 1];
-        const prevMacd = macd[macd.length - 2];
-        if (prevMacd.MACD < prevMacd.signal && latestMacd.MACD > latestMacd.signal) {
-             signalsHTML += `<li class="signal-bullish">🔵 MACD Bullish Crossover - Potential upward momentum.</li>`;
-             markers.push({ time: chartData[chartData.length - 1].time, position: 'belowBar', color: '#2196f3', shape: 'arrowUp', text: 'MACD Cross' });
-        }
-        if (prevMacd.MACD > prevMacd.signal && latestMacd.MACD < latestMacd.signal) {
-             signalsHTML += `<li class="signal-bearish">🔴 MACD Bearish Crossover - Potential downward momentum.</li>`;
-             markers.push({ time: chartData[chartData.length - 1].time, position: 'aboveBar', color: '#ff9800', shape: 'arrowDown', text: 'MACD Cross' });
-        }
-
-        if (signalsHTML === '<h3>Potential Setups:</h3><ul id="signals-list">') {
-            signalsHTML += '<li>No strong signals detected based on current indicators.</li>';
-        }
-
-        signalsHTML += '</ul>';
-        analysisContent.innerHTML = signalsHTML;
-        candlestickSeries.setMarkers(markers);
+        // Update Dashboard
+        updateDashboard(score, reasons);
+        loader.style.display = 'none';
     }
 
-    // --- Main Application Logic ---
-    async function loadChartData(symbol, timeframe) {
-        initializeChart();
-        const data = await fetchChartData(symbol, timeframe);
-        processDataAndPlot(data);
+    function updateDashboard(score, reasons) {
+        // Update Gauge
+        const rotation = (score / 100) * 180 - 90;
+        gaugePointer.style.transform = `rotate(${rotation}deg)`;
+        gaugeScore.textContent = Math.round(score);
+        if (score > 60) gaugeScore.className = 'bullish';
+        else if (score < 40) gaugeScore.className = 'bearish';
+        else gaugeScore.className = 'neutral';
+        
+        // Update Table
+        let tableHTML = '';
+        reasons.forEach(r => {
+            let sentimentClass = r.sentiment.includes('Bullish') ? 'bullish' : r.sentiment.includes('Bearish') ? 'bearish' : 'neutral';
+            tableHTML += `<tr><td>${r.indicator}</td><td class="${sentimentClass}">${r.value}</td></tr>`;
+        });
+        indicatorTable.innerHTML = tableHTML;
     }
     
     // --- Event Listeners ---
-    symbolSearch.addEventListener('change', (e) => {
-        loadChartData(e.target.value, timeframeSelect.value);
-    });
-
-    timeframeSelect.addEventListener('change', (e) => {
-        loadChartData(symbolSearch.value, e.target.value);
-    });
-
-    window.addEventListener('resize', () => {
-        if (chart) {
-            chart.resize(chartContainer.clientWidth, chartContainer.clientHeight);
+    symbolSearch.addEventListener('change', e => loadData(e.target.value, timeframeSelect.value));
+    timeframeSelect.addEventListener('change', e => loadData(symbolSearch.value, e.target.value));
+    
+    // Resize handler
+    new ResizeObserver(() => {
+        if (mainChart) {
+            mainChart.resize(chartContainer.clientWidth, chartContainer.clientHeight);
+            rsiChart.resize(rsiPane.clientWidth, rsiPane.clientHeight);
+            macdChart.resize(macdPane.clientWidth, macdPane.clientHeight);
         }
-    });
+    }).observe(document.getElementById('chart-panel'));
 
     // --- Initial Load ---
     document.addEventListener('DOMContentLoaded', () => {
-        fetchBinanceSymbols();
+        initCharts();
+        fetchSymbols();
     });
-
 </script>
 </body>
 </html>
