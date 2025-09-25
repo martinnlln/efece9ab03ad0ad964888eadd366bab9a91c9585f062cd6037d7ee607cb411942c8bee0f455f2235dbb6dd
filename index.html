@@ -423,7 +423,8 @@
 
     // --- GLOBAL CONFIGURATION & STATE ---
     const config = {
-        binanceApiUrl: 'https://api.binance.com/api/v3',
+        // CORRECTED URL: Using data.binance.com which has an open CORS policy and works from GitHub Pages.
+        binanceApiUrl: 'https://data.binance.com/api/v3',
         binanceWsUrl: 'wss://stream.binance.com:9443/ws',
         symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'WIFUSDT', 'AVAXUSDT', 'PYTHUSDT', 'ADAUSDT', 'MATICUSDT', 'BRETTUSDT', 'FARCOINUSDT'],
         intervals: ['1m', '5m', '15m', '1h', '4h', '1d'],
@@ -558,19 +559,16 @@
                     volume: parseFloat(candle.v),
                 };
                 
-                // Update chart, indicators, and UI in real-time
                 ChartManager.updateRealtime(formattedCandle);
                 UI.updateHeaderPrice(formattedCandle.close, state.klineData[state.klineData.length - 2]?.close);
                 
-                // If it's a new candle, run analysis, otherwise just update last candle
-                if(candle.x) { // is closed candle
+                if(candle.x) { 
                     state.klineData.push(formattedCandle);
                     if(state.klineData.length > config.candleLimit) state.klineData.shift();
                     runFullAnalysis();
                 } else {
-                     // Live update of current candle
                      state.klineData[state.klineData.length - 1] = formattedCandle;
-                     runLightAnalysis(); // Less intensive update
+                     runLightAnalysis(); 
                 }
                 PaperTrading.updateOpenPositions();
             };
@@ -587,7 +585,6 @@
     // ========================================================================================================
     const UI = {
         init() {
-            // Populate selectors
             config.symbols.forEach(symbol => {
                 const option = document.createElement('option');
                 option.value = symbol;
@@ -595,7 +592,6 @@
                 dom.symbolSelector.appendChild(option);
             });
 
-            // Populate indicator toolbar
             Object.keys(INDICATOR_DEFS).forEach(name => {
                 const button = document.createElement('button');
                 button.textContent = name;
@@ -604,7 +600,6 @@
                 button.addEventListener('click', () => this.toggleIndicator(name));
             });
 
-            // Event Listeners
             dom.symbolSelector.addEventListener('change', (e) => Main.changeAsset(e.target.value, state.currentInterval));
             dom.intervalSelector.addEventListener('change', (e) => Main.changeAsset(state.currentSymbol, e.target.value));
             dom.trainModelBtn.addEventListener('click', () => ML.trainModel());
@@ -614,7 +609,6 @@
             dom.paperSellBtn.addEventListener('click', () => PaperTrading.executeTrade('sell'));
             dom.runBacktestBtn.addEventListener('click', Backtester.run);
             
-            // Set initial theme
             const savedTheme = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
         },
@@ -624,9 +618,6 @@
         },
         
         updateHeaderPrice(price, prevClose) {
-            const currentPrice = state.klineData.length > 0 ? state.klineData[state.klineData.length-1].close : 0;
-            const openPrice = state.klineData.length > 0 ? state.klineData[0].close : 0;
-            
             dom.lastPrice.textContent = price.toFixed(price > 100 ? 2 : 4);
             const change = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
             dom.priceChange.textContent = `${change.toFixed(2)}%`;
@@ -686,7 +677,7 @@
             document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
         },
 
-        showToast(message, type = 'info') { // type: info, success, error
+        showToast(message, type = 'info') { 
             dom.toast.textContent = message;
             dom.toast.className = `toast show ${type}`;
             setTimeout(() => {
@@ -714,14 +705,8 @@
                     horzLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
                 },
                 crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                rightPriceScale: {
-                    borderColor: theme === 'dark' ? '#2a2e39' : '#e0e3eb',
-                },
-                timeScale: {
-                    borderColor: theme === 'dark' ? '#2a2e39' : '#e0e3eb',
-                    timeVisible: true,
-                    secondsVisible: false,
-                },
+                rightPriceScale: { borderColor: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
+                timeScale: { borderColor: theme === 'dark' ? '#2a2e39' : '#e0e3eb', timeVisible: true, secondsVisible: false },
             };
             state.chart = LightweightCharts.createChart(dom.chartContainer, chartOptions);
             state.candleSeries = state.chart.addCandlestickSeries({
@@ -750,9 +735,7 @@
         
         applyTheme(theme) {
             state.chart.applyOptions({
-                layout: {
-                    textColor: theme === 'dark' ? '#d1d4dc' : '#131722',
-                },
+                layout: { textColor: theme === 'dark' ? '#d1d4dc' : '#131722' },
                 grid: {
                     vertLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
                     horzLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
@@ -780,10 +763,7 @@
                     state.indicatorSeries[name].main.setData(data);
                 }
             } else if (def.type === 'pane') {
-                 const pane = state.chart.addHistogramSeries({
-                    priceFormat: { type: 'volume' },
-                    priceScaleId: name,
-                });
+                 const pane = state.chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: name });
                 pane.setData(data);
                 state.indicatorSeries[name].pane = pane;
             }
@@ -797,8 +777,6 @@
         },
 
         showPredictions(predictions) {
-            // Visualize predictions on chart
-            // For simplicity, let's just log them for now
             console.log("ML Predictions:", predictions);
             UI.showToast(`Model predicted next price: ${predictions[0].value.toFixed(2)}`, 'info');
         }
@@ -812,19 +790,11 @@
         calculateAll(data) {
             const indicators = {};
             const closePrices = data.map(d => d.close);
-            const highPrices = data.map(d => d.high);
-            const lowPrices = data.map(d => d.low);
-            const volumes = data.map(d => d.volume);
             
-            // Calculate a few key indicators for the signal engine
             indicators.rsi14 = technicalindicators.rsi({ period: 14, values: closePrices });
             indicators.macd12_26_9 = technicalindicators.macd({
-                values: closePrices,
-                fastPeriod: 12,
-                slowPeriod: 26,
-                signalPeriod: 9,
-                SimpleMAOscillator: false,
-                SimpleMASignal: false
+                values: closePrices, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9,
+                SimpleMAOscillator: false, SimpleMASignal: false
             });
             indicators.ema20 = technicalindicators.ema({ period: 20, values: closePrices });
             indicators.ema50 = technicalindicators.ema({ period: 50, values: closePrices });
@@ -845,16 +815,13 @@
             if(name === 'Bollinger Bands') {
                 result = technicalindicators.bollingerbands({period: 20, stdDev: 2, values: closes});
             }
-            // Add more indicator calculations here...
-
-            // Format for chart
+            
             if(Array.isArray(result) && typeof result[0] === 'number') {
                 return data.slice(data.length - result.length).map((d, i) => ({ time: d.time, value: result[i] }));
             }
              if(Array.isArray(result) && typeof result[0] === 'object') {
                 return data.slice(data.length - result.length).map((d, i) => ({ time: d.time, ...result[i] }));
             }
-            
             return [];
         }
     };
@@ -870,14 +837,11 @@
             let score = 0;
             const signals = [];
             const lastCandle = data[data.length - 1];
-            const prevCandle = data[data.length - 2];
-
-            // RSI
+            
             const lastRSI = indicators.rsi14[indicators.rsi14.length - 1];
             if (lastRSI < 30) { score += 1; signals.push({ name: 'RSI(14)', type: 'buy' }); }
             if (lastRSI > 70) { score -= 1; signals.push({ name: 'RSI(14)', type: 'sell' }); }
 
-            // MACD
             const lastMACD = indicators.macd12_26_9[indicators.macd12_26_9.length - 1];
             const prevMACD = indicators.macd12_26_9[indicators.macd12_26_9.length - 2];
             if (prevMACD.MACD < prevMACD.signal && lastMACD.MACD > lastMACD.signal) {
@@ -887,18 +851,11 @@
                 score -= 1.5; signals.push({ name: 'MACD Cross', type: 'sell' });
             }
 
-            // EMA Cross
-            const lastEMA20 = indicators.ema20[indicators.ema20.length - 1];
             const lastEMA50 = indicators.ema50[indicators.ema50.length - 1];
             if (lastCandle.close > lastEMA50) { score += 0.5; signals.push({ name: 'Price > EMA(50)', type: 'buy'}); }
             if (lastCandle.close < lastEMA50) { score -= 0.5; signals.push({ name: 'Price < EMA(50)', type: 'sell'}); }
-            if (lastEMA20 > lastEMA50) { score += 0.5; }
-            if (lastEMA20 < lastEMA50) { score -= 0.5; }
-
-            // Normalize score
-            const maxScore = 4.5; // Sum of max absolute weights
-            const normalizedScore = Math.max(-1, Math.min(1, score / maxScore));
             
+            const normalizedScore = Math.max(-1, Math.min(1, score / 4.0));
             return { score: normalizedScore, signals };
         }
     };
@@ -909,49 +866,32 @@
     // ========================================================================================================
     const ML = {
         async trainModel() {
-            if (state.isTraining) {
-                UI.showToast('Training is already in progress.', 'info');
-                return;
-            }
+            if (state.isTraining) return UI.showToast('Training is already in progress.', 'info');
             state.isTraining = true;
             dom.trainModelBtn.disabled = true;
             dom.mlStatus.textContent = 'Preparing data...';
 
             try {
-                // Feature engineering
-                const features = state.klineData.map(d => [
-                    d.open, d.high, d.low, d.close, d.volume
-                ]).slice(50); // Remove early data points where indicators are not stable
-                
-                if(features.length < 100) {
-                    throw new Error("Not enough historical data to train the model. Need at least 100 candles.");
-                }
+                const features = state.klineData.map(d => [d.open, d.high, d.low, d.close, d.volume]).slice(50);
+                if(features.length < 100) throw new Error("Not enough historical data to train (min 100 candles).");
 
-                // Normalize data
                 const { normalized, min, max } = this.normalize(features);
-
                 const sequenceLength = 60;
                 const horizon = parseInt(dom.mlHorizon.value, 10);
                 const { X, y } = this.createSequences(normalized, sequenceLength, horizon);
-                
-                if(!X || X.length === 0) {
-                    throw new Error("Could not create training sequences from the available data.");
-                }
+                if(!X || X.length === 0) throw new Error("Could not create training sequences.");
 
-                const X_tensor = tf.tensor3d(X, [X.length, sequenceLength, 5]);
+                const X_tensor = tf.tensor3d(X);
                 const y_tensor = tf.tensor2d(y, [y.length, 1]);
 
-                // Define model
                 state.mlModel = tf.sequential();
                 state.mlModel.add(tf.layers.lstm({ units: 50, returnSequences: true, inputShape: [sequenceLength, 5] }));
                 state.mlModel.add(tf.layers.dropout(0.2));
                 state.mlModel.add(tf.layers.lstm({ units: 50 }));
                 state.mlModel.add(tf.layers.dropout(0.2));
                 state.mlModel.add(tf.layers.dense({ units: 1 }));
-
                 state.mlModel.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
 
-                // Train model
                 const epochs = parseInt(dom.mlEpochs.value, 10);
                 dom.mlStatus.textContent = `Training... Epoch 1/${epochs}`;
                 await state.mlModel.fit(X_tensor, y_tensor, {
@@ -963,9 +903,7 @@
                     }
                 });
                 
-                // Store normalization stats
                 state.mlModel.normalizationStats = { min, max };
-                
                 UI.showToast('Model training complete!', 'success');
                 dom.mlStatus.textContent = 'Model trained. Ready to predict.';
                 await this.predict();
@@ -980,39 +918,27 @@
         },
 
         async predict() {
-            if (!state.mlModel) {
-                UI.showToast('Train a model first before predicting.', 'error');
-                return;
-            }
+            if (!state.mlModel) return UI.showToast('Train a model first before predicting.', 'error');
             
-            const horizon = parseInt(dom.mlHorizon.value, 10);
             const sequenceLength = 60;
             const lastSequenceRaw = state.klineData.slice(-sequenceLength).map(d => [d.open, d.high, d.low, d.close, d.volume]);
-
             const { min, max } = state.mlModel.normalizationStats;
-            const lastSequenceNormalized = lastSequenceRaw.map(row => 
-                row.map((val, i) => (val - min[i]) / (max[i] - min[i]))
-            );
+            const lastSequenceNormalized = lastSequenceRaw.map(row => row.map((val, i) => (val - min[i]) / (max[i] - min[i])));
 
             const inputTensor = tf.tensor3d([lastSequenceNormalized]);
             const predictionTensor = state.mlModel.predict(inputTensor);
             const predictionNormalized = await predictionTensor.data();
             
-            // Denormalize prediction (we care about the close price, index 3)
             const predictedClose = predictionNormalized[0] * (max[3] - min[3]) + min[3];
 
-            // For multi-step, this needs a loop and feeding predictions back in
-            // For simplicity, we show a single prediction for now.
+            const horizon = parseInt(dom.mlHorizon.value, 10);
             const lastTime = state.klineData[state.klineData.length - 1].time;
             const intervalSeconds = this.getIntervalSeconds(state.currentInterval);
             const predictionTime = lastTime + (horizon * intervalSeconds);
             
-            const predictionData = [{ time: predictionTime, value: predictedClose }];
-            
-            ChartManager.showPredictions(predictionData);
+            ChartManager.showPredictions([{ time: predictionTime, value: predictedClose }]);
         },
         
-        // Helper functions for ML
         normalize(data) {
             const arr = tf.tensor2d(data);
             const min = arr.min(0);
@@ -1022,11 +948,10 @@
         },
         
         createSequences(data, seqLength, horizon) {
-            const X = [];
-            const y = [];
+            const X = [], y = [];
             for (let i = 0; i < data.length - seqLength - horizon + 1; i++) {
                 X.push(data.slice(i, i + seqLength));
-                y.push(data[i + seqLength + horizon - 1][3]); // Predicting the 'close' price
+                y.push(data[i + seqLength + horizon - 1][3]);
             }
             return { X, y };
         },
@@ -1035,8 +960,8 @@
             const unit = interval.slice(-1);
             const value = parseInt(interval.slice(0, -1));
             if (unit === 'm') return value * 60;
-            if (unit === 'h') return value * 60 * 60;
-            if (unit === 'd') return value * 24 * 60 * 60;
+            if (unit === 'h') return value * 3600;
+            if (unit === 'd') return value * 86400;
             return 0;
         }
     };
@@ -1048,52 +973,27 @@
     const PaperTrading = {
         init() {
             const savedTrades = localStorage.getItem('paperTrades');
-            if (savedTrades) {
-                state.paperTrades = JSON.parse(savedTrades);
-            }
+            if (savedTrades) state.paperTrades = JSON.parse(savedTrades);
             this.renderTables();
         },
 
         executeTrade(side) {
             const amount = parseFloat(dom.tradeAmountInput.value);
-            if (isNaN(amount) || amount <= 0) {
-                UI.showToast('Please enter a valid trade amount.', 'error');
-                return;
-            }
+            if (isNaN(amount) || amount <= 0) return UI.showToast('Please enter a valid trade amount.', 'error');
             
             const currentPrice = state.klineData[state.klineData.length - 1].close;
             const quantity = amount / currentPrice;
 
-            if (side === 'buy') {
-                const position = {
-                    id: Date.now(),
-                    symbol: state.currentSymbol,
-                    side: 'long',
-                    amount,
-                    quantity,
-                    entryPrice: currentPrice,
-                };
-                state.paperTrades.positions.push(position);
-            } else { // sell
-                 const position = {
-                    id: Date.now(),
-                    symbol: state.currentSymbol,
-                    side: 'short',
-                    amount,
-                    quantity,
-                    entryPrice: currentPrice,
-                };
-                state.paperTrades.positions.push(position);
-            }
-            
-            const historyEntry = {
-                time: new Date().toISOString(),
-                symbol: state.currentSymbol,
-                side,
-                amount,
-                price: currentPrice
+            const position = {
+                id: Date.now(), symbol: state.currentSymbol, side: side === 'buy' ? 'long' : 'short',
+                amount, quantity, entryPrice: currentPrice,
             };
-            state.paperTrades.history.unshift(historyEntry);
+            state.paperTrades.positions.push(position);
+            
+            state.paperTrades.history.unshift({
+                time: new Date().toISOString(), symbol: state.currentSymbol,
+                side, amount, price: currentPrice
+            });
             
             this.saveAndRender();
             UI.showToast(`${side.toUpperCase()} order for ${amount} USDT filled.`, 'success');
@@ -1103,40 +1003,26 @@
             const index = state.paperTrades.positions.findIndex(p => p.id === positionId);
             if(index === -1) return;
 
-            const position = state.paperTrades.positions[index];
-            state.paperTrades.positions.splice(index, 1);
-            
-            const currentPrice = state.klineData.find(k => k.symbol === position.symbol)?.close || state.klineData[state.klineData.length-1].close;
-            const historyEntry = {
-                time: new Date().toISOString(),
-                symbol: position.symbol,
-                side: `close ${position.side}`,
-                amount: position.amount,
-                price: currentPrice
-            };
-            state.paperTrades.history.unshift(historyEntry);
+            const position = state.paperTrades.positions.splice(index, 1)[0];
+            const currentPrice = state.klineData[state.klineData.length-1].close;
+            state.paperTrades.history.unshift({
+                time: new Date().toISOString(), symbol: position.symbol, side: `close ${position.side}`,
+                amount: position.amount, price: currentPrice
+            });
             this.saveAndRender();
         },
 
         updateOpenPositions() {
-             const currentPrice = state.klineData[state.klineData.length - 1].close;
              if(state.paperTrades.positions.length > 0) {
-                 this.renderTables(currentPrice);
+                 this.renderTables(state.klineData[state.klineData.length - 1].close);
              }
         },
 
         renderTables(currentPrice) {
-            // Positions
             dom.positionsTableBody.innerHTML = '';
             state.paperTrades.positions.forEach(pos => {
-                const price = (pos.symbol === state.currentSymbol) ? currentPrice : pos.entryPrice; // Simplified
-                let pnl = 0;
-                if (pos.side === 'long') {
-                    pnl = (price - pos.entryPrice) * pos.quantity;
-                } else {
-                    pnl = (pos.entryPrice - price) * pos.quantity;
-                }
-
+                const price = (pos.symbol === state.currentSymbol && currentPrice) ? currentPrice : pos.entryPrice;
+                const pnl = (pos.side === 'long') ? (price - pos.entryPrice) * pos.quantity : (pos.entryPrice - price) * pos.quantity;
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${pos.symbol}</td>
@@ -1150,13 +1036,11 @@
                 dom.positionsTableBody.appendChild(row);
             });
             
-            document.querySelectorAll('.close-pos-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => this.closePosition(parseInt(e.target.dataset.id, 10)));
-            });
+            document.querySelectorAll('.close-pos-btn').forEach(btn => 
+                btn.addEventListener('click', (e) => this.closePosition(parseInt(e.target.dataset.id, 10))));
 
-            // History
             dom.historyTableBody.innerHTML = '';
-            state.paperTrades.history.slice(0, 100).forEach(trade => { // Limit history display
+            state.paperTrades.history.slice(0, 100).forEach(trade => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${new Date(trade.time).toLocaleString()}</td>
@@ -1171,7 +1055,7 @@
 
         saveAndRender() {
             localStorage.setItem('paperTrades', JSON.stringify(state.paperTrades));
-            this.renderTables(state.klineData[state.klineData.length-1].close);
+            this.renderTables(state.klineData.length ? state.klineData[state.klineData.length-1].close : null);
         }
     };
     
@@ -1183,25 +1067,21 @@
         run() {
             const buyThreshold = parseFloat(dom.backtestBuyThreshold.value);
             const sellThreshold = parseFloat(dom.backtestSellThreshold.value);
-
-            let inPosition = false;
-            let entryPrice = 0;
-            let trades = [];
-            let balance = 10000;
+            let inPosition = false, entryPrice = 0, trades = [], balance = 10000;
             const initialBalance = balance;
 
             for (let i = 50; i < state.klineData.length; i++) {
                 const historicalData = state.klineData.slice(0, i + 1);
                 const indicators = IndicatorCalculator.calculateAll(historicalData);
                 const { score } = SignalEngine.getCompositeScore(historicalData, indicators);
+                const currentClose = historicalData[historicalData.length - 1].close;
 
                 if (!inPosition && score > buyThreshold) {
                     inPosition = true;
-                    entryPrice = historicalData[historicalData.length - 1].close;
+                    entryPrice = currentClose;
                 } else if (inPosition && score < sellThreshold) {
                     inPosition = false;
-                    const exitPrice = historicalData[historicalData.length - 1].close;
-                    const pnl = (exitPrice - entryPrice) / entryPrice;
+                    const pnl = (currentClose - entryPrice) / entryPrice;
                     trades.push(pnl);
                     balance *= (1 + pnl);
                 }
@@ -1211,19 +1091,15 @@
         },
 
         displayResults(trades, finalBalance, initialBalance) {
-            const totalTrades = trades.length;
-            if (totalTrades === 0) {
+            if (trades.length === 0) {
                 dom.backtestResults.innerHTML = '<p>No trades were executed with the current settings.</p>';
                 return;
             }
-
-            const wins = trades.filter(t => t > 0).length;
-            const winRate = (wins / totalTrades * 100).toFixed(2);
+            const winRate = (trades.filter(t => t > 0).length / trades.length * 100).toFixed(2);
             const totalReturn = ((finalBalance - initialBalance) / initialBalance * 100).toFixed(2);
-            
             dom.backtestResults.innerHTML = `
                 <h4>Backtest Results</h4>
-                <p>Total Trades: <strong>${totalTrades}</strong></p>
+                <p>Total Trades: <strong>${trades.length}</strong></p>
                 <p>Win Rate: <strong>${winRate}%</strong></p>
                 <p>Total Return: <strong style="color: ${totalReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${totalReturn}%</strong></p>
                 <p>Final Balance: <strong>$${finalBalance.toFixed(2)}</strong></p>
@@ -1254,7 +1130,6 @@
             state.currentInterval = interval;
             localStorage.setItem('lastSymbol', symbol);
             localStorage.setItem('lastInterval', interval);
-            
             document.title = `${symbol} | PTA`;
 
             const klineData = await API.fetchKlines(symbol, interval);
@@ -1267,7 +1142,7 @@
             } else {
                  state.klineData = [];
                  ChartManager.setData([]);
-                 UI.showToast(`Could not load data for ${symbol}. It might not be listed on Binance.`, 'error');
+                 UI.updateHeaderPrice(0,0);
             }
 
             UI.showLoader(false);
@@ -1280,7 +1155,6 @@
         const { score, signals } = SignalEngine.getCompositeScore(state.klineData, indicators);
         UI.updateCompositeScore(score, signals);
         
-        // Update any active indicator overlays
         state.activeIndicators.forEach(name => {
              const data = IndicatorCalculator.calculate(name, state.klineData);
              ChartManager.addIndicator(name, data);
@@ -1288,13 +1162,10 @@
     }
 
     function runLightAnalysis() {
-        // A less computationally expensive update for real-time ticks
         if (state.klineData.length < 50) return;
-        // Could be optimized to only recalculate last few values of indicators
-        runFullAnalysis(); // For simplicity, re-run full analysis
+        runFullAnalysis();
     }
 
-    // --- Let's Go! ---
     document.addEventListener('DOMContentLoaded', () => Main.init());
 
 })();
