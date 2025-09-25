@@ -2,577 +2,1302 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Personal Trading Assistant</title>
-    <!-- README -->
-    <!--
-    Personal Trading Assistant (PTA)
-    --------------------------------
-    This is a self-contained browser-based trading assistant using Binance public data.
-    
-    How to run locally:
-    - Save as index.html
-    - Run: python -m http.server 8000
-    - Open http://localhost:8000
-    
-    CORS issues:
-    - Binance API may block direct browser requests due to CORS.
-    - Solution: Use a proxy. Example Express.js proxy (install express, node-fetch):
-      const express = require('express');
-      const fetch = require('node-fetch');
-      const app = express();
-      app.use((req, res, next) => {
-        res.header('Access-Control-Allow-Origin', '*');
-        next();
-      });
-      app.get('/proxy/*', async (req, res) => {
-        const url = 'https://api.binance.com' + req.url.replace('/proxy', '');
-        try {
-          const response = await fetch(url);
-          const data = await response.json();
-          res.json(data);
-        } catch (e) {
-          res.status(500).send(e.message);
-        }
-      });
-      app.listen(3000);
-    - Then in code, replace 'https://api.binance.com' with 'http://localhost:3000/proxy'
-    
-    For private API/trading:
-    - Do not store keys in client. Use server proxy with dotenv for keys.
-    - Example: add headers with API key in proxy.
-    
-    Binance rate limits: 1200/min. Be polite.
-    
-    Warnings: Not financial advice. Models are demo. No real trading.
-    
-    Debug: Set debug=true in JS for sim data.
-    -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+
     <style>
+        /* --- GLOBAL STYLES & THEMES --- */
         :root {
-            --bg: #fff;
-            --text: #000;
-            --accent: #007bff;
+            --bg-color: #131722;
+            --primary-text: #d1d4dc;
+            --secondary-text: #8c8f96;
+            --border-color: #2a2e39;
+            --card-bg: #1e222d;
+            --accent-color: #2962ff;
+            --accent-hover: #1e4ac9;
+            --green: #26a69a;
+            --red: #ef5350;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
-        .dark {
-            --bg: #222;
-            --text: #fff;
-            --accent: #0d6efd;
+        
+        [data-theme="light"] {
+            --bg-color: #ffffff;
+            --primary-text: #131722;
+            --secondary-text: #5d606b;
+            --border-color: #e0e3eb;
+            --card-bg: #f7f8fa;
+            --green: #008773;
+            --red: #d7373f;
         }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        
         body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: Arial, sans-serif;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-text);
             margin: 0;
-            padding: 10px;
+            padding: 0;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- LAYOUT --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .chart-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 340px;
+            background-color: var(--card-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: width 0.3s ease;
+        }
+        
+        /* --- HEADER --- */
+        .app-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .app-header h1 {
+            font-size: 18px;
+            margin: 0;
+            margin-right: 16px;
+        }
+        
+        .header-controls select, .header-controls button {
+            background-color: var(--card-bg);
+            color: var(--primary-text);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .price-info {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+            font-size: 16px;
+            gap: 16px;
+        }
+        .price-info .last-price { font-weight: bold; }
+        .price-info .change.positive { color: var(--green); }
+        .price-info .change.negative { color: var(--red); }
+
+        /* --- CHART AREA --- */
+        #chart {
+            width: 100%;
+            height: 100%;
+            flex: 1;
+        }
+        
+        #chart-loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            font-size: 18px;
+            color: var(--secondary-text);
+            display: none;
+        }
+
+        .indicator-toolbar {
+            padding: 4px 8px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .indicator-toolbar button {
+             background-color: transparent;
+             color: var(--secondary-text);
+             border: 1px solid var(--border-color);
+             padding: 4px 8px;
+             font-size: 12px;
+             border-radius: 16px;
+             cursor: pointer;
+        }
+        .indicator-toolbar button.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+        
+        /* --- SIDEBAR --- */
+        .sidebar-section {
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px;
+        }
+        .sidebar-section h3 {
+            font-size: 16px;
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: var(--primary-text);
+        }
+        
+        .composite-score-display { text-align: center; }
+        .score-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .score-label {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .score-label.buy { color: var(--green); }
+        .score-label.sell { color: var(--red); }
+        .score-label.neutral { color: var(--secondary-text); }
+        
+        .signal-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 13px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .signal-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+        .signal-list .signal-name { color: var(--secondary-text); }
+        
+        .ml-controls .control-group { margin-bottom: 12px; }
+        .ml-controls label { display: block; margin-bottom: 4px; color: var(--secondary-text); }
+        .ml-controls input, .ml-controls select {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--primary-text);
+            padding: 6px;
+            border-radius: 4px;
+        }
+        
+        .ml-actions button {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+        .ml-actions button:hover { background-color: var(--accent-hover); }
+        .ml-actions button:disabled { background-color: var(--border-color); cursor: not-allowed; }
+        
+        #ml-status { margin-top: 8px; font-style: italic; color: var(--secondary-text); text-align: center; }
+        
+        /* --- BOTTOM PANEL --- */
+        .bottom-panel {
+            height: 250px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--card-bg);
             display: flex;
             flex-direction: column;
         }
-        #top-bar {
+        
+        .tabs {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-bottom: 1px solid var(--border-color);
         }
-        #chart {
-            height: 400px;
-        }
-        #sidebar {
-            width: 300px;
-            padding: 10px;
-        }
-        #main {
-            display: flex;
-            flex: 1;
-        }
-        @media (max-width: 600px) {
-            #main {
-                flex-direction: column;
-            }
-            #sidebar {
-                width: auto;
-            }
-        }
-        button, select {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 5px;
+        .tab-button {
+            padding: 10px 16px;
             cursor: pointer;
+            background: transparent;
+            border: none;
+            color: var(--secondary-text);
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
         }
-        .tooltip {
-            position: relative;
+        .tab-button.active {
+            color: var(--primary-text);
+            border-bottom: 2px solid var(--accent-color);
         }
-        .tooltip:hover::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            background: #333;
-            color: #fff;
-            padding: 5px;
-            border-radius: 5px;
-            white-space: nowrap;
+        
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
         }
+        .tab-content.active { display: block; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th { color: var(--secondary-text); }
+        
+        /* --- UTILITY & RESPONSIVE --- */
+        .hidden { display: none !important; }
+        
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                height: 40vh;
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+            .price-info { display: none; }
+            .app-header h1 { font-size: 16px; }
+            .app-header { padding: 8px; gap: 8px;}
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            bottom: 30px;
+        }
+        
+        .toast.error { background-color: var(--red); }
+        .toast.success { background-color: var(--green); }
+
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/technicalindicators@3.0.0/dist/browser.esm.js"></script>
 </head>
 <body>
-    <div id="top-bar">
-        <select id="symbol"></select>
-        <select id="interval">
-            <option value="1m">1m</option>
-            <option value="5m">5m</option>
-            <option value="15m">15m</option>
-            <option value="1h">1h</option>
-            <option value="4h">4h</option>
-            <option value="1d">1d</option>
-        </select>
-        <div id="price">Price: --</div>
-        <div id="change">Change: --</div>
-        <div id="volume">Volume: --</div>
-        <button id="theme">Dark</button>
-        <button id="easy">Easy</button>
+
+    <header class="app-header">
+        <h1>PTA</h1>
+        <div class="header-controls">
+            <select id="symbol-selector"></select>
+            <select id="interval-selector">
+                <option value="1m">1m</option>
+                <option value="5m">5m</option>
+                <option value="15m" selected>15m</option>
+                <option value="1h">1h</option>
+                <option value="4h">4h</option>
+                <option value="1d">1d</option>
+            </select>
+        </div>
+        <div class="price-info">
+            <span id="last-price">-.--</span>
+            <span id="price-change" class="change">-.--%</span>
+        </div>
+        <button id="theme-toggle" style="margin-left: auto;">☀️/🌙</button>
+    </header>
+
+    <div class="main-container">
+        <div class="chart-container">
+            <div class="indicator-toolbar">
+                </div>
+            <div id="chart"></div>
+            <div id="chart-loader">Loading chart data...</div>
+        </div>
+
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h3>Composite Signal</h3>
+                <div id="composite-score" class="composite-score-display">
+                    <div class="score-value">0.00</div>
+                    <div class="score-label neutral">Neutral</div>
+                </div>
+                <h4 style="margin-top: 20px; margin-bottom: 8px;">Active Signals</h4>
+                <ul id="signal-list" class="signal-list">
+                    <li>No active signals</li>
+                </ul>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>ML Prediction</h3>
+                <div class="ml-controls">
+                    <div class="control-group">
+                        <label for="ml-horizon">Prediction Horizon (candles)</label>
+                        <input type="number" id="ml-horizon" value="5" min="1" max="20">
+                    </div>
+                    <div class="control-group">
+                        <label for="ml-epochs">Training Epochs</label>
+                        <input type="number" id="ml-epochs" value="10" min="1" max="50">
+                    </div>
+                </div>
+                <div class="ml-actions">
+                    <button id="train-model-btn">Train Model</button>
+                </div>
+                <div id="ml-status">Model not trained.</div>
+            </div>
+            
+             <div class="sidebar-section">
+                <h3>Paper Trading</h3>
+                 <div class="paper-trade-controls" style="display: flex; gap: 8px;">
+                     <input type="number" id="trade-amount" value="1000" placeholder="Amount (USDT)" style="flex: 1; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--primary-text); padding: 6px; border-radius: 4px;">
+                     <button id="paper-buy" style="flex: 1; padding: 8px; background-color: var(--green); color: white; border: none; border-radius: 4px; cursor: pointer;">Buy</button>
+                     <button id="paper-sell" style="flex: 1; padding: 8px; background-color: var(--red); color: white; border: none; border-radius: 4px; cursor: pointer;">Sell</button>
+                 </div>
+            </div>
+
+        </aside>
     </div>
-    <div id="main">
-        <div id="chart"></div>
-        <div id="sidebar">
-            <h3>Indicators</h3>
-            <div id="ind-toggles"></div>
-            <h3>Signals</h3>
-            <div id="signals"></div>
-            <h3>Prediction</h3>
-            <button id="train">Train Model</button>
-            <button id="predict">Predict</button>
-            <div id="pred-out"></div>
-            <h3>Backtest</h3>
-            <button id="backtest">Run</button>
-            <div id="bt-out"></div>
-            <h3>Paper Trade</h3>
-            <div id="pt-ledger"></div>
-            <button id="buy-sim">Buy</button>
-            <button id="sell-sim">Sell</button>
-            <h3>Alerts</h3>
-            <input id="alert-price" placeholder="Price alert">
-            <button id="set-alert">Set</button>
-            <h3>Export/Import</h3>
-            <button id="export">Export</button>
-            <input type="file" id="import">
+
+    <div class="bottom-panel">
+        <div class="tabs">
+            <button class="tab-button active" data-tab="positions">Positions</button>
+            <button class="tab-button" data-tab="history">History</button>
+            <button class="tab-button" data-tab="backtest">Backtest</button>
+        </div>
+        <div id="positions" class="tab-content active">
+             <table>
+                <thead><tr><th>Symbol</th><th>Side</th><th>Amount (USDT)</th><th>Entry Price</th><th>Current Price</th><th>P&L</th><th>Actions</th></tr></thead>
+                <tbody id="positions-table-body"></tbody>
+            </table>
+        </div>
+        <div id="history" class="tab-content">
+            <table>
+                <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Amount (USDT)</th><th>Price</th></tr></thead>
+                <tbody id="history-table-body"></tbody>
+            </table>
+        </div>
+        <div id="backtest" class="tab-content">
+             <div class="backtest-controls" style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                <span>Buy when Score ></span>
+                <input type="number" id="backtest-buy-threshold" value="0.6" step="0.1" style="width: 80px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--primary-text); padding: 4px;">
+                <span>Sell when Score <</span>
+                <input type="number" id="backtest-sell-threshold" value="-0.6" step="0.1" style="width: 80px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--primary-text); padding: 4px;">
+                <button id="run-backtest-btn" style="padding: 6px 12px; background-color: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Run Backtest</button>
+            </div>
+            <div id="backtest-results">Run a backtest to see results.</div>
         </div>
     </div>
-    <div id="tutorial" style="position:fixed;top:0;left:0;background:rgba(0,0,0,0.5);color:white;padding:20px;display:none;">
-        Welcome! Select symbol, interval. Toggle indicators. Train/predict model. Simulate trades.
-        <button onclick="this.parentElement.style.display='none'">Close</button>
-    </div>
-    <script>
-        const TI = technicalindicators;
-        const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'WIFUSDT', 'AVAXUSDT', 'BRETTUSDT', 'PYTHUSDT', 'ADAUSDT', 'LINKUSDT']; // FARCOIN not found, fallback in fetch
-        const intervals = ['1m','5m','15m','1h','4h','1d'];
-        const indicators = ['SMA5','SMA10','SMA20','SMA50','SMA100','SMA200','EMA','WMA','HMA','MACD','RSI','Stoch','BB','ATR','OBV','VWAP','Ichimoku','ADX','CCI','Supertrend','Keltner','EMARibbon','HA','Pivot','VP'];
-        let chart, data = [], model, ws, alerts = [];
-        let isDark = false, easyMode = true;
-        let historyLength = 1000, TTL = 300000; // 5min
-        let position = 0, pnl = 0, trades = [];
+    
+    <div id="toast" class="toast"></div>
 
-        // Init UI
-        symbols.forEach(s => document.getElementById('symbol').innerHTML += `<option>${s}</option>`);
-        document.getElementById('interval').value = '1h';
-        document.getElementById('symbol').value = 'BTCUSDT';
-        indicators.forEach(ind => {
-            const div = document.createElement('div');
-            div.innerHTML = `<input type="checkbox" id="${ind}" data-tooltip="${ind} info"><label for="${ind}">${ind}</label>`;
-            document.getElementById('ind-toggles').appendChild(div);
-        });
-        document.getElementById('theme').onclick = () => {
-            isDark = !isDark;
-            document.body.classList.toggle('dark');
-            document.getElementById('theme').textContent = isDark ? 'Light' : 'Dark';
-            updateChart();
-        };
-        document.getElementById('easy').onclick = () => {
-            easyMode = !easyMode;
-            document.getElementById('easy').textContent = easyMode ? 'Expert' : 'Easy';
-            // Hide/show advanced
-            document.querySelectorAll('#sidebar > *:not(:first-child)').forEach(el => el.style.display = easyMode ? 'none' : 'block');
-        };
-        document.getElementById('tutorial').style.display = 'block';
+<script>
+// ========================================================================================================
+// # JAVASCRIPT APPLICATION LOGIC
+// # This script contains the entire functionality for the Personal Trading Assistant.
+// # It is structured into logical modules using an IIFE (Immediately Invoked Function Expression)
+// # to encapsulate the code and avoid polluting the global namespace.
+// ========================================================================================================
 
-        // Chart init
-        chart = new ApexCharts(document.getElementById('chart'), {
-            series: [{name: 'Candles', data: []}],
-            chart: {type: 'candlestick', height: 400, animations: {enabled: false}},
-            xaxis: {type: 'datetime'},
-            theme: {mode: 'light'}
-        });
-        chart.render();
+(function() {
+    'use strict';
 
-        // Fetch data
-        async function loadData() {
-            const sym = document.getElementById('symbol').value;
-            const int = document.getElementById('interval').value;
-            const key = `${sym}_${int}`;
-            const cached = localStorage.getItem(key);
+    // --- GLOBAL CONFIGURATION & STATE ---
+    const config = {
+        binanceApiUrl: 'https://api.binance.com/api/v3',
+        binanceWsUrl: 'wss://stream.binance.com:9443/ws',
+        symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'WIFUSDT', 'AVAXUSDT', 'PYTHUSDT', 'ADAUSDT', 'MATICUSDT', 'BRETTUSDT', 'FARCOINUSDT'],
+        intervals: ['1m', '5m', '15m', '1h', '4h', '1d'],
+        candleLimit: 1000,
+        cacheTTL: 5 * 60 * 1000, // 5 minutes
+        defaultIndicators: [
+            { name: 'EMA', params: { period: 20 }, type: 'overlay', color: '#ff6d00' },
+            { name: 'EMA', params: { period: 50 }, type: 'overlay', color: '#2962ff' },
+        ]
+    };
+
+    const state = {
+        currentSymbol: null,
+        currentInterval: null,
+        klineData: [],
+        chart: null,
+        candleSeries: null,
+        indicatorSeries: {},
+        ws: null,
+        activeIndicators: new Set(),
+        mlModel: null,
+        isTraining: false,
+        paperTrades: {
+            positions: [],
+            history: [],
+        },
+    };
+    
+    // Technical Indicator definitions
+    const INDICATOR_DEFS = {
+        'SMA': { params: [{ name: 'period', default: 20 }], type: 'overlay' },
+        'EMA': { params: [{ name: 'period', default: 20 }], type: 'overlay' },
+        'Bollinger Bands': { params: [{ name: 'period', default: 20 }, { name: 'stdDev', default: 2 }], type: 'overlay' },
+        'MACD': { params: [{ name: 'fastPeriod', default: 12 }, { name: 'slowPeriod', default: 26 }, { name: 'signalPeriod', default: 9 }], type: 'pane' },
+        'RSI': { params: [{ name: 'period', default: 14 }], type: 'pane' },
+        'Stochastic': { params: [{ name: 'period', default: 14 }, { name: 'signalPeriod', default: 3 }], type: 'pane' },
+    };
+
+
+    // --- DOM ELEMENT REFERENCES ---
+    const dom = {
+        symbolSelector: document.getElementById('symbol-selector'),
+        intervalSelector: document.getElementById('interval-selector'),
+        lastPrice: document.getElementById('last-price'),
+        priceChange: document.getElementById('price-change'),
+        chartContainer: document.getElementById('chart'),
+        chartLoader: document.getElementById('chart-loader'),
+        indicatorToolbar: document.querySelector('.indicator-toolbar'),
+        compositeScoreValue: document.querySelector('.composite-score-display .score-value'),
+        compositeScoreLabel: document.querySelector('.composite-score-display .score-label'),
+        signalList: document.getElementById('signal-list'),
+        trainModelBtn: document.getElementById('train-model-btn'),
+        mlStatus: document.getElementById('ml-status'),
+        mlHorizon: document.getElementById('ml-horizon'),
+        mlEpochs: document.getElementById('ml-epochs'),
+        themeToggle: document.getElementById('theme-toggle'),
+        tabs: document.querySelectorAll('.tab-button'),
+        tabContents: document.querySelectorAll('.tab-content'),
+        paperBuyBtn: document.getElementById('paper-buy'),
+        paperSellBtn: document.getElementById('paper-sell'),
+        tradeAmountInput: document.getElementById('trade-amount'),
+        positionsTableBody: document.getElementById('positions-table-body'),
+        historyTableBody: document.getElementById('history-table-body'),
+        runBacktestBtn: document.getElementById('run-backtest-btn'),
+        backtestResults: document.getElementById('backtest-results'),
+        backtestBuyThreshold: document.getElementById('backtest-buy-threshold'),
+        backtestSellThreshold: document.getElementById('backtest-sell-threshold'),
+        toast: document.getElementById('toast'),
+    };
+
+    // ========================================================================================================
+    // # MODULE: API Handler
+    // # Handles fetching data from Binance REST API and WebSocket. Includes caching and error handling.
+    // ========================================================================================================
+    const API = {
+        async fetchKlines(symbol, interval) {
+            const cacheKey = `kline_${symbol}_${interval}`;
+            const cached = localStorage.getItem(cacheKey);
             if (cached) {
-                const {data: cdata, time} = JSON.parse(cached);
-                if (Date.now() - time < TTL) {
-                    data = cdata;
-                    updateChart();
-                    updateInfo();
-                    return;
+                const { timestamp, data } = JSON.parse(cached);
+                if (Date.now() - timestamp < config.cacheTTL) {
+                    console.log('Using cached kline data.');
+                    return data;
                 }
             }
+            
             try {
-                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${int}&limit=${historyLength}`);
-                if (!res.ok) {
-                    if (res.status === 400) alert('Symbol not found on Binance');
-                    return;
-                }
-                const raw = await res.json();
-                data = raw.map(c => ({x: c[0], y: [parseFloat(c[1]), parseFloat(c[2]), parseFloat(c[3]), parseFloat(c[4])], volume: parseFloat(c[5])}));
-                localStorage.setItem(key, JSON.stringify({data, time: Date.now()}));
-                updateChart();
-                updateInfo();
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        // WebSocket
-        function connectWS() {
-            if (ws) ws.close();
-            const sym = document.getElementById('symbol').value.toLowerCase();
-            const int = document.getElementById('interval').value;
-            ws = new WebSocket(`wss://stream.binance.com:9443/ws/${sym}@kline_${int}`);
-            ws.onmessage = (e) => {
-                const msg = JSON.parse(e.data);
-                if (msg.k) {
-                    const candle = {x: msg.k.t, y: [msg.k.o, msg.k.h, msg.k.l, msg.k.c], volume: msg.k.v};
-                    if (data[data.length-1].x === candle.x) {
-                        data[data.length-1] = candle;
-                    } else {
-                        data.push(candle);
+                const url = `${config.binanceApiUrl}/klines?symbol=${symbol}&interval=${interval}&limit=${config.candleLimit}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    if(errorData.code === -1121) { // Invalid symbol
+                        throw new Error(`Symbol ${symbol} not found on Binance.`);
                     }
-                    updateChart();
-                    updateInfo();
-                    checkAlerts(parseFloat(msg.k.c));
+                    throw new Error(`API Error: ${response.statusText} (${response.status})`);
                 }
+                const data = await response.json();
+                const formattedData = data.map(d => ({
+                    time: d[0] / 1000,
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[2]),
+                    low: parseFloat(d[3]),
+                    close: parseFloat(d[4]),
+                    volume: parseFloat(d[5]),
+                }));
+                
+                localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: formattedData }));
+                return formattedData;
+            } catch (error) {
+                console.error('Failed to fetch klines:', error);
+                UI.showToast(error.message, 'error');
+                return null;
+            }
+        },
+
+        connectWebSocket() {
+            if (state.ws) {
+                state.ws.close();
+            }
+            const url = `${config.binanceWsUrl}/${state.currentSymbol.toLowerCase()}@kline_${state.currentInterval}`;
+            state.ws = new WebSocket(url);
+
+            state.ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                const candle = msg.k;
+                const formattedCandle = {
+                    time: candle.t / 1000,
+                    open: parseFloat(candle.o),
+                    high: parseFloat(candle.h),
+                    low: parseFloat(candle.l),
+                    close: parseFloat(candle.c),
+                    volume: parseFloat(candle.v),
+                };
+                
+                // Update chart, indicators, and UI in real-time
+                ChartManager.updateRealtime(formattedCandle);
+                UI.updateHeaderPrice(formattedCandle.close, state.klineData[state.klineData.length - 2]?.close);
+                
+                // If it's a new candle, run analysis, otherwise just update last candle
+                if(candle.x) { // is closed candle
+                    state.klineData.push(formattedCandle);
+                    if(state.klineData.length > config.candleLimit) state.klineData.shift();
+                    runFullAnalysis();
+                } else {
+                     // Live update of current candle
+                     state.klineData[state.klineData.length - 1] = formattedCandle;
+                     runLightAnalysis(); // Less intensive update
+                }
+                PaperTrading.updateOpenPositions();
+            };
+
+            state.ws.onerror = (error) => {
+                console.error('WebSocket Error:', error);
             };
         }
+    };
+    
+    // ========================================================================================================
+    // # MODULE: UI Manager
+    // # Handles all DOM manipulations, event listeners, and visual feedback.
+    // ========================================================================================================
+    const UI = {
+        init() {
+            // Populate selectors
+            config.symbols.forEach(symbol => {
+                const option = document.createElement('option');
+                option.value = symbol;
+                option.textContent = symbol;
+                dom.symbolSelector.appendChild(option);
+            });
 
-        // Update chart
-        function updateChart() {
-            let series = [{name: 'Candles', type: 'candlestick', data: data}];
-            const closes = data.map(d => d.y[3]);
-            const highs = data.map(d => d.y[1]);
-            const lows = data.map(d => d.y[2]);
-            const opens = data.map(d => d.y[0]);
+            // Populate indicator toolbar
+            Object.keys(INDICATOR_DEFS).forEach(name => {
+                const button = document.createElement('button');
+                button.textContent = name;
+                button.dataset.indicator = name;
+                dom.indicatorToolbar.appendChild(button);
+                button.addEventListener('click', () => this.toggleIndicator(name));
+            });
+
+            // Event Listeners
+            dom.symbolSelector.addEventListener('change', (e) => Main.changeAsset(e.target.value, state.currentInterval));
+            dom.intervalSelector.addEventListener('change', (e) => Main.changeAsset(state.currentSymbol, e.target.value));
+            dom.trainModelBtn.addEventListener('click', () => ML.trainModel());
+            dom.themeToggle.addEventListener('click', this.toggleTheme);
+            dom.tabs.forEach(tab => tab.addEventListener('click', () => this.switchTab(tab.dataset.tab)));
+            dom.paperBuyBtn.addEventListener('click', () => PaperTrading.executeTrade('buy'));
+            dom.paperSellBtn.addEventListener('click', () => PaperTrading.executeTrade('sell'));
+            dom.runBacktestBtn.addEventListener('click', Backtester.run);
+            
+            // Set initial theme
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        },
+        
+        showLoader(isLoading) {
+            dom.chartLoader.style.display = isLoading ? 'block' : 'none';
+        },
+        
+        updateHeaderPrice(price, prevClose) {
+            const currentPrice = state.klineData.length > 0 ? state.klineData[state.klineData.length-1].close : 0;
+            const openPrice = state.klineData.length > 0 ? state.klineData[0].close : 0;
+            
+            dom.lastPrice.textContent = price.toFixed(price > 100 ? 2 : 4);
+            const change = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+            dom.priceChange.textContent = `${change.toFixed(2)}%`;
+            dom.priceChange.className = `change ${change >= 0 ? 'positive' : 'negative'}`;
+            document.title = `${price.toFixed(2)} | ${state.currentSymbol} | PTA`;
+        },
+        
+        updateCompositeScore(score, signals) {
+            dom.compositeScoreValue.textContent = score.toFixed(2);
+            let label, className;
+            if (score > 0.5) { label = 'Strong Buy'; className = 'buy'; }
+            else if (score > 0.1) { label = 'Buy'; className = 'buy'; }
+            else if (score < -0.5) { label = 'Strong Sell'; className = 'sell'; }
+            else if (score < -0.1) { label = 'Sell'; className = 'sell'; }
+            else { label = 'Neutral'; className = 'neutral'; }
+            dom.compositeScoreLabel.textContent = label;
+            dom.compositeScoreLabel.className = `score-label ${className}`;
+            
+            dom.signalList.innerHTML = '';
+            if (signals.length > 0) {
+                signals.forEach(s => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="signal-name">${s.name}</span><span class="signal-value ${s.type}">${s.type.toUpperCase()}</span>`;
+                    dom.signalList.appendChild(li);
+                });
+            } else {
+                dom.signalList.innerHTML = '<li>No active signals</li>';
+            }
+        },
+
+        toggleIndicator(name) {
+            const button = dom.indicatorToolbar.querySelector(`[data-indicator="${name}"]`);
+            if (state.activeIndicators.has(name)) {
+                state.activeIndicators.delete(name);
+                button.classList.remove('active');
+                ChartManager.removeIndicator(name);
+            } else {
+                state.activeIndicators.add(name);
+                button.classList.add('active');
+                const data = IndicatorCalculator.calculate(name, state.klineData);
+                ChartManager.addIndicator(name, data);
+            }
+        },
+        
+        toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            ChartManager.applyTheme(newTheme);
+        },
+
+        switchTab(tabId) {
+            dom.tabContents.forEach(content => content.classList.remove('active'));
+            dom.tabs.forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+        },
+
+        showToast(message, type = 'info') { // type: info, success, error
+            dom.toast.textContent = message;
+            dom.toast.className = `toast show ${type}`;
+            setTimeout(() => {
+                dom.toast.className = 'toast';
+            }, 3000);
+        }
+    };
+
+    // ========================================================================================================
+    // # MODULE: Chart Manager
+    // # Manages the Lightweight Charts instance, including series for candles and indicators.
+    // ========================================================================================================
+    const ChartManager = {
+        init() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            const chartOptions = {
+                width: dom.chartContainer.clientWidth,
+                height: dom.chartContainer.clientHeight,
+                layout: {
+                    background: { color: 'transparent' },
+                    textColor: theme === 'dark' ? '#d1d4dc' : '#131722',
+                },
+                grid: {
+                    vertLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
+                    horzLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
+                },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                rightPriceScale: {
+                    borderColor: theme === 'dark' ? '#2a2e39' : '#e0e3eb',
+                },
+                timeScale: {
+                    borderColor: theme === 'dark' ? '#2a2e39' : '#e0e3eb',
+                    timeVisible: true,
+                    secondsVisible: false,
+                },
+            };
+            state.chart = LightweightCharts.createChart(dom.chartContainer, chartOptions);
+            state.candleSeries = state.chart.addCandlestickSeries({
+                upColor: '#26a69a', wickUpColor: '#26a69a',
+                downColor: '#ef5350', wickDownColor: '#ef5350',
+                borderVisible: false,
+            });
+
+            new ResizeObserver(this.resize).observe(dom.chartContainer);
+        },
+        
+        resize() {
+            if (state.chart && dom.chartContainer.clientWidth > 0) {
+                state.chart.resize(dom.chartContainer.clientWidth, dom.chartContainer.clientHeight);
+            }
+        },
+
+        setData(data) {
+            state.candleSeries.setData(data);
+            state.chart.timeScale().fitContent();
+        },
+        
+        updateRealtime(candle) {
+            state.candleSeries.update(candle);
+        },
+        
+        applyTheme(theme) {
+            state.chart.applyOptions({
+                layout: {
+                    textColor: theme === 'dark' ? '#d1d4dc' : '#131722',
+                },
+                grid: {
+                    vertLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
+                    horzLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
+                },
+            });
+        },
+
+        addIndicator(name, data) {
+            this.removeIndicator(name);
+            const def = INDICATOR_DEFS[name];
+            if (!def) return;
+            
+            state.indicatorSeries[name] = {};
+
+            if (def.type === 'overlay') {
+                if(name === 'Bollinger Bands') {
+                    state.indicatorSeries[name].upper = state.chart.addLineSeries({ color: 'rgba(76, 175, 80, 0.5)', lineWidth: 1, priceLineVisible: false });
+                    state.indicatorSeries[name].middle = state.chart.addLineSeries({ color: 'rgba(255, 205, 210, 0.5)', lineWidth: 1, priceLineVisible: false });
+                    state.indicatorSeries[name].lower = state.chart.addLineSeries({ color: 'rgba(76, 175, 80, 0.5)', lineWidth: 1, priceLineVisible: false });
+                    state.indicatorSeries[name].upper.setData(data.map(d => ({time: d.time, value: d.upper})));
+                    state.indicatorSeries[name].middle.setData(data.map(d => ({time: d.time, value: d.middle})));
+                    state.indicatorSeries[name].lower.setData(data.map(d => ({time: d.time, value: d.lower})));
+                } else {
+                    state.indicatorSeries[name].main = state.chart.addLineSeries({ color: '#2962ff', lineWidth: 2 });
+                    state.indicatorSeries[name].main.setData(data);
+                }
+            } else if (def.type === 'pane') {
+                 const pane = state.chart.addHistogramSeries({
+                    priceFormat: { type: 'volume' },
+                    priceScaleId: name,
+                });
+                pane.setData(data);
+                state.indicatorSeries[name].pane = pane;
+            }
+        },
+
+        removeIndicator(name) {
+            if (state.indicatorSeries[name]) {
+                Object.values(state.indicatorSeries[name]).forEach(series => state.chart.removeSeries(series));
+                delete state.indicatorSeries[name];
+            }
+        },
+
+        showPredictions(predictions) {
+            // Visualize predictions on chart
+            // For simplicity, let's just log them for now
+            console.log("ML Predictions:", predictions);
+            UI.showToast(`Model predicted next price: ${predictions[0].value.toFixed(2)}`, 'info');
+        }
+    };
+
+    // ========================================================================================================
+    // # MODULE: Indicator Calculator
+    // # Uses the technicalindicators library to compute values for various indicators.
+    // ========================================================================================================
+    const IndicatorCalculator = {
+        calculateAll(data) {
+            const indicators = {};
+            const closePrices = data.map(d => d.close);
+            const highPrices = data.map(d => d.high);
+            const lowPrices = data.map(d => d.low);
             const volumes = data.map(d => d.volume);
-            let ha = {open: opens, high: highs, low: lows, close: closes};
-            if (document.getElementById('HA').checked) {
-                ha = heikinAshi(opens, highs, lows, closes);
-                series[0].data = data.map((d,i) => ({x: d.x, y: [ha.open[i], ha.high[i], ha.low[i], ha.close[i]]}));
+            
+            // Calculate a few key indicators for the signal engine
+            indicators.rsi14 = technicalindicators.rsi({ period: 14, values: closePrices });
+            indicators.macd12_26_9 = technicalindicators.macd({
+                values: closePrices,
+                fastPeriod: 12,
+                slowPeriod: 26,
+                signalPeriod: 9,
+                SimpleMAOscillator: false,
+                SimpleMASignal: false
+            });
+            indicators.ema20 = technicalindicators.ema({ period: 20, values: closePrices });
+            indicators.ema50 = technicalindicators.ema({ period: 50, values: closePrices });
+            
+            return indicators;
+        },
+
+        calculate(name, data) {
+            const closes = data.map(d => d.close);
+            const def = INDICATOR_DEFS[name];
+            if (!def) return [];
+
+            let result;
+            if(name === 'SMA' || name === 'EMA') {
+                const period = def.params[0].default;
+                result = technicalindicators[name.toLowerCase()]({period, values: closes});
             }
-            const indCloses = ha.close; // use HA if enabled
-            indicators.forEach(ind => {
-                if (document.getElementById(ind).checked) {
-                    let line;
-                    switch (ind) {
-                        case 'SMA5': line = addMA(series, TI.SMA.calculate({values: indCloses, period:5}), 'SMA5'); break;
-                        case 'SMA10': line = addMA(series, TI.SMA.calculate({values: indCloses, period:10}), 'SMA10'); break;
-                        // ... similar for others
-                        case 'EMA': line = addMA(series, TI.EMA.calculate({values: indCloses, period:20}), 'EMA'); break;
-                        case 'WMA': line = addMA(series, TI.WMA.calculate({values: indCloses, period:20}), 'WMA'); break;
-                        case 'HMA': line = addMA(series, hullMA(indCloses, 20), 'HMA'); break;
-                        case 'MACD': {
-                            const macd = TI.MACD.calculate({values: indCloses, fastPeriod:12, slowPeriod:26, signalPeriod:9});
-                            series.push({name: 'MACD', type: 'line', data: macd.map((m,i) => ({x: data[data.length - macd.length + i].x, y: m.MACD}))});
-                            series.push({name: 'Signal', type: 'line', data: macd.map((m,i) => ({x: data[data.length - macd.length + i].x, y: m.signal}))});
-                            series.push({name: 'Hist', type: 'bar', data: macd.map((m,i) => ({x: data[data.length - macd.length + i].x, y: m.histogram}))});
-                            break;
-                        }
-                        case 'RSI': line = addMA(series, TI.RSI.calculate({values: indCloses, period:14}), 'RSI', true); break;
-                        case 'Stoch': {
-                            const stoch = TI.Stochastic.calculate({high: ha.high, low: ha.low, close: indCloses, period:14, signalPeriod:3});
-                            series.push({name: '%K', type: 'line', data: stoch.map((s,i) => ({x: data[data.length - stoch.length + i].x, y: s.k}))});
-                            series.push({name: '%D', type: 'line', data: stoch.map((s,i) => ({x: data[data.length - stoch.length + i].x, y: s.d}))});
-                            break;
-                        }
-                        case 'BB': {
-                            const bb = TI.BollingerBands.calculate({values: indCloses, period:20, stdDev:2});
-                            series.push({name: 'Upper', type: 'line', data: bb.map((b,i) => ({x: data[data.length - bb.length + i].x, y: b.upper}))});
-                            series.push({name: 'Middle', type: 'line', data: bb.map((b,i) => ({x: data[data.length - bb.length + i].x, y: b.middle}))});
-                            series.push({name: 'Lower', type: 'line', data: bb.map((b,i) => ({x: data[data.length - bb.length + i].x, y: b.lower}))});
-                            break;
-                        }
-                        case 'ATR': line = addMA(series, TI.ATR.calculate({high: ha.high, low: ha.low, close: indCloses, period:14}), 'ATR', true); break;
-                        case 'OBV': line = addMA(series, TI.OBV.calculate({close: indCloses, volume: volumes.slice(-indCloses.length)}), 'OBV', true); break;
-                        case 'VWAP': line = addMA(series, TI.VWAP.calculate({high: ha.high, low: ha.low, close: indCloses, volume: volumes.slice(-indCloses.length)}), 'VWAP'); break;
-                        case 'Ichimoku': {
-                            const ich = TI.Ichimoku.calculate({high: ha.high, low: ha.low, conversionPeriod:9, basePeriod:26, spanPeriod:52, displacement:26});
-                            series.push({name: 'Tenkan', type: 'line', data: ich.map((ic,i) => ({x: data[data.length - ich.length + i].x, y: ic.conversion}))});
-                            series.push({name: 'Kijun', type: 'line', data: ich.map((ic,i) => ({x: data[data.length - ich.length + i].x, y: ic.base}))});
-                            series.push({name: 'SpanA', type: 'line', data: ich.map((ic,i) => ({x: data[data.length - ich.length + i].x, y: ic.spanA}))});
-                            series.push({name: 'SpanB', type: 'line', data: ich.map((ic,i) => ({x: data[data.length - ich.length + i].x, y: ic.spanB}))});
-                            series.push({name: 'Chikou', type: 'line', data: ich.map((ic,i) => ({x: data[data.length - ich.length + i].x, y: ic.lag}))});
-                            break;
-                        }
-                        case 'ADX': line = addMA(series, TI.ADX.calculate({high: ha.high, low: ha.low, close: indCloses, period:14}).map(a => a.adx), 'ADX', true); break;
-                        case 'CCI': line = addMA(series, TI.CCI.calculate({high: ha.high, low: ha.low, close: indCloses, period:20}), 'CCI', true); break;
-                        case 'Supertrend': line = addMA(series, supertrend(ha.high, ha.low, indCloses), 'Supertrend'); break;
-                        case 'Keltner': {
-                            const kc = keltnerChannels(indCloses, ha.high, ha.low);
-                            series.push({name: 'KC Upper', type: 'line', data: kc.upper.map((u,i) => ({x: data[data.length - kc.upper.length + i].x, y: u}))});
-                            series.push({name: 'KC Middle', type: 'line', data: kc.middle.map((m,i) => ({x: data[data.length - kc.middle.length + i].x, y: m}))});
-                            series.push({name: 'KC Lower', type: 'line', data: kc.lower.map((l,i) => ({x: data[data.length - kc.lower.length + i].x, y: l}))});
-                            break;
-                        }
-                        case 'EMARibbon': {
-                            [8,13,21,34,55,89].forEach(p => {
-                                addMA(series, TI.EMA.calculate({values: indCloses, period:p}), `EMA${p}`);
-                            });
-                            break;
-                        }
-                        case 'Pivot': {
-                            // Daily pivots, assume data is daily for simplicity
-                            const pivots = pivotPoints(highs, lows, closes);
-                            // Add horizontal lines, but Apex annotations
-                            chart.addXaxisAnnotation({y: pivots.pp, label: {text: 'PP'}}); // approx
-                            // etc, simplified
-                            break;
-                        }
-                        case 'VP': {
-                            const vp = TI.VolumeProfile.calculate({high: highs, low: lows, close: closes, volume: volumes, bins:10});
-                            // Add as separate series bar
-                            series.push({name: 'VP', type: 'bar', data: vp.map((v,i) => ({x: i, y: v.volume})) , xaxis: {type: 'category'}}); // separate pane?
-                            break;
+            if(name === 'Bollinger Bands') {
+                result = technicalindicators.bollingerbands({period: 20, stdDev: 2, values: closes});
+            }
+            // Add more indicator calculations here...
+
+            // Format for chart
+            if(Array.isArray(result) && typeof result[0] === 'number') {
+                return data.slice(data.length - result.length).map((d, i) => ({ time: d.time, value: result[i] }));
+            }
+             if(Array.isArray(result) && typeof result[0] === 'object') {
+                return data.slice(data.length - result.length).map((d, i) => ({ time: d.time, ...result[i] }));
+            }
+            
+            return [];
+        }
+    };
+    
+    // ========================================================================================================
+    // # MODULE: Signal Engine
+    // # Generates buy/sell signals based on indicator values and computes a composite score.
+    // ========================================================================================================
+    const SignalEngine = {
+        getCompositeScore(data, indicators) {
+            if (indicators.rsi14.length === 0) return { score: 0, signals: [] };
+
+            let score = 0;
+            const signals = [];
+            const lastCandle = data[data.length - 1];
+            const prevCandle = data[data.length - 2];
+
+            // RSI
+            const lastRSI = indicators.rsi14[indicators.rsi14.length - 1];
+            if (lastRSI < 30) { score += 1; signals.push({ name: 'RSI(14)', type: 'buy' }); }
+            if (lastRSI > 70) { score -= 1; signals.push({ name: 'RSI(14)', type: 'sell' }); }
+
+            // MACD
+            const lastMACD = indicators.macd12_26_9[indicators.macd12_26_9.length - 1];
+            const prevMACD = indicators.macd12_26_9[indicators.macd12_26_9.length - 2];
+            if (prevMACD.MACD < prevMACD.signal && lastMACD.MACD > lastMACD.signal) {
+                score += 1.5; signals.push({ name: 'MACD Cross', type: 'buy' });
+            }
+            if (prevMACD.MACD > prevMACD.signal && lastMACD.MACD < lastMACD.signal) {
+                score -= 1.5; signals.push({ name: 'MACD Cross', type: 'sell' });
+            }
+
+            // EMA Cross
+            const lastEMA20 = indicators.ema20[indicators.ema20.length - 1];
+            const lastEMA50 = indicators.ema50[indicators.ema50.length - 1];
+            if (lastCandle.close > lastEMA50) { score += 0.5; signals.push({ name: 'Price > EMA(50)', type: 'buy'}); }
+            if (lastCandle.close < lastEMA50) { score -= 0.5; signals.push({ name: 'Price < EMA(50)', type: 'sell'}); }
+            if (lastEMA20 > lastEMA50) { score += 0.5; }
+            if (lastEMA20 < lastEMA50) { score -= 0.5; }
+
+            // Normalize score
+            const maxScore = 4.5; // Sum of max absolute weights
+            const normalizedScore = Math.max(-1, Math.min(1, score / maxScore));
+            
+            return { score: normalizedScore, signals };
+        }
+    };
+
+    // ========================================================================================================
+    // # MODULE: Machine Learning
+    // # Handles in-browser model training and prediction with TensorFlow.js.
+    // ========================================================================================================
+    const ML = {
+        async trainModel() {
+            if (state.isTraining) {
+                UI.showToast('Training is already in progress.', 'info');
+                return;
+            }
+            state.isTraining = true;
+            dom.trainModelBtn.disabled = true;
+            dom.mlStatus.textContent = 'Preparing data...';
+
+            try {
+                // Feature engineering
+                const features = state.klineData.map(d => [
+                    d.open, d.high, d.low, d.close, d.volume
+                ]).slice(50); // Remove early data points where indicators are not stable
+                
+                if(features.length < 100) {
+                    throw new Error("Not enough historical data to train the model. Need at least 100 candles.");
+                }
+
+                // Normalize data
+                const { normalized, min, max } = this.normalize(features);
+
+                const sequenceLength = 60;
+                const horizon = parseInt(dom.mlHorizon.value, 10);
+                const { X, y } = this.createSequences(normalized, sequenceLength, horizon);
+                
+                if(!X || X.length === 0) {
+                    throw new Error("Could not create training sequences from the available data.");
+                }
+
+                const X_tensor = tf.tensor3d(X, [X.length, sequenceLength, 5]);
+                const y_tensor = tf.tensor2d(y, [y.length, 1]);
+
+                // Define model
+                state.mlModel = tf.sequential();
+                state.mlModel.add(tf.layers.lstm({ units: 50, returnSequences: true, inputShape: [sequenceLength, 5] }));
+                state.mlModel.add(tf.layers.dropout(0.2));
+                state.mlModel.add(tf.layers.lstm({ units: 50 }));
+                state.mlModel.add(tf.layers.dropout(0.2));
+                state.mlModel.add(tf.layers.dense({ units: 1 }));
+
+                state.mlModel.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+
+                // Train model
+                const epochs = parseInt(dom.mlEpochs.value, 10);
+                dom.mlStatus.textContent = `Training... Epoch 1/${epochs}`;
+                await state.mlModel.fit(X_tensor, y_tensor, {
+                    epochs: epochs,
+                    callbacks: {
+                        onEpochEnd: (epoch, logs) => {
+                            dom.mlStatus.textContent = `Training... Epoch ${epoch + 1}/${epochs} | Loss: ${logs.loss.toFixed(4)}`;
                         }
                     }
-                }
-            });
-            chart.updateOptions({theme: {mode: isDark ? 'dark' : 'light'}});
-            chart.updateSeries(series);
-            updateSignals();
-        }
-
-        function addMA(series, values, name, separate=false) {
-            const maData = values.map((v,i) => ({x: data[data.length - values.length + i].x, y: v}));
-            series.push({name, type: 'line', data: maData});
-        }
-
-        // Custom indicators
-        function heikinAshi(open, high, low, close) {
-            let haClose = [], haOpen = [], haHigh = [], haLow = [];
-            for (let i = 0; i < close.length; i++) {
-                haClose[i] = (open[i] + high[i] + low[i] + close[i]) / 4;
-                haOpen[i] = i === 0 ? (open[0] + close[0]) / 2 : (haOpen[i - 1] + haClose[i - 1]) / 2;
-                haHigh[i] = Math.max(high[i], haOpen[i], haClose[i]);
-                haLow[i] = Math.min(low[i], haOpen[i], haClose[i]);
+                });
+                
+                // Store normalization stats
+                state.mlModel.normalizationStats = { min, max };
+                
+                UI.showToast('Model training complete!', 'success');
+                dom.mlStatus.textContent = 'Model trained. Ready to predict.';
+                await this.predict();
+            } catch (error) {
+                console.error("ML Training Error:", error);
+                UI.showToast(error.message, 'error');
+                dom.mlStatus.textContent = `Error: ${error.message}`;
+            } finally {
+                state.isTraining = false;
+                dom.trainModelBtn.disabled = false;
             }
-            return { open: haOpen, high: haHigh, low: haLow, close: haClose };
-        }
+        },
 
-        function hullMA(prices, period = 20) {
-            const halfP = Math.floor(period / 2);
-            const sqrtP = Math.floor(Math.sqrt(period));
-            const wmaHalf = TI.WMA.calculate({values: prices, period: halfP});
-            const wmaFull = TI.WMA.calculate({values: prices, period});
-            const diffLen = prices.length - Math.max(halfP, period) + 1;
-            const diff = [];
-            for (let i = 0; i < diffLen; i++) {
-                diff[i] = 2 * wmaHalf[wmaHalf.length - diffLen + i] - wmaFull[wmaFull.length - diffLen + i];
+        async predict() {
+            if (!state.mlModel) {
+                UI.showToast('Train a model first before predicting.', 'error');
+                return;
             }
-            return TI.WMA.calculate({values: diff, period: sqrtP});
-        }
+            
+            const horizon = parseInt(dom.mlHorizon.value, 10);
+            const sequenceLength = 60;
+            const lastSequenceRaw = state.klineData.slice(-sequenceLength).map(d => [d.open, d.high, d.low, d.close, d.volume]);
 
-        function supertrend(high, low, close, period = 10, mult = 3) {
-            const atr = TI.ATR.calculate({high, low, close, period});
-            const len = atr.length;
-            const hl2 = high.slice(-len).map((h,i) => (h + low[high.length - len + i]) / 2);
-            let upper = hl2.map((v,i) => v + mult * atr[i]);
-            let lower = hl2.map((v,i) => v - mult * atr[i]);
-            let trend = new Array(len).fill(0);
-            let dir = 1;
-            for (let i = 0; i < len; i++) {
-                let curr = dir > 0 ? lower[i] : upper[i];
-                if (i > 0) {
-                    curr = dir > 0 ? Math.max(curr, trend[i-1]) : Math.min(curr, trend[i-1]);
-                }
-                if (dir > 0 && close[close.length - len + i - 1] < curr) {
-                    dir = -1;
-                    curr = upper[i];
-                } else if (dir < 0 && close[close.length - len + i - 1] > curr) {
-                    dir = 1;
-                    curr = lower[i];
-                }
-                trend[i] = curr;
+            const { min, max } = state.mlModel.normalizationStats;
+            const lastSequenceNormalized = lastSequenceRaw.map(row => 
+                row.map((val, i) => (val - min[i]) / (max[i] - min[i]))
+            );
+
+            const inputTensor = tf.tensor3d([lastSequenceNormalized]);
+            const predictionTensor = state.mlModel.predict(inputTensor);
+            const predictionNormalized = await predictionTensor.data();
+            
+            // Denormalize prediction (we care about the close price, index 3)
+            const predictedClose = predictionNormalized[0] * (max[3] - min[3]) + min[3];
+
+            // For multi-step, this needs a loop and feeding predictions back in
+            // For simplicity, we show a single prediction for now.
+            const lastTime = state.klineData[state.klineData.length - 1].time;
+            const intervalSeconds = this.getIntervalSeconds(state.currentInterval);
+            const predictionTime = lastTime + (horizon * intervalSeconds);
+            
+            const predictionData = [{ time: predictionTime, value: predictedClose }];
+            
+            ChartManager.showPredictions(predictionData);
+        },
+        
+        // Helper functions for ML
+        normalize(data) {
+            const arr = tf.tensor2d(data);
+            const min = arr.min(0);
+            const max = arr.max(0);
+            const normalized = arr.sub(min).div(max.sub(min));
+            return { normalized: normalized.arraySync(), min: min.arraySync(), max: max.arraySync() };
+        },
+        
+        createSequences(data, seqLength, horizon) {
+            const X = [];
+            const y = [];
+            for (let i = 0; i < data.length - seqLength - horizon + 1; i++) {
+                X.push(data.slice(i, i + seqLength));
+                y.push(data[i + seqLength + horizon - 1][3]); // Predicting the 'close' price
             }
-            return trend;
-        }
+            return { X, y };
+        },
 
-        function keltnerChannels(close, high, low, period=20, mult=2) {
-            const ema = TI.EMA.calculate({values: close, period});
-            const atr = TI.ATR.calculate({high, low, close, period});
-            const len = Math.min(ema.length, atr.length);
-            return {
-                upper: ema.slice(-len).map((e,i) => e + mult * atr[atr.length - len + i]),
-                middle: ema.slice(-len),
-                lower: ema.slice(-len).map((e,i) => e - mult * atr[atr.length - len + i])
+        getIntervalSeconds(interval) {
+            const unit = interval.slice(-1);
+            const value = parseInt(interval.slice(0, -1));
+            if (unit === 'm') return value * 60;
+            if (unit === 'h') return value * 60 * 60;
+            if (unit === 'd') return value * 24 * 60 * 60;
+            return 0;
+        }
+    };
+    
+    // ========================================================================================================
+    // # MODULE: Paper Trading
+    // # Simulates trading based on user actions, tracks positions and history.
+    // ========================================================================================================
+    const PaperTrading = {
+        init() {
+            const savedTrades = localStorage.getItem('paperTrades');
+            if (savedTrades) {
+                state.paperTrades = JSON.parse(savedTrades);
+            }
+            this.renderTables();
+        },
+
+        executeTrade(side) {
+            const amount = parseFloat(dom.tradeAmountInput.value);
+            if (isNaN(amount) || amount <= 0) {
+                UI.showToast('Please enter a valid trade amount.', 'error');
+                return;
+            }
+            
+            const currentPrice = state.klineData[state.klineData.length - 1].close;
+            const quantity = amount / currentPrice;
+
+            if (side === 'buy') {
+                const position = {
+                    id: Date.now(),
+                    symbol: state.currentSymbol,
+                    side: 'long',
+                    amount,
+                    quantity,
+                    entryPrice: currentPrice,
+                };
+                state.paperTrades.positions.push(position);
+            } else { // sell
+                 const position = {
+                    id: Date.now(),
+                    symbol: state.currentSymbol,
+                    side: 'short',
+                    amount,
+                    quantity,
+                    entryPrice: currentPrice,
+                };
+                state.paperTrades.positions.push(position);
+            }
+            
+            const historyEntry = {
+                time: new Date().toISOString(),
+                symbol: state.currentSymbol,
+                side,
+                amount,
+                price: currentPrice
             };
-        }
+            state.paperTrades.history.unshift(historyEntry);
+            
+            this.saveAndRender();
+            UI.showToast(`${side.toUpperCase()} order for ${amount} USDT filled.`, 'success');
+        },
 
-        function pivotPoints(high, low, close) {
-            // Last day
-            const last = close.length - 1;
-            const pp = (high[last] + low[last] + close[last]) / 3;
-            return {pp, r1: pp * 2 - low[last], s1: pp * 2 - high[last]}; // simplified
-        }
+        closePosition(positionId) {
+            const index = state.paperTrades.positions.findIndex(p => p.id === positionId);
+            if(index === -1) return;
 
-        // Update info
-        function updateInfo() {
-            if (!data.length) return;
-            const last = data[data.length-1].y[3];
-            const prev = data[data.length-2]?.y[3] || last;
-            const change = ((last - prev) / prev * 100).toFixed(2);
-            const vol = data.reduce((s,d) => s + d.volume, 0).toFixed(0);
-            document.getElementById('price').textContent = `Price: ${last}`;
-            document.getElementById('change').textContent = `Change: ${change}%`;
-            document.getElementById('volume').textContent = `Vol: ${vol}`;
-        }
-
-        // Signals
-        function updateSignals() {
-            const closes = data.map(d => d.y[3]);
-            const lastClose = closes[closes.length-1];
-            let signals = [];
-            let score = 0;
-            // Example signals
-            const rsi = TI.RSI.calculate({values: closes, period:14})[0];
-            if (rsi < 30) { signals.push('RSI Oversold: Buy'); score += 1; }
-            if (rsi > 70) { signals.push('RSI Overbought: Sell'); score -= 1; }
-            const macd = TI.MACD.calculate({values: closes, fastPeriod:12, slowPeriod:26, signalPeriod:9})[0];
-            if (macd.MACD > macd.signal) { signals.push('MACD Bull Cross: Buy'); score += 1; }
-            if (macd.MACD < macd.signal) { signals.push('MACD Bear Cross: Sell'); score -= 1; }
-            // Add more...
-            document.getElementById('signals').innerHTML = signals.join('<br>') + `<br>Score: ${score > 0 ? 'Buy' : score < 0 ? 'Sell' : 'Neutral'}`;
-        }
-
-        // Model
-        async function trainModel() {
-            const closes = data.map(d => d.y[3]);
-            const timesteps = 20;
-            const features = 1; // simple close
-            const xsArr = [], ysArr = [];
-            for (let i = timesteps; i < closes.length; i++) {
-                xsArr.push(closes.slice(i-timesteps, i));
-                ysArr.push(closes[i]);
-            }
-            const min = Math.min(...closes), max = Math.max(...closes);
-            const norm = v => (v - min) / (max - min);
-            const xs = tf.tensor3d(xsArr.map(arr => arr.map(norm)).map(arr => [arr]));
-            const ys = tf.tensor1d(ysArr.map(norm));
-            model = tf.sequential();
-            model.add(tf.layers.lstm({units: 50, inputShape: [timesteps, features]}));
-            model.add(tf.layers.dense({units: 1}));
-            model.compile({optimizer: 'adam', loss: 'meanSquaredError'});
-            await model.fit(xs, ys, {epochs: 10});
-            alert('Model trained');
-        }
-
-        async function predict() {
-            if (!model) return alert('Train first');
-            const closes = data.map(d => d.y[3]);
-            const last = closes.slice(-20).map(v => [v]); // norm later
-            const min = Math.min(...closes), max = Math.max(...closes);
-            const normLast = last.map(([v]) => [(v - min)/(max - min)]);
-            const pred = model.predict(tf.tensor3d([normLast]));
-            const predVal = (await pred.data())[0] * (max - min) + min;
-            document.getElementById('pred-out').textContent = `Next: ${predVal.toFixed(2)}`;
-        }
-
-        // Backtest
-        function backtest() {
-            const closes = data.map(d => d.y[3]);
-            let pos = 0, capital = 1000, buys = 0, sells = 0;
-            for (let i = 50; i < closes.length; i++) {
-                const slice = closes.slice(0,i);
-                const rsi = TI.RSI.calculate({values: slice, period:14})[0];
-                const score = (rsi < 30 ? 1 : rsi > 70 ? -1 : 0); // simple
-                if (score > 0 && pos === 0) { pos = capital / closes[i]; buys++; capital = 0; }
-                if (score < 0 && pos > 0) { capital = pos * closes[i]; pos = 0; sells++; }
-            }
-            if (pos > 0) capital = pos * closes[closes.length-1];
-            const ret = ((capital - 1000)/1000 * 100).toFixed(2);
-            document.getElementById('bt-out').textContent = `Return: ${ret}%`;
-        }
-
-        // Paper trade
-        document.getElementById('buy-sim').onclick = () => {
-            if (position === 0) {
-                position = 1000 / data[data.length-1].y[3];
-                trades.push(`Buy at ${data[data.length-1].y[3]}`);
-            }
-            updateLedger();
-        };
-        document.getElementById('sell-sim').onclick = () => {
-            if (position > 0) {
-                pnl += position * data[data.length-1].y[3] - 1000;
-                trades.push(`Sell at ${data[data.length-1].y[3]}, PNL: ${pnl}`);
-                position = 0;
-            }
-            updateLedger();
-        };
-        function updateLedger() {
-            document.getElementById('pt-ledger').innerHTML = trades.join('<br>') + `<br>Current PNL: ${pnl}`;
-        }
-
-        // Alerts
-        document.getElementById('set-alert').onclick = () => {
-            alerts.push(parseFloat(document.getElementById('alert-price').value));
-        };
-        function checkAlerts(price) {
-            alerts = alerts.filter(a => {
-                if (price > a) {
-                    alert(`Price alert: ${a}`);
-                    return false;
-                }
-                return true;
-            });
-        }
-
-        // Export/Import
-        document.getElementById('export').onclick = () => {
-            const state = {data, trades, pnl};
-            const blob = new Blob([JSON.stringify(state)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'pta.json';
-            a.click();
-        };
-        document.getElementById('import').onchange = (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const state = JSON.parse(ev.target.result);
-                data = state.data;
-                trades = state.trades;
-                pnl = state.pnl;
-                updateChart();
-                updateLedger();
+            const position = state.paperTrades.positions[index];
+            state.paperTrades.positions.splice(index, 1);
+            
+            const currentPrice = state.klineData.find(k => k.symbol === position.symbol)?.close || state.klineData[state.klineData.length-1].close;
+            const historyEntry = {
+                time: new Date().toISOString(),
+                symbol: position.symbol,
+                side: `close ${position.side}`,
+                amount: position.amount,
+                price: currentPrice
             };
-            reader.readAsText(file);
-        };
+            state.paperTrades.history.unshift(historyEntry);
+            this.saveAndRender();
+        },
 
-        // Events
-        document.getElementById('symbol').onchange = () => { loadData(); connectWS(); };
-        document.getElementById('interval').onchange = () => { loadData(); connectWS(); };
-        document.querySelectorAll('#ind-toggles input').forEach(inp => inp.onchange = updateChart);
-        document.getElementById('train').onclick = trainModel;
-        document.getElementById('predict').onclick = predict;
-        document.getElementById('backtest').onclick = backtest;
+        updateOpenPositions() {
+             const currentPrice = state.klineData[state.klineData.length - 1].close;
+             if(state.paperTrades.positions.length > 0) {
+                 this.renderTables(currentPrice);
+             }
+        },
 
-        // Initial load
-        loadData();
-        connectWS();
-    </script>
+        renderTables(currentPrice) {
+            // Positions
+            dom.positionsTableBody.innerHTML = '';
+            state.paperTrades.positions.forEach(pos => {
+                const price = (pos.symbol === state.currentSymbol) ? currentPrice : pos.entryPrice; // Simplified
+                let pnl = 0;
+                if (pos.side === 'long') {
+                    pnl = (price - pos.entryPrice) * pos.quantity;
+                } else {
+                    pnl = (pos.entryPrice - price) * pos.quantity;
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${pos.symbol}</td>
+                    <td>${pos.side}</td>
+                    <td>${pos.amount.toFixed(2)}</td>
+                    <td>${pos.entryPrice.toFixed(4)}</td>
+                    <td>${price ? price.toFixed(4) : '-'}</td>
+                    <td style="color: ${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl.toFixed(2)} (${(pnl/pos.amount*100).toFixed(2)}%)</td>
+                    <td><button class="close-pos-btn" data-id="${pos.id}">Close</button></td>
+                `;
+                dom.positionsTableBody.appendChild(row);
+            });
+            
+            document.querySelectorAll('.close-pos-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => this.closePosition(parseInt(e.target.dataset.id, 10)));
+            });
+
+            // History
+            dom.historyTableBody.innerHTML = '';
+            state.paperTrades.history.slice(0, 100).forEach(trade => { // Limit history display
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(trade.time).toLocaleString()}</td>
+                    <td>${trade.symbol}</td>
+                    <td>${trade.side}</td>
+                    <td>${trade.amount.toFixed(2)}</td>
+                    <td>${trade.price.toFixed(4)}</td>
+                `;
+                dom.historyTableBody.appendChild(row);
+            });
+        },
+
+        saveAndRender() {
+            localStorage.setItem('paperTrades', JSON.stringify(state.paperTrades));
+            this.renderTables(state.klineData[state.klineData.length-1].close);
+        }
+    };
+    
+    // ========================================================================================================
+    // # MODULE: Backtester
+    // # Runs a simple strategy over historical data and provides performance metrics.
+    // ========================================================================================================
+    const Backtester = {
+        run() {
+            const buyThreshold = parseFloat(dom.backtestBuyThreshold.value);
+            const sellThreshold = parseFloat(dom.backtestSellThreshold.value);
+
+            let inPosition = false;
+            let entryPrice = 0;
+            let trades = [];
+            let balance = 10000;
+            const initialBalance = balance;
+
+            for (let i = 50; i < state.klineData.length; i++) {
+                const historicalData = state.klineData.slice(0, i + 1);
+                const indicators = IndicatorCalculator.calculateAll(historicalData);
+                const { score } = SignalEngine.getCompositeScore(historicalData, indicators);
+
+                if (!inPosition && score > buyThreshold) {
+                    inPosition = true;
+                    entryPrice = historicalData[historicalData.length - 1].close;
+                } else if (inPosition && score < sellThreshold) {
+                    inPosition = false;
+                    const exitPrice = historicalData[historicalData.length - 1].close;
+                    const pnl = (exitPrice - entryPrice) / entryPrice;
+                    trades.push(pnl);
+                    balance *= (1 + pnl);
+                }
+            }
+
+            this.displayResults(trades, balance, initialBalance);
+        },
+
+        displayResults(trades, finalBalance, initialBalance) {
+            const totalTrades = trades.length;
+            if (totalTrades === 0) {
+                dom.backtestResults.innerHTML = '<p>No trades were executed with the current settings.</p>';
+                return;
+            }
+
+            const wins = trades.filter(t => t > 0).length;
+            const winRate = (wins / totalTrades * 100).toFixed(2);
+            const totalReturn = ((finalBalance - initialBalance) / initialBalance * 100).toFixed(2);
+            
+            dom.backtestResults.innerHTML = `
+                <h4>Backtest Results</h4>
+                <p>Total Trades: <strong>${totalTrades}</strong></p>
+                <p>Win Rate: <strong>${winRate}%</strong></p>
+                <p>Total Return: <strong style="color: ${totalReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${totalReturn}%</strong></p>
+                <p>Final Balance: <strong>$${finalBalance.toFixed(2)}</strong></p>
+            `;
+        }
+    };
+
+    // ========================================================================================================
+    // # MAIN APPLICATION LOGIC & INITIALIZATION
+    // ========================================================================================================
+    const Main = {
+        async init() {
+            UI.init();
+            ChartManager.init();
+            PaperTrading.init();
+            
+            const initialSymbol = localStorage.getItem('lastSymbol') || 'BTCUSDT';
+            const initialInterval = localStorage.getItem('lastInterval') || '15m';
+            dom.symbolSelector.value = initialSymbol;
+            dom.intervalSelector.value = initialInterval;
+
+            await this.changeAsset(initialSymbol, initialInterval);
+        },
+
+        async changeAsset(symbol, interval) {
+            UI.showLoader(true);
+            state.currentSymbol = symbol;
+            state.currentInterval = interval;
+            localStorage.setItem('lastSymbol', symbol);
+            localStorage.setItem('lastInterval', interval);
+            
+            document.title = `${symbol} | PTA`;
+
+            const klineData = await API.fetchKlines(symbol, interval);
+            
+            if (klineData && klineData.length > 0) {
+                state.klineData = klineData;
+                ChartManager.setData(state.klineData);
+                API.connectWebSocket();
+                runFullAnalysis();
+            } else {
+                 state.klineData = [];
+                 ChartManager.setData([]);
+                 UI.showToast(`Could not load data for ${symbol}. It might not be listed on Binance.`, 'error');
+            }
+
+            UI.showLoader(false);
+        }
+    };
+
+    function runFullAnalysis() {
+        if (state.klineData.length < 50) return;
+        const indicators = IndicatorCalculator.calculateAll(state.klineData);
+        const { score, signals } = SignalEngine.getCompositeScore(state.klineData, indicators);
+        UI.updateCompositeScore(score, signals);
+        
+        // Update any active indicator overlays
+        state.activeIndicators.forEach(name => {
+             const data = IndicatorCalculator.calculate(name, state.klineData);
+             ChartManager.addIndicator(name, data);
+        });
+    }
+
+    function runLightAnalysis() {
+        // A less computationally expensive update for real-time ticks
+        if (state.klineData.length < 50) return;
+        // Could be optimized to only recalculate last few values of indicators
+        runFullAnalysis(); // For simplicity, re-run full analysis
+    }
+
+    // --- Let's Go! ---
+    document.addEventListener('DOMContentLoaded', () => Main.init());
+
+})();
+</script>
 </body>
 </html>
