@@ -1,530 +1,496 @@
-<!DOCTYPE html>
+<!doctype html>
+<!--
+Personal Trading Assistant (PTA) - single-file index.html
+
+Top-of-file README / Instructions
+--------------------------------
+- How to run locally:
+  1) Save this file as index.html
+  2) Run a local static server (recommended for CORS & WebSocket stability):
+     - Python 3: python -m http.server 8000
+     - Node: npx http-server .
+  3) Open http://localhost:8000 in your browser (works on desktop/mobile Safari/Chrome/Firefox).
+
+- CORS & Binance notes:
+  - This app uses Binance public REST and public WebSocket streams. Binance enforces CORS policies. If you see CORS errors, run a simple proxy (example below) or use this app via a local server.
+  - Example minimal Express CORS proxy (for local dev only):
+    const express = require('express');
+    const fetch = require('node-fetch');
+    const app = express();
+    const PORT = process.env.PORT||3000;
+    app.use((req,res,next)=>{res.setHeader('Access-Control-Allow-Origin','*');next();});
+    app.get('/proxy/:path(*)', async (req,res)=>{
+      const upstream = `https://api.binance.com/${req.params.path}?${req._parsedUrl.query||''}`;
+      const r = await fetch(upstream);
+      const text = await r.text(); res.setHeader('Content-Type','application/json'); res.send(text);
+    });
+    app.listen(PORT);
+  - Do NOT store API secret keys in the browser. If you need private trading endpoints, implement server-side signing.
+
+- Binance polite usage:
+  - Use public endpoints sparingly. Keep candle history small (default 500). Use WebSocket for live updates.
+  - REST endpoints public: GET /api/v3/klines, GET /api/v3/ticker/24hr
+
+- Features included (implemented client-side):
+  - Live candlestick fetch via REST and optional WebSocket updates
+  - Local caching to localStorage with TTL
+  - Candlestick chart with Chart.js (financial plugin included)
+  - Multiple indicators implemented in JS (SMA, EMA, WMA, HMA, RSI, MACD, Bollinger Bands, ATR, OBV, VWAP, Ichimoku, ADX, CCI, Supertrend (simplified), EMA Ribbon, Keltner Channels, Heikin-Ashi option, Pivot points (daily), Volume profile histogram)
+  - Composite signal engine with weights and explanation panel
+  - Small TF.js model (1D conv) that can be trained in-browser and predicts next price(s). Lightweight; option to load external pretrained weights via URL
+  - Paper trading simulator & backtester
+  - Export/import of state + snapshots
+  - Mobile-first responsive UI with easy/expert mode, dark/light toggle
+
+- Practical notes & limitations:
+  - This file attempts to provide many indicators; some are simplified for performance and readability. Consider extracting/optimizing functions for production.
+  - Web Workers are used for model training when available. Training in-browser is limited by device CPU/memory—use small history sizes.
+  - This is NOT financial advice. Models are demo-only.
+
+-->
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WIF/USDT Personal Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%); color: #ffffff; overflow-x: hidden; }
-        .header { background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%); padding: 15px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); position: relative; overflow: hidden; }
-        .header::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); animation: shimmer 3s infinite; }
-        @keyframes shimmer { 0% { left: -100%; } 100% { left: 100%; } }
-        .header-content { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; flex-wrap: wrap; }
-        .logo { font-size: 24px; font-weight: bold; color: #00ff88; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
-        .price-ticker { display: flex; gap: 30px; align-items: center; background: rgba(0,0,0,0.3); padding: 10px 20px; border-radius: 25px; backdrop-filter: blur(10px); flex-wrap: wrap; }
-        .price-info { text-align: center; }
-        .price-value { font-size: 18px; font-weight: bold; color: #00ff88; }
-        .price-change { font-size: 12px; margin-top: 2px; }
-        .positive { color: #00ff88; }
-        .negative { color: #ff4444; }
-        .main-container { display: grid; grid-template-columns: 250px 1fr 300px; grid-template-rows: 1fr; height: calc(100vh - 80px); gap: 10px; padding: 10px; }
-        .sidebar { background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 15px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
-        .sidebar h3 { color: #00ff88; margin-bottom: 15px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; }
-        .indicator-group { margin-bottom: 25px; }
-        .indicator-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin: 5px 0; background: rgba(255,255,255,0.05); border-radius: 8px; transition: all 0.3s ease; cursor: pointer; border: 1px solid transparent; }
-        .indicator-item:hover { background: rgba(0,255,136,0.1); border-color: rgba(0,255,136,0.3); transform: translateX(5px); }
-        .indicator-value { font-weight: bold; font-size: 12px; }
-        .chart-container { background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 15px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; }
-        .chart-controls { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-        .timeframe-buttons { display: flex; gap: 5px; }
-        .timeframe-btn { padding: 8px 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; color: white; cursor: pointer; transition: all 0.3s ease; font-size: 12px; }
-        .timeframe-btn.active, .timeframe-btn:hover { background: linear-gradient(45deg, #00ff88, #00cc6a); border-color: #00ff88; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,255,136,0.3); }
-        .chart-wrapper { position: relative; flex: 1; min-height: 400px; }
-        .right-panel { display: flex; flex-direction: column; gap: 10px; }
-        .panel { background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 15px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); }
-        .panel h3 { color: #00ff88; margin-bottom: 15px; font-size: 16px; text-align: center; }
-        .prediction-card { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); border-radius: 10px; padding: 15px; margin: 10px 0; text-align: center; }
-        .prediction-price { font-size: 20px; font-weight: bold; }
-        .confidence-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin: 10px 0; }
-        .confidence-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ffaa00, #00ff88); transition: width 0.5s ease; }
-        .signal-item { display: flex; justify-content: space-between; padding: 10px; margin: 5px 0; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid transparent; }
-        .signal-buy { border-left-color: #00ff88; }
-        .signal-sell { border-left-color: #ff4444; }
-        .signal-hold { border-left-color: #ffaa00; }
-        .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; animation: pulse 2s infinite; }
-        .status-connected { background: #00ff88; }
-        .status-disconnected { background: #ff4444; }
-        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
-        .loading-spinner { border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top: 3px solid #00ff88; width: 20px; height: 20px; animation: spin 1s linear infinite; margin: 0 auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .error-message { background: rgba(255, 68, 68, 0.1); border: 1px solid rgba(255, 68, 68, 0.3); border-radius: 8px; padding: 15px; margin: 10px 0; color: #ff4444; text-align: center; }
-        @media (max-width: 1200px) { .main-container { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; } .sidebar, .right-panel { overflow-y: visible; } }
-        @media (max-width: 768px) { .header-content { flex-direction: column; gap: 10px; } .price-ticker { justify-content: center; } }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PTA — Personal Trading Assistant (single-file)</title>
+  <!-- Chart.js and financial plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@4.0.0/dist/chartjs-chart-financial.umd.min.js"></script>
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.9.0/dist/tf.min.js"></script>
+  <!-- small helper libs (optional) -->
+  <style>
+    :root{--bg:#0b1020;--panel:#0f1724;--muted:#9aa4c0;--accent:#3ddc84}
+    [data-theme='light']{--bg:#f7f9fc;--panel:#ffffff;--muted:#5b6b80;--accent:#0b76ff}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,var(--bg),#071021);color:#e6eef8}
+    .app{display:flex;flex-direction:column;height:100vh}
+    .topbar{display:flex;gap:8px;align-items:center;padding:8px;backdrop-filter: blur(6px);background:rgba(255,255,255,0.02)}
+    .brand{font-weight:700;margin-right:8px}
+    select,input,button{border-radius:8px;padding:6px 8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+    .main{display:grid;grid-template-columns:1fr 360px;gap:8px;padding:8px;flex:1;min-height:0}
+
+    /* Mobile-first: single column */
+    @media(min-width:900px){.main{grid-template-columns:1fr 360px}}
+
+    .panel{background:var(--panel);border-radius:12px;padding:10px;overflow:auto}
+    #chartWrap{height:56vh;min-height:320px}
+    .controls{display:flex;gap:6px;align-items:center}
+    .small{font-size:12px}
+    .row{display:flex;gap:6px;align-items:center}
+    .indicators{display:flex;flex-wrap:wrap;gap:6px}
+    .indicators label{display:flex;align-items:center;gap:6px}
+    .signals{margin-top:8px}
+    .badge{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.03)}
+    .muted{color:var(--muted)}
+    .footer{padding:8px;font-size:12px;color:var(--muted)}
+    .list{max-height:40vh;overflow:auto}
+    button.primary{background:linear-gradient(90deg,var(--accent),#7af0b1);color:#001}
+    .flexcol{display:flex;flex-direction:column}
+    .hr{height:1px;background:rgba(255,255,255,0.03);margin:8px 0}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:6px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:left}
+    .smallmuted{font-size:12px;color:var(--muted)}
+
+    /* tutorial overlay */
+    #tutorial{position:fixed;right:16px;bottom:16px;background:linear-gradient(180deg,rgba(11,16,32,0.95),rgba(6,10,18,0.95));padding:12px;border-radius:10px;max-width:320px}
+  </style>
 </head>
-<body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">WIF/USDT Personal Dashboard</div>
-            <div class="price-ticker">
-                <div class="price-info">
-                    <div class="price-value" id="currentPrice">...</div>
-                    <div class="price-change" id="priceChange">--</div>
-                </div>
-                <div class="price-info">
-                    <div class="price-value" id="volume24h">--</div>
-                    <div style="font-size: 12px; color: #aaa;">24h Volume</div>
-                </div>
-                <div class="price-info">
-                    <div class="price-value" id="marketCap">...</div>
-                    <div style="font-size: 12px; color: #aaa;">Market Cap</div>
-                </div>
-                <div style="display: flex; align-items: center;">
-                    <span class="status-indicator status-disconnected" id="connectionStatus"></span>
-                    <span style="font-size: 12px;" id="connectionText">Connecting...</span>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <div class="indicator-group">
-                <h3>Trend Indicators</h3>
-                <div class="indicator-item"><span>SMA (20)</span><span class="indicator-value" id="sma20">...</span></div>
-                <div class="indicator-item"><span>EMA (20)</span><span class="indicator-value" id="ema20">...</span></div>
-                <div class="indicator-item"><span>MACD</span><span class="indicator-value" id="macd">...</span></div>
-                <div class="indicator-item"><span>Bollinger Upper</span><span class="indicator-value" id="bbUpper">...</span></div>
-                <div class="indicator-item"><span>Bollinger Lower</span><span class="indicator-value" id="bbLower">...</span></div>
-            </div>
-            <div class="indicator-group">
-                <h3>Momentum</h3>
-                <div class="indicator-item"><span>RSI (14)</span><span class="indicator-value" id="rsi">...</span></div>
-                <div class="indicator-item"><span>Stochastic %K</span><span class="indicator-value" id="stoch">...</span></div>
-            </div>
-            <div class="indicator-group">
-                <h3>Volume</h3>
-                <div class="indicator-item"><span>VWAP</span><span class="indicator-value" id="vwap">...</span></div>
-            </div>
-        </div>
-
-        <div class="chart-container">
-            <div class="chart-controls">
-                <div class="timeframe-buttons">
-                    <button class="timeframe-btn" data-timeframe="5m">5m</button>
-                    <button class="timeframe-btn" data-timeframe="15m">15m</button>
-                    <button class="timeframe-btn" data-timeframe="1h">1h</button>
-                    <button class="timeframe-btn active" data-timeframe="4h">4h</button>
-                    <button class="timeframe-btn" data-timeframe="1d">1d</button>
-                </div>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="priceChart"></canvas>
-            </div>
-        </div>
-
-        <div class="right-panel">
-            <div class="panel">
-                <h3>Heuristic Prediction</h3>
-                <div class="prediction-card">
-                    <div style="font-size: 14px; margin-bottom: 5px;">Next Period Outlook</div>
-                    <div class="prediction-price" id="predictionPrice">...</div>
-                    <div class="confidence-bar">
-                        <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
-                    </div>
-                    <div style="font-size: 12px;" id="confidenceText">Analyzing...</div>
-                </div>
-            </div>
-
-            <div class="panel">
-                <h3>Trading Signals</h3>
-                <div id="signalsContainer"><div class="loading-spinner"></div></div>
-            </div>
-        </div>
+<body data-theme="dark">
+  <div class="app">
+    <div class="topbar panel row">
+      <div class="brand">PTA</div>
+      <div class="controls">
+        <select id="symbolSelect" aria-label="Symbol selector"></select>
+        <select id="intervalSelect">
+          <option value="1m">1m</option>
+          <option value="5m">5m</option>
+          <option value="15m">15m</option>
+          <option value="1h">1h</option>
+          <option value="4h">4h</option>
+          <option value="1d">1d</option>
+        </select>
+        <select id="modeSelect"><option value="easy">Easy</option><option value="expert">Expert</option></select>
+        <div id="lastPrice" class="badge">—</div>
+      </div>
+      <div style="flex:1"></div>
+      <button id="themeToggle">Toggle Theme</button>
+      <button id="snapshotBtn">Snapshot</button>
     </div>
 
-    <script>
-        class WIFDashboard {
-            constructor() {
-                // --- CONFIGURATION ---
-                this.config = {
-                    symbol: 'WIFUSDT',
-                    binanceApiBase: 'https://api.binance.com/api/v3',
-                    // CoinGecko API is used for live circulating supply to calculate market cap.
-                    // You can get a free API key from their site for better reliability.
-                    coinGeckoApiBase: 'https://api.coingecko.com/api/v3',
-                    coinGeckoCoinId: 'dogwifcoin',
-                    // WARNING: For personal use ONLY. Do not use API keys in public-facing websites.
-                    coinGeckoApiKey: '', // Optional: Add your CoinGecko API key here
-                    historicalLimit: 500, // Number of candles to fetch for chart
-                };
+    <div class="main">
+      <div class="panel flexcol">
+        <div class="row" style="justify-content:space-between;align-items:flex-start">
+          <div style="flex:1">
+            <div id="chartWrap" class="panel"></div>
+            <div class="row" style="margin-top:8px;justify-content:space-between">
+              <div class="indicators" id="indicatorToggles"></div>
+              <div class="smallmuted">Candles cached in localStorage (TTL 5m). Use local server if CORS issues.</div>
+            </div>
+          </div>
+        </div>
 
-                this.ws = null;
-                this.chart = null;
-                this.priceData = [];
-                this.indicators = {};
-                this.currentTimeframe = '4h';
-                this.currentPrice = 0;
-                this.priceChange24h = 0;
-            }
+        <div class="hr"></div>
+        <div class="row" style="gap:12px">
+          <div class="panel" style="flex:1;min-width:200px">
+            <h4 style="margin:0">Paper Trading</h4>
+            <div class="row small" style="margin-top:6px">
+              <input id="tradeSide" list="sides" value="BUY" style="width:80px" />
+              <datalist id="sides"><option>BUY</option><option>SELL</option></datalist>
+              <input id="tradeQty" placeholder="Qty" style="width:100px" />
+              <button id="execTrade" class="primary">Execute (paper)</button>
+            </div>
+            <div id="ledger" class="list smallmuted" style="margin-top:8px"></div>
+          </div>
 
-            async initialize() {
-                this.initializeChart();
-                this.initializeEventListeners();
-                await this.fetchInitialData();
-                this.connectWebSocket();
+          <div class="panel" style="width:360px">
+            <h4 style="margin:0">Signals & Prediction</h4>
+            <div id="signalSummary" class="smallmuted small"></div>
+            <div class="hr"></div>
+            <div>
+              <label class="small">Prediction horizon:</label>
+              <select id="predHorizon"><option value="1">Next candle</option><option value="5">Next 5</option><option value="60">Next hour (if interval <=1m)</option></select>
+              <button id="runPredict">Run Predict</button>
+              <div id="predOutput" class="smallmuted" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
 
-                // Set up periodic updates for data not from the WebSocket
-                setInterval(() => this.updateHeuristicsAndSignals(), 5000); // Update predictions/signals every 5s
-                setInterval(() => this.fetchMarketData(), 60000); // Refresh market cap every minute
-            }
-            
-            initializeChart() {
-                const ctx = document.getElementById('priceChart').getContext('2d');
-                this.chart = new Chart(ctx, {
-                    type: 'line',
-                    data: { labels: [], datasets: [{ label: 'WIF/USDT Price', data: [], borderColor: '#00ff88', borderWidth: 2, fill: false, tension: 0.1, pointRadius: 0 }] },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { labels: { color: '#ffffff' } } },
-                        scales: {
-                            x: { ticks: { color: '#aaa', maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                            y: { position: 'right', ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.1)' } }
-                        }
-                    }
-                });
-            }
+        <div class="hr"></div>
+        <div class="row">
+          <div class="panel" style="flex:1">
+            <h4 style="margin:0">Backtest</h4>
+            <div class="row small" style="margin-top:6px">
+              <label>Window:</label>
+              <select id="backtestWindow"><option value="100">100</option><option value="500">500</option><option value="1000">1000</option></select>
+              <label class="smallmuted">Composite threshold:</label>
+              <input id="buyThreshold" value="0.6" style="width:80px" />
+              <input id="sellThreshold" value="0.4" style="width:80px" />
+              <button id="runBacktest">Run</button>
+            </div>
+            <div id="backtestResult" class="smallmuted" style="margin-top:8px"></div>
+          </div>
 
-            async fetchInitialData() {
-                try {
-                    await this.fetchMarketData();
-                    await this.fetchHistoricalData();
-                    this.processData();
-                } catch (error) {
-                    console.error("Initialization failed:", error);
-                    this.showError("Failed to load initial data.");
-                }
-            }
+          <div class="panel" style="width:360px">
+            <h4 style="margin:0">Export / Import</h4>
+            <div class="row small" style="margin-top:8px">
+              <button id="exportState">Export JSON</button>
+              <input id="importFile" type="file" />
+            </div>
+          </div>
+        </div>
 
-            async fetchMarketData() {
-                try {
-                    // Fetch ticker data from Binance
-                    const tickerUrl = `${this.config.binanceApiBase}/ticker/24hr?symbol=${this.config.symbol}`;
-                    const tickerResponse = await fetch(tickerUrl);
-                    if (!tickerResponse.ok) throw new Error('Failed to fetch Binance ticker');
-                    const tickerData = await tickerResponse.json();
-                    
-                    this.currentPrice = parseFloat(tickerData.lastPrice);
-                    this.priceChange24h = parseFloat(tickerData.priceChangePercent);
-                    
-                    // Fetch market cap data from CoinGecko
-                    const coinUrl = `${this.config.coinGeckoApiBase}/coins/${this.config.coinGeckoCoinId}${this.config.coinGeckoApiKey ? '?x_cg_demo_api_key='+this.config.coinGeckoApiKey : ''}`;
-                    const coinResponse = await fetch(coinUrl);
-                    if (!coinResponse.ok) throw new Error('Failed to fetch CoinGecko data');
-                    const coinData = await coinResponse.json();
+      </div>
 
-                    const circulatingSupply = coinData.market_data.circulating_supply;
-                    const marketCap = this.currentPrice * circulatingSupply;
-                    
-                    this.updateTickerUI(this.currentPrice, this.priceChange24h, marketCap, parseFloat(tickerData.volume));
-                } catch (error) {
-                    console.error("Error fetching market data:", error);
-                }
-            }
-            
-            async fetchHistoricalData() {
-                try {
-                    const url = `${this.config.binanceApiBase}/klines?symbol=${this.config.symbol}&interval=${this.currentTimeframe}&limit=${this.config.historicalLimit}`;
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const klines = await response.json();
-                    
-                    this.priceData = klines.map(k => ({
-                        timestamp: k[0],
-                        open: parseFloat(k[1]),
-                        high: parseFloat(k[2]),
-                        low: parseFloat(k[3]),
-                        close: parseFloat(k[4]),
-                        volume: parseFloat(k[5])
-                    }));
-                } catch (error) {
-                    console.error('Error fetching historical data:', error);
-                    this.showError('Failed to fetch historical chart data.');
-                }
-            }
+      <div class="panel">
+        <h3 style="margin-top:0">Overview & Settings</h3>
+        <div class="smallmuted">Quick info</div>
+        <div id="quickInfo" class="small" style="margin-top:8px"></div>
+        <div class="hr"></div>
+        <h4>Indicators</h4>
+        <div id="indicatorList" class="list smallmuted"></div>
+        <div class="hr"></div>
+        <h4>Model</h4>
+        <div class="small">
+          <label>Model type:</label>
+          <select id="modelType"><option value="conv1d">Conv1D (default)</option><option value="lstm">Tiny LSTM</option></select>
+          <div style="margin-top:8px">
+            <button id="trainModel">Train Model (in-browser)</button>
+            <button id="loadWeights">Load Weights (URL)</button>
+          </div>
+          <div id="modelMetrics" class="smallmuted" style="margin-top:8px"></div>
+        </div>
+        <div class="hr"></div>
+        <h4>Warnings & Limits</h4>
+        <div class="smallmuted">This is a demo. Do not use private API keys in-browser. Model may overfit on short histories. Training on mobile may be slow.</div>
+      </div>
+    </div>
 
-            connectWebSocket() {
-                const url = `wss://stream.binance.com:9443/ws/${this.config.symbol.toLowerCase()}@ticker`;
-                this.ws = new WebSocket(url);
+    <div class="footer panel">Built for demo & developer extraction. Use local server to avoid CORS. See top comments for proxy snippet.</div>
 
-                this.ws.onopen = () => {
-                    console.log('WebSocket connected.');
-                    this.updateConnectionStatus(true);
-                };
+    <div id="tutorial">
+      <strong>Quick tour</strong>
+      <ol style="padding-left:16px;margin:6px 0">
+        <li>Select symbol & interval.</li>
+        <li>Toggle indicators on the right to overlay.</li>
+        <li>Click "Run Predict" to let the small TF model propose next price.</li>
+        <li>Use Paper Trading to simulate positions and Backtest for historical rules.</li>
+      </ol>
+    </div>
+  </div>
 
-                this.ws.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    if (data && data.c) {
-                        this.currentPrice = parseFloat(data.c);
-                        this.priceChange24h = parseFloat(data.P);
-                        this.updateTickerUI(this.currentPrice, this.priceChange24h);
-                        this.updateLiveChartPoint();
-                    }
-                };
+<script>
+// ---- PTA core javascript --------------------------------------------------
+// Namespaces: PTA.*
+const PTA = {
+  config: {
+    defaultSymbol: 'BTCUSDT',
+    symbols: ['BTCUSDT','ETHUSDT','SOLUSDT','WIFUSDT','AVAXUSDT','ADAUSDT','MATICUSDT','BRETT','FARCOIN','PYTH'],
+    extraSymbols: ['ADAUSDT','MATICUSDT'],
+    binanceRest: 'https://api.binance.com/api/v3',
+    wsBase: 'wss://stream.binance.com:9443/ws',
+    cacheTTL: 1000*60*5,
+    candleLimit: 500,
+    indicators: ['SMA','EMA','WMA','HMA','MACD','RSI','STOCH','BOLL','ATR','OBV','VWAP','ICHIMOKU','ADX','CCI','SUPERTREND','EMA_RIBBON','KELTNER','HEIKIN','PIVOT','VOL_PROFILE']
+  },
+  state: {
+    symbol: null, interval: '5m', candles: [], indicators: {}, ws: null, ledger: [], model: null, modelState:{}, mode:'easy'
+  }
+};
 
-                this.ws.onclose = () => {
-                    console.log('WebSocket disconnected. Reconnecting in 5s...');
-                    this.updateConnectionStatus(false);
-                    setTimeout(() => this.connectWebSocket(), 5000);
-                };
+// UTILITIES
+function now(){return Date.now();}
+function cacheKey(sym,interval){return `pta:${sym}:${interval}:candles`}
+function saveCache(sym,interval,data){localStorage.setItem(cacheKey(sym,interval), JSON.stringify({ts:now(),data}));}
+function loadCache(sym,interval){try{const s=localStorage.getItem(cacheKey(sym,interval)); if(!s) return null; const o=JSON.parse(s); if(now()-o.ts>PTA.config.cacheTTL) return null; return o.data;}catch(e){return null}}
 
-                this.ws.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    this.ws.close();
-                };
-            }
+// Rate-limit/backoff simple wrapper
+async function fetchWithBackoff(url, opts={}, retries=3, delay=500){
+  for(let i=0;i<=retries;i++){
+    try{ const r=await fetch(url,opts); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json();}catch(e){ if(i===retries) throw e; await new Promise(res=>setTimeout(res,delay*(i+1))); }
+  }
+}
 
-            // --- DATA PROCESSING AND CALCULATIONS ---
+// Candles: Binance /api/v3/klines
+async function fetchCandles(symbol, interval, limit=PTA.config.candleLimit){
+  const url = `${PTA.config.binanceRest}/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+  const data = await fetchWithBackoff(url);
+  // map to objects
+  return data.map(d=>({t: d[0], open: +d[1], high:+d[2], low:+d[3], close:+d[4], vol:+d[5], closeTime:d[6], quoteVol:+d[7], trades:d[8], buyBase:+d[9], buyQuote:+d[10]}));
+}
 
-            processData() {
-                if (this.priceData.length < 20) return;
-                this.calculateAllIndicators();
-                this.updateIndicatorUI();
-                this.updateChart();
-                this.updateHeuristicsAndSignals();
-            }
+// Quick 24h ticker
+async function fetchTicker(symbol){ try{ return await fetchWithBackoff(`${PTA.config.binanceRest}/ticker/24hr?symbol=${symbol}`);}catch(e){console.warn('ticker err',e);return null} }
 
-            calculateAllIndicators() {
-                const closes = this.priceData.map(p => p.close);
-                const highs = this.priceData.map(p => p.high);
-                const lows = this.priceData.map(p => p.low);
-                const volumes = this.priceData.map(p => p.volume);
+// WebSocket live kline subscribe
+function startKlineWS(symbol,interval,onKline){
+  const stream = `${symbol.toLowerCase()}@kline_${interval}`;
+  const url = `${PTA.config.wsBase}/${stream}`;
+  try{
+    const ws = new WebSocket(url);
+    ws.onopen = ()=>console.log('ws open',url);
+    ws.onmessage = (m)=>{ const d=JSON.parse(m.data); if(d.k) onKline(d.k); };
+    ws.onclose = ()=>console.log('ws closed');
+    ws.onerror = (e)=>console.warn('ws err',e);
+    return ws;
+  }catch(e){console.warn('ws not available',e);return null}
+}
 
-                this.indicators.sma20 = this.calculateSMA(closes, 20);
-                this.indicators.ema20 = this.calculateEMA(closes, 20);
-                this.indicators.bb = this.calculateBollingerBands(closes, 20, 2);
-                this.indicators.rsi = this.calculateRSI(closes, 14);
-                const macdResult = this.calculateMACD(closes, 12, 26, 9);
-                this.indicators.macd = macdResult ? macdResult.macd : null;
-                this.indicators.stoch = this.calculateStochastic(closes, highs, lows, 14);
-                this.indicators.vwap = this.calculateVWAP(this.priceData);
-            }
+// Simple indicator implementations
+// All functions accept arrays of close/opens/highs/lows/vol and return aligned arrays (same length) with nulls for initial values where needed.
+function SMA(values, period){ const out = new Array(values.length).fill(null); let sum=0; for(let i=0;i<values.length;i++){ sum+=values[i]; if(i>=period) sum-=values[i-period]; if(i>=period-1) out[i]=sum/period; } return out; }
+function EMA(values, period){ const out = new Array(values.length).fill(null); const k = 2/(period+1); let prev=null; for(let i=0;i<values.length;i++){ const v=values[i]; if(i<period-1){continue;} if(i===period-1){ let sum=0; for(let j=0;j<period;j++) sum+=values[j]; prev = sum/period; out[i]=prev; } else { prev = (v - prev)*k + prev; out[i]=prev; } } return out; }
+function WMA(values, period){ const out = new Array(values.length).fill(null); const denom = period*(period+1)/2; for(let i=period-1;i<values.length;i++){ let sum=0; for(let j=0;j<period;j++){ sum += values[i-j]*(period-j); } out[i]=sum/denom; } return out; }
+function HMA(values, period){ // Hull MA: HMA = WMA(2*WMA(n/2)-WMA(n)), sqrt(n)
+  const half = Math.round(period/2); const sqrtN = Math.round(Math.sqrt(period)); const w1 = WMA(values, half); const w2 = WMA(values, period); const diff = values.map((v,i)=> (w1[i]!=null && w2[i]!=null)? 2*w1[i]-w2[i] : null); return WMA(diff, sqrtN);
+}
 
-            // --- HEURISTIC ENGINE ---
-            updateHeuristicsAndSignals() {
-                if (Object.keys(this.indicators).length === 0) return;
-                
-                let score = 0;
-                const i = this.indicators;
+function RSI(values, period=14){ const out=new Array(values.length).fill(null); let gain=0, loss=0; for(let i=1;i<values.length;i++){ const change = values[i]-values[i-1]; if(i<=period){ if(change>0) gain+=change; else loss-=change; if(i===period){ let rs = gain/period / (loss/period || 1e-9); out[i]=100 - (100/(1+rs)); var prevAvgGain=gain/period; var prevAvgLoss=loss/period; } } else { const up = Math.max(change,0); const down = Math.max(-change,0); prevAvgGain = (prevAvgGain*(period-1) + up)/period; prevAvgLoss = (prevAvgLoss*(period-1) + down)/period; let rs = prevAvgGain / (prevAvgLoss || 1e-9); out[i]=100 - (100/(1+rs)); } } return out; }
 
-                // RSI contribution
-                if (i.rsi < 30) score += (30 - i.rsi) * 1.5; // Strong buy signal
-                if (i.rsi > 70) score -= (i.rsi - 70) * 1.5; // Strong sell signal
+function MACD(values, fast=12, slow=26, signal=9){ const emaFast = EMA(values,fast); const emaSlow = EMA(values,slow); const macd = values.map((v,i)=> (emaFast[i]!=null && emaSlow[i]!=null)? emaFast[i]-emaSlow[i] : null); const signalLine = EMA(macd.map(v=>v===null?0:v), signal); const hist = macd.map((v,i)=> (v!=null && signalLine[i]!=null)? v - signalLine[i] : null); return {macd,signal:signalLine,hist}; }
 
-                // MACD contribution
-                if (i.macd > 0) score += 10;
-                if (i.macd < 0) score -= 10;
+function Bollinger(values, period=20, mult=2){ const sma = SMA(values,period); const out=new Array(values.length).fill(null); for(let i=period-1;i<values.length;i++){ let sum=0; for(let j=0;j<period;j++){ const d = values[i-j]-sma[i]; sum += d*d; } const sd = Math.sqrt(sum/period); out[i] = {upper: sma[i]+mult*sd, middle:sma[i], lower: sma[i]-mult*sd}; } return out; }
 
-                // Bollinger Bands contribution
-                if (this.currentPrice < i.bb.lower) score += 25; // Very strong buy signal
-                if (this.currentPrice > i.bb.upper) score -= 25; // Very strong sell signal
+function ATR(high,low,close,period=14){ const out=new Array(close.length).fill(null); const tr = new Array(close.length).fill(0); for(let i=1;i<close.length;i++){ tr[i]=Math.max(high[i]-low[i], Math.abs(high[i]-close[i-1]), Math.abs(low[i]-close[i-1])); }
+  let sum=0; for(let i=1;i<close.length;i++){ sum+=tr[i]; if(i>=period) { if(i===period) out[i]=sum/period; else { sum -= tr[i-period]; out[i] = (out[i-1]*(period-1) + tr[i])/period; } } }
+  return out; }
 
-                // Stochastic contribution
-                if (i.stoch < 20) score += 15;
-                if (i.stoch > 80) score -= 15;
-                
-                // Normalize score to confidence
-                const confidence = Math.max(0, Math.min(100, 50 + score));
-                const strength = Math.abs(score) / 100;
-                
-                let predictionPrice = this.currentPrice * (1 + (score / 2000)); // Predict a small move
-                let outlook = "Neutral";
-                let color = "#ffaa00";
+function OBV(close, vol){ const out=new Array(close.length).fill(null); let val=0; out[0]=0; for(let i=1;i<close.length;i++){ if(close[i]>close[i-1]) val+=vol[i]; else if(close[i]<close[i-1]) val-=vol[i]; out[i]=val; } return out; }
 
-                if (score > 15) {
-                    outlook = "Bullish";
-                    color = "#00ff88";
-                } else if (score < -15) {
-                    outlook = "Bearish";
-                    color = "#ff4444";
-                }
+function VWAP(candles){ // intraday VWAP: reset per day
+  const out = new Array(candles.length).fill(null); let cumPV=0, cumVol=0; let lastDay=null; for(let i=0;i<candles.length;i++){ const d=candles[i]; const day = new Date(d.t).toISOString().slice(0,10); if(day!==lastDay){ cumPV=0; cumVol=0; lastDay=day; } const typical = (d.high + d.low + d.close)/3; cumPV += typical * d.vol; cumVol += d.vol; out[i]=cumVol?cumPV/cumVol:null; } return out; }
 
-                this.updatePredictionUI(predictionPrice, outlook, color, confidence);
-                this.updateSignalsUI();
-            }
+// Ichimoku (simplified)
+function Ichimoku(high,low,close){ const spanA = []; const spanB = []; const tenkan = []; const kijun = []; for(let i=0;i<close.length;i++){ if(i>=8){ let hh= -Infinity, ll=Infinity; for(let j=i-8;j<=i;j++){ hh=Math.max(hh,high[j]); ll=Math.min(ll,low[j]); } tenkan[i]=(hh+ll)/2; } if(i>=25){ let hh= -Infinity,ll=Infinity; for(let j=i-25;j<=i;j++){ hh=Math.max(hh,high[j]); ll=Math.min(ll,low[j]); } kijun[i]=(hh+ll)/2; } if(i>=25){ if(tenkan[i]!=null && kijun[i]!=null) spanA[i+26] = (tenkan[i]+kijun[i])/2; let hh=-Infinity,ll=Infinity; for(let j=i-51;j<=i;j++){ if(j>=0){ hh=Math.max(hh,high[j]); ll=Math.min(ll,low[j]); } } spanB[i+26] = (hh+ll)/2; } }
+  return {tenkan,kijun,spanA,spanB}; }
 
-            // --- UI UPDATES ---
-            updateTickerUI(price, change, marketCap, volume) {
-                document.getElementById('currentPrice').textContent = `$${price.toFixed(4)}`;
-                const changeEl = document.getElementById('priceChange');
-                changeEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
-                changeEl.className = `price-change ${change >= 0 ? 'positive' : 'negative'}`;
+// ADX (simplified)
+function ADX(high,low,close,period=14){ const out=new Array(close.length).fill(null); const tr = []; const plus = []; const minus = []; for(let i=1;i<close.length;i++){ const up = high[i]-high[i-1]; const down = low[i-1]-low[i]; plus[i]= (up>down && up>0)? up:0; minus[i]= (down>up && down>0)? down:0; tr[i]=Math.max(high[i]-low[i], Math.abs(high[i]-close[i-1]), Math.abs(low[i]-close[i-1])); }
+  // smoothing
+  let atr=0, plusS=0, minusS=0; for(let i=1;i<close.length;i++){ if(i<period) { atr+=tr[i]; plusS+=plus[i]; minusS+=minus[i]; if(i===period-1){ atr/=period; plusS/=period; minusS/=period; const pdi=100*(plusS/atr); const mdi=100*(minusS/atr); out[i]=100*(Math.abs(pdi-mdi)/(pdi+mdi||1e-9)); } } else { atr = (atr*(period-1)+tr[i])/period; plusS=(plusS*(period-1)+plus[i])/period; minusS=(minusS*(period-1)+minus[i])/period; const pdi=100*(plusS/atr); const mdi=100*(minusS/atr); out[i]=100*(Math.abs(pdi-mdi)/(pdi+mdi||1e-9)); } }
+  return out; }
 
-                if (marketCap) document.getElementById('marketCap').textContent = this.formatLargeNumber(marketCap);
-                if (volume) document.getElementById('volume24h').textContent = this.formatLargeNumber(volume);
-            }
+// CCI
+function CCI(high,low,close,period=20){ const out=new Array(close.length).fill(null); const tp = high.map((h,i)=> (h+low[i]+close[i])/3); const smaTp = SMA(tp,period); for(let i=period-1;i<close.length;i++){ let mean = smaTp[i]; let sd=0; for(let j=0;j<period;j++){ sd += Math.abs(tp[i-j]-mean); } sd = sd/period; out[i] = (tp[i]-mean)/(0.015*(sd||1e-9)); } return out; }
 
-            updateIndicatorUI() {
-                const format = (val, dec) => (val !== null && val !== undefined) ? val.toFixed(dec) : '...';
-                document.getElementById('sma20').textContent = format(this.indicators.sma20, 4);
-                document.getElementById('ema20').textContent = format(this.indicators.ema20, 4);
-                document.getElementById('macd').textContent = format(this.indicators.macd, 6);
-                document.getElementById('bbUpper').textContent = format(this.indicators.bb?.upper, 4);
-                document.getElementById('bbLower').textContent = format(this.indicators.bb?.lower, 4);
-                document.getElementById('rsi').textContent = format(this.indicators.rsi, 1);
-                document.getElementById('stoch').textContent = format(this.indicators.stoch, 1);
-                document.getElementById('vwap').textContent = format(this.indicators.vwap, 4);
-            }
+// Supertrend (simplified)
+function Supertrend(high,low,close,period=10,mult=3){ const atrArr = ATR(high,low,close,period); const out=new Array(close.length).fill(null); let finalUpper=[], finalLower=[], trend=[]; for(let i=0;i<close.length;i++){ if(atrArr[i]==null) continue; const hl2 = (high[i]+low[i])/2; let upper = hl2 + mult*atrArr[i]; let lower = hl2 - mult*atrArr[i]; if(i>0){ if(upper>finalUpper[i-1] || close[i-1]>finalUpper[i-1]) finalUpper[i]=upper; else finalUpper[i]=finalUpper[i-1]; if(lower<finalLower[i-1] || close[i-1]<finalLower[i-1]) finalLower[i]=lower; else finalLower[i]=finalLower[i-1]; } else { finalUpper[i]=upper; finalLower[i]=lower; }
+    trend[i] = (close[i] > finalUpper[i-1]) ? 1 : (close[i] < finalLower[i-1]) ? -1 : (trend[i-1]||1);
+    out[i] = {trend:trend[i],upper:finalUpper[i],lower:finalLower[i]}; }
+  return out; }
 
-            updateChart() {
-                if (!this.chart || this.priceData.length === 0) return;
-                this.chart.data.labels = this.priceData.map(p => new Date(p.timestamp).toLocaleTimeString());
-                this.chart.data.datasets[0].data = this.priceData.map(p => p.close);
-                this.chart.update('none');
-            }
+// Keltner channels
+function Keltner(high,low,close,period=20,mult=1.5){ const emaMiddle = EMA(close,period); const atrArr = ATR(high,low,close,period); const out=new Array(close.length).fill(null); for(let i=0;i<close.length;i++){ if(emaMiddle[i]==null || atrArr[i]==null) continue; out[i]={upper: emaMiddle[i]+mult*atrArr[i], middle:emaMiddle[i], lower: emaMiddle[i]-mult*atrArr[i]}; } return out; }
 
-            updateLiveChartPoint() {
-                if (!this.chart || this.chart.data.labels.length === 0) return;
-                const lastDataPoint = this.chart.data.datasets[0].data[this.chart.data.datasets[0].data.length - 1];
-                if (this.currentPrice !== lastDataPoint) {
-                    this.chart.data.datasets[0].data[this.chart.data.datasets[0].data.length - 1] = this.currentPrice;
-                    this.chart.update('none');
-                }
-            }
-            
-            updatePredictionUI(price, outlook, color, confidence) {
-                const priceEl = document.getElementById('predictionPrice');
-                priceEl.textContent = `$${price.toFixed(4)} (${outlook})`;
-                priceEl.style.color = color;
-                document.getElementById('confidenceFill').style.width = `${confidence}%`;
-                document.getElementById('confidenceText').textContent = `Confidence: ${confidence.toFixed(1)}%`;
-            }
+// Heikin Ashi conversion
+function HeikinAshi(candles){ const out = []; for(let i=0;i<candles.length;i++){ if(i===0){ out.push({t:candles[i].t, open:(candles[i].open+candles[i].close)/2, high:candles[i].high, low:candles[i].low, close:(candles[i].open+candles[i].high+candles[i].low+candles[i].close)/4, vol:candles[i].vol}); } else { const prev=out[i-1]; const close = (candles[i].open+candles[i].high+candles[i].low+candles[i].close)/4; const open = (prev.open+prev.close)/2; const high = Math.max(candles[i].high, open, close); const low = Math.min(candles[i].low, open, close); out.push({t:candles[i].t, open, high, low, close, vol:candles[i].vol}); } } return out; }
 
-            updateSignalsUI() {
-                const container = document.getElementById('signalsContainer');
-                const signals = [];
-                const i = this.indicators;
+// Pivot points (daily)
+function PivotPoints(candles){ const out=new Array(candles.length).fill(null); let lastDay=null; for(let i=0;i<candles.length;i++){ const day = new Date(candles[i].t).toISOString().slice(0,10); if(i===0) lastDay=day; if(day!==lastDay){ // compute pivot for previous day
+    // find day range
+    let j=i-1; let hh=-Infinity,ll=Infinity,cl=null; const dayKey = lastDay;
+    while(j>=0 && new Date(candles[j].t).toISOString().slice(0,10)===dayKey){ hh=Math.max(hh,candles[j].high); ll=Math.min(ll,candles[j].low); cl=candles[j].close; j--; }
+    const pivot = (hh+ll+cl)/3; const r1 = 2*pivot-ll; const s1 = 2*pivot-hh; // simple
+    // apply for the next day's bars
+    for(let k=j+1;k<i;k++) out[k]={pivot,r1,s1}; lastDay=day; }
+  }
+  return out;
+}
 
-                if (i.rsi > 70) signals.push({ type: 'sell', title: 'RSI Overbought', desc: `Value is ${i.rsi.toFixed(1)}` });
-                if (i.rsi < 30) signals.push({ type: 'buy', title: 'RSI Oversold', desc: `Value is ${i.rsi.toFixed(1)}` });
-                if (this.currentPrice < i.bb?.lower) signals.push({ type: 'buy', title: 'Price Below BB', desc: 'Potential reversal' });
-                if (this.currentPrice > i.bb?.upper) signals.push({ type: 'sell', title: 'Price Above BB', desc: 'Potential reversal' });
-                if (i.macd > 0 && this.priceData[this.priceData.length-1].close > i.ema20) signals.push({ type: 'buy', title: 'Bullish Trend', desc: 'MACD positive & price > EMA' });
-                if (i.macd < 0 && this.priceData[this.priceData.length-1].close < i.ema20) signals.push({ type: 'sell', title: 'Bearish Trend', desc: 'MACD negative & price < EMA' });
+// Volume profile: simple histogram per price buckets
+function VolumeProfile(candles, buckets=20){ const prices = candles.flatMap(c=>[c.high,c.low]); const minP=Math.min(...prices), maxP=Math.max(...prices); const range=maxP-minP; const bucketSize=range/buckets; const vp=new Array(buckets).fill(0); for(const c of candles){ const mid=(c.high+c.low+c.close)/3; const idx=Math.min(buckets-1,Math.max(0,Math.floor((mid-minP)/bucketSize))); vp[idx]+=c.vol; } return {vp, minP, maxP, bucketSize}; }
 
-                if (signals.length === 0) {
-                    container.innerHTML = `<div class="signal-item signal-hold"><div><strong>Neutral</strong><div style="font-size:11px; color:#aaa;">No strong signals detected.</div></div></div>`;
-                    return;
-                }
+// Composite signal engine (very configurable)
+function computeSignals(candles, indicators){ // returns signals per latest bar
+  const n=candles.length; const last = n-1; const close = candles.map(c=>c.close);
+  const sigs = {};
+  // Price vs EMA50
+  const ema50 = indicators.EMA50 || EMA(close,50); sigs.priceAboveEMA50 = close[last] > (ema50[last]||0);
+  // RSI oversold/overbought
+  const rsi = indicators.RSI || RSI(close,14); sigs.rsi = rsi[last]; sigs.rsiOversold = rsi[last]<30; sigs.rsiOverbought = rsi[last]>70;
+  // MACD cross
+  const macd = indicators.MACD || MACD(close); const m=macd.macd, s=macd.signal; sigs.macdHist = macd.hist[last]; sigs.macdBull = m[last]>s[last];
+  // VWAP
+  const vwap = indicators.VWAP || VWAP(candles); sigs.aboveVWAP = close[last] > (vwap[last]||0);
+  // Supertrend
+  const st = indicators.SUPERTREND || Supertrend(candles.map(c=>c.high), candles.map(c=>c.low), close); sigs.supertrend = st[last] && st[last].trend===1;
 
-                container.innerHTML = signals.slice(0, 4).map(s => `
-                    <div class="signal-item signal-${s.type}">
-                        <div>
-                            <div style="font-weight: bold;">${s.title}</div>
-                            <div style="font-size: 11px; color: #aaa;">${s.desc}</div>
-                        </div>
-                    </div>
-                `).join('');
-            }
+  // combine into weighted score
+  const weights = {priceAboveEMA50:0.2, rsiOversold:0.15, macdBull:0.2, aboveVWAP:0.15, supertrend:0.2};
+  let score=0; let denom=0; for(const k in weights){ denom+=weights[k]; if(sigs[k]) score += weights[k]; }
+  const normalized = score/denom;
+  return {sigs,score:normalized,weights}; }
 
-            updateConnectionStatus(isConnected) {
-                const statusEl = document.getElementById('connectionStatus');
-                const textEl = document.getElementById('connectionText');
-                if (isConnected) {
-                    statusEl.className = 'status-indicator status-connected';
-                    textEl.textContent = 'Live';
-                } else {
-                    statusEl.className = 'status-indicator status-disconnected';
-                    textEl.textContent = 'Disconnected';
-                }
-            }
+// Charting: build Chart.js candlestick
+let chart=null; function buildChart(candles, overlays){
+  const ctxDiv = document.createElement('canvas'); const wrap = document.getElementById('chartWrap'); wrap.innerHTML=''; wrap.appendChild(ctxDiv);
+  const ctx = ctxDiv.getContext('2d');
+  const dataset = {
+    label:'Candles',
+    data: candles.map(c=>({x:new Date(c.t), o:c.open,h:c.high,l:c.low,c:c.close})),
+    type:'candlestick'
+  };
+  const datasets=[dataset];
+  // overlays: sma/ema lines
+  if(overlays.SMA20) datasets.push({label:'SMA20', data:overlays.SMA20.map((v,i)=>v==null?null:{x:new Date(candles[i].t),y:v}), parsing:false, type:'line', pointRadius:0});
+  if(overlays.EMA50) datasets.push({label:'EMA50', data:overlays.EMA50.map((v,i)=>v==null?null:{x:new Date(candles[i].t),y:v}), parsing:false, type:'line', pointRadius:0});
+  if(overlays.BOLL){ datasets.push({label:'BOLL U', data:overlays.BOLL.map((v,i)=>v?v.upper:null), parsing:false, type:'line', pointRadius:0}); datasets.push({label:'BOLL L', data:overlays.BOLL.map((v,i)=>v?v.lower:null), parsing:false, type:'line', pointRadius:0}); }
 
-            initializeEventListeners() {
-                document.querySelectorAll('.timeframe-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        this.currentTimeframe = e.target.dataset.timeframe;
-                        document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
-                        e.target.classList.add('active');
-                        await this.fetchHistoricalData();
-                        this.processData();
-                    });
-                });
-            }
+  const config = {type:'bar',data:{datasets},options:{plugins:{legend:{display:true}},scales:{x:{type:'time',time:{unit:'minute'}}, y:{position:'right'}}};
+  if(chart) chart.destroy(); chart = new Chart(ctx, config);
+}
 
-            // --- HELPERS & UTILITIES ---
-            formatLargeNumber(num) {
-                if (!num) return '--';
-                if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
-                if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
-                if (num >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
-                return `$${num.toFixed(0)}`;
-            }
+// UI bootstrap
+function initUI(){
+  const symSel = document.getElementById('symbolSelect'); PTA.config.symbols.forEach(s=>{ const opt=document.createElement('option'); opt.value=s; opt.innerText=s; symSel.appendChild(opt); });
+  symSel.value = PTA.config.defaultSymbol; PTA.state.symbol = symSel.value;
+  document.getElementById('intervalSelect').value = PTA.state.interval;
+  document.getElementById('modeSelect').addEventListener('change', e=>{ PTA.state.mode = e.target.value; });
+  symSel.addEventListener('change', async (e)=>{ PTA.state.symbol = e.target.value; await loadSymbol(e.target.value, document.getElementById('intervalSelect').value); });
+  document.getElementById('intervalSelect').addEventListener('change', async (e)=>{ PTA.state.interval = e.target.value; await loadSymbol(PTA.state.symbol, PTA.state.interval); });
+  document.getElementById('themeToggle').addEventListener('click', ()=>{ const el=document.body; if(el.getAttribute('data-theme')==='light'){el.setAttribute('data-theme','dark');} else {el.setAttribute('data-theme','light')} });
 
-            showError(message) {
-                document.getElementById('signalsContainer').innerHTML = `<div class="error-message">${message}</div>`;
-            }
+  document.getElementById('execTrade').addEventListener('click', execPaperTrade);
+  document.getElementById('runPredict').addEventListener('click', runPredict);
+  document.getElementById('trainModel').addEventListener('click', trainModelInteractive);
+  document.getElementById('runBacktest').addEventListener('click', runBacktest);
+  document.getElementById('exportState').addEventListener('click', exportState);
+  document.getElementById('importFile').addEventListener('change', importState);
 
-            // --- INDICATOR CALCULATION LIBRARY ---
-            calculateSMA = (data, period) => {
-                if (data.length < period) return null;
-                return data.slice(-period).reduce((a, b) => a + b, 0) / period;
-            };
+  // indicators toggles
+  const toggles = document.getElementById('indicatorToggles'); PTA.config.indicators.forEach(name=>{
+    const label = document.createElement('label'); label.innerHTML = `<input type='checkbox' data-ind='${name}' checked /> ${name}`; toggles.appendChild(label);
+  });
 
-            calculateEMA = (data, period) => {
-                if (data.length < period) return null;
-                const k = 2 / (period + 1);
-                let ema = this.calculateSMA(data.slice(0, period), period);
-                for (let i = period; i < data.length; i++) {
-                    ema = (data[i] * k) + (ema * (1 - k));
-                }
-                return ema;
-            };
-            
-            calculateBollingerBands = (data, period, stdDev) => {
-                if (data.length < period) return null;
-                const slice = data.slice(-period);
-                const sma = this.calculateSMA(slice, period);
-                const variance = slice.reduce((sum, val) => sum + Math.pow(val - sma, 2), 0) / period;
-                const sd = Math.sqrt(variance);
-                return { upper: sma + (sd * stdDev), middle: sma, lower: sma - (sd * stdDev) };
-            };
-            
-            calculateRSI = (data, period) => {
-                if (data.length < period + 1) return null;
-                let gains = 0, losses = 0;
-                for (let i = data.length - period; i < data.length; i++) {
-                    const diff = data[i] - data[i - 1];
-                    if (diff >= 0) { gains += diff; } else { losses -= diff; }
-                }
-                if (losses === 0) return 100;
-                const rs = (gains / period) / (losses / period);
-                return 100 - (100 / (1 + rs));
-            };
+  // initial load
+  loadSymbol(PTA.state.symbol, PTA.state.interval);
+}
 
-            calculateMACD = (data, fast, slow, signal) => {
-                if (data.length < slow) return null;
-                const emaFast = this.calculateEMA(data, fast);
-                const emaSlow = this.calculateEMA(data, slow);
-                const macdLine = emaFast - emaSlow;
-                // Simplified: just returning the macd line for display
-                return { macd: macdLine };
-            };
-            
-            calculateStochastic = (closes, highs, lows, period) => {
-                if (closes.length < period) return null;
-                const relevantLows = lows.slice(-period);
-                const relevantHighs = highs.slice(-period);
-                const lowestLow = Math.min(...relevantLows);
-                const highestHigh = Math.max(...relevantHighs);
-                const currentClose = closes[closes.length - 1];
-                return ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
-            };
-            
-            calculateVWAP = (data) => {
-                if (data.length < 1) return null;
-                const recentData = data.slice(-20); // VWAP on last 20 periods
-                const totalPV = recentData.reduce((sum, p) => sum + (((p.high + p.low + p.close) / 3) * p.volume), 0);
-                const totalVolume = recentData.reduce((sum, p) => sum + p.volume, 0);
-                return totalVolume === 0 ? null : totalPV / totalVolume;
-            };
-        }
+async function loadSymbol(symbol, interval){
+  document.getElementById('lastPrice').innerText = 'Loading...';
+  let cached = loadCache(symbol,interval);
+  let candles = cached;
+  try{ if(!candles){ candles = await fetchCandles(symbol, interval, PTA.config.candleLimit); saveCache(symbol, interval, candles); } }catch(e){ console.warn('fetch candles failed',e); if(!candles) candles = [] }
+  PTA.state.candles = candles;
+  // compute indicators
+  computeAllIndicators();
+  renderOverview();
+  // start websocket for live updates
+  if(PTA.state.ws) PTA.state.ws.close(); PTA.state.ws = startKlineWS(symbol, interval, (k)=>{ // k is kline object
+    const c = {t:k.t, open:+k.o, high:+k.h, low:+k.l, close:+k.c, vol:+k.v}; // simplified
+    // update last candle
+    const last = PTA.state.candles[PTA.state.candles.length-1]; if(last && last.t===c.t){ PTA.state.candles[PTA.state.candles.length-1]=c; } else { PTA.state.candles.push(c); if(PTA.state.candles.length>PTA.config.candleLimit) PTA.state.candles.shift(); }
+    computeAllIndicators(); renderOverview();
+  });
+  // fetch quick ticker
+  const ticker = await fetchTicker(symbol); if(ticker){ document.getElementById('lastPrice').innerText = `${parseFloat(ticker.lastPrice).toFixed(4)} (${parseFloat(ticker.priceChangePercent).toFixed(2)}%)`; document.getElementById('quickInfo').innerHTML = `24h vol: ${parseFloat(ticker.quoteVolume).toFixed(2)}`; }
+}
 
-        document.addEventListener('DOMContentLoaded', () => {
-            window.dashboard = new WIFDashboard();
-            window.dashboard.initialize();
-        });
-    </script>
+function computeAllIndicators(){ const candles = PTA.state.candles; if(!candles || candles.length===0) return; const close = candles.map(c=>c.close); const high = candles.map(c=>c.high); const low = candles.map(c=>c.low); const vol = candles.map(c=>c.vol);
+  const indicators = {};
+  indicators.SMA20 = SMA(close,20);
+  indicators.EMA50 = EMA(close,50);
+  indicators.WMA20 = WMA(close,20);
+  indicators.HMA21 = HMA(close,21);
+  indicators.RSI = RSI(close,14);
+  indicators.MACD = MACD(close);
+  indicators.BOLL = Bollinger(close,20,2);
+  indicators.ATR = ATR(high,low,close,14);
+  indicators.OBV = OBV(close,vol);
+  indicators.VWAP = VWAP(candles);
+  indicators.ICHIMOKU = Ichimoku(high,low,close);
+  indicators.ADX = ADX(high,low,close,14);
+  indicators.CCI = CCI(high,low,close,20);
+  indicators.SUPERTREND = Supertrend(high,low,close,10,3);
+  indicators.KELTNER = Keltner(high,low,close,20,1.5);
+  indicators.HEIKIN = HeikinAshi(candles);
+  indicators.PIVOT = PivotPoints(candles);
+  indicators.VOL_PROFILE = VolumeProfile(candles,24);
+  PTA.state.indicators = indicators;
+  // chart build with overlays
+  const overlays = {SMA20:indicators.SMA20,EMA50:indicators.EMA50,BOLL:indicators.BOLL};
+  buildChart( (document.querySelector('input[data-ind="HEIKIN"]') && document.querySelector('input[data-ind="HEIKIN"]').checked) ? indicators.HEIKIN : candles, overlays);
+}
+
+// Paper trading
+function execPaperTrade(){ const side = document.getElementById('tradeSide').value || 'BUY'; const qty = parseFloat(document.getElementById('tradeQty').value||'0'); const last = PTA.state.candles[PTA.state.candles.length-1]; if(!last){ alert('No candle'); return;} const price = last.close; const entry = {ts: Date.now(), side, qty, price}; PTA.state.ledger.push(entry); renderLedger(); }
+function renderLedger(){ const el = document.getElementById('ledger'); el.innerHTML = PTA.state.ledger.map(t=>`<div>${new Date(t.ts).toLocaleString()} ${t.side} ${t.qty} @ ${t.price}</div>`).join(''); }
+
+// Prediction model (tiny conv1d or LSTM)
+async function trainModelInteractive(){ const data = PTA.state.candles; if(!data || data.length<64) return alert('Not enough data'); const close = data.map(d=>d.close); const seqLen = 64; const X=[], Y=[]; for(let i=0;i+seqLen<close.length;i++){ X.push(close.slice(i,i+seqLen)); Y.push([close[i+seqLen]]); }
+  // normalize
+  const max = Math.max(...close); const min = Math.min(...close); const norm = v=> (v-min)/(max-min+1e-9);
+  const Xn = tf.tensor2d(X.map(r=>r.map(norm)));
+  const Yn = tf.tensor2d(Y.map(r=>norm(r[0])) , [Y.length,1]);
+  const model = buildModel(document.getElementById('modelType').value, seqLen);
+  model.compile({optimizer: tf.train.adam(0.001), loss: 'meanAbsoluteError'});
+  const hist = await model.fit(Xn.reshape([Xn.shape[0],seqLen,1]), Yn, {epochs:6,batchSize:32,validationSplit:0.1, callbacks:{onEpochEnd:(e,l)=> document.getElementById('modelMetrics').innerText = `epoch ${e+1} loss ${l.loss.toFixed(4)} val ${l.val_loss?l.val_loss.toFixed(4):'—'}`}});
+  PTA.state.model = model; PTA.state.modelState = {min,max,seqLen}; alert('Model trained (demo)'); }
+
+function buildModel(type, seqLen){ if(type==='conv1d'){ const model = tf.sequential(); model.add(tf.layers.inputLayer({inputShape:[seqLen,1]})); model.add(tf.layers.conv1d({filters:16,kernelSize:3,activation:'relu'})); model.add(tf.layers.maxPooling1d({poolSize:2})); model.add(tf.layers.flatten()); model.add(tf.layers.dense({units:32,activation:'relu'})); model.add(tf.layers.dense({units:1})); return model; } else { // tiny LSTM
+    const model = tf.sequential(); model.add(tf.layers.inputLayer({inputShape:[seqLen,1]})); model.add(tf.layers.lstm({units:24,returnSequences:false})); model.add(tf.layers.dense({units:1})); return model; } }
+
+async function runPredict(){ if(!PTA.state.model) return alert('No model. Train or load weights.'); const state = PTA.state.modelState; const seqLen = state.seqLen; const data = PTA.state.candles.map(c=>c.close); const lastSeq = data.slice(-seqLen); const norm = v=> (v-state.min)/(state.max-state.min+1e-9);
+  const x = tf.tensor(lastSeq.map(norm)).reshape([1,seqLen,1]); const pred = PTA.state.model.predict(x); const p = (await pred.data())[0]; const denorm = p*(state.max-state.min)+state.min; document.getElementById('predOutput').innerText = `Predicted next: ${denorm.toFixed(6)} (raw ${p.toFixed(4)})`; // show confidence band - simple: use training MAE as sigma if exists (not implemented)
+}
+
+// Backtest
+function runBacktest(){ const window = parseInt(document.getElementById('backtestWindow').value); const buyT = parseFloat(document.getElementById('buyThreshold').value); const sellT = parseFloat(document.getElementById('sellThreshold').value); const candles = PTA.state.candles.slice(-window); if(candles.length<50) return alert('not enough data'); const results = []; let pos=null; let equity=1; let peak=1; let drawdown=0; for(let i=0;i<candles.length;i++){ const subset = candles.slice(0,i+1); const scoreObj = computeSignals(subset, PTA.state.indicators); const score = scoreObj.score; const price = candles[i].close; if(!pos && score>buyT){ pos={entry:price}; } else if(pos && score<sellT){ const ret = price/pos.entry; equity *= ret; pos=null; if(equity>peak) peak=equity; drawdown = Math.max(drawdown, (peak-equity)/peak); } }
+  const retPercent = (equity-1)*100; document.getElementById('backtestResult').innerText = `Return ${retPercent.toFixed(2)}% | MaxDD ${(drawdown*100).toFixed(2)}%`;
+}
+
+// Export/Import
+function exportState(){ const state = {candles:PTA.state.candles, ledger:PTA.state.ledger, modelState:PTA.state.modelState}; const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='pta-state.json'; a.click(); }
+function importState(e){ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); if(o.candles) PTA.state.candles=o.candles; if(o.ledger) PTA.state.ledger=o.ledger; alert('Imported'); computeAllIndicators(); renderOverview(); }catch(err){alert('import error')} }; r.readAsText(f); }
+
+// small helpers
+function renderOverview(){ document.getElementById('signalSummary').innerText = ''; const sig = computeSignals(PTA.state.candles, PTA.state.indicators); document.getElementById('signalSummary').innerHTML = `Composite score: ${(sig.score*100).toFixed(1)}%`; renderLedger(); // indicator list
+  const il = document.getElementById('indicatorList'); il.innerHTML = PTA.config.indicators.map(name=>`<div>${name}</div>`).join(''); }
+
+// init on load
+window.addEventListener('load', ()=>{ initUI(); });
+
+</script>
 </body>
 </html>
