@@ -2,1173 +2,668 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Personal Trading Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Crypto Trading Assistant</title>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/technicalindicators@3.1.0/dist/browser.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+    <script src="https://unpkg.com/technicalindicators/dist/browser.js"></script>
 
     <style>
-        /* --- GLOBAL STYLES & THEMES --- */
+        /* --- Basic Setup & Theming --- */
         :root {
-            --bg-color: #131722;
-            --primary-text: #d1d4dc;
-            --secondary-text: #8c8f96;
-            --border-color: #2a2e39;
-            --card-bg: #1e222d;
-            --accent-color: #2962ff;
-            --accent-hover: #1e4ac9;
+            --bg-color: #121212;
+            --pane-color: #1a1a1a;
+            --border-color: #333;
+            --text-color: #e0e0e0;
+            --text-secondary: #aaa;
+            --accent-color: #007bff;
             --green: #26a69a;
             --red: #ef5350;
-            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        }
-        
-        [data-theme="light"] {
-            --bg-color: #ffffff;
-            --primary-text: #131722;
-            --secondary-text: #5d606b;
-            --border-color: #e0e3eb;
-            --card-bg: #f7f8fa;
-            --green: #008773;
-            --red: #d7373f;
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
-        
         body {
-            font-family: var(--font-family);
-            background-color: var(--bg-color);
-            color: var(--primary-text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             margin: 0;
-            padding: 0;
-            font-size: 14px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
         }
 
-        /* --- LAYOUT --- */
-        .main-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .chart-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        .sidebar {
-            width: 340px;
-            background-color: var(--card-bg);
-            border-left: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            transition: width 0.3s ease;
-        }
-        
-        /* --- HEADER --- */
-        .app-header {
-            display: flex;
-            align-items: center;
-            padding: 8px 16px;
-            border-bottom: 1px solid var(--border-color);
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        
-        .app-header h1 {
-            font-size: 18px;
-            margin: 0;
-            margin-right: 16px;
-        }
-        
-        .header-controls select, .header-controls button {
-            background-color: var(--card-bg);
-            color: var(--primary-text);
-            border: 1px solid var(--border-color);
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        
-        .price-info {
-            display: flex;
-            align-items: center;
-            margin-left: auto;
-            font-size: 16px;
-            gap: 16px;
-        }
-        .price-info .last-price { font-weight: bold; }
-        .price-info .change.positive { color: var(--green); }
-        .price-info .change.negative { color: var(--red); }
-
-        /* --- CHART AREA --- */
-        #chart {
-            width: 100%;
-            height: 100%;
-            flex: 1;
-        }
-        
-        #chart-loader {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10;
-            font-size: 18px;
-            color: var(--secondary-text);
-            display: none;
-        }
-
-        .indicator-toolbar {
-            padding: 4px 8px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .indicator-toolbar button {
-             background-color: transparent;
-             color: var(--secondary-text);
-             border: 1px solid var(--border-color);
-             padding: 4px 8px;
-             font-size: 12px;
-             border-radius: 16px;
-             cursor: pointer;
-        }
-        .indicator-toolbar button.active {
-            background-color: var(--accent-color);
-            color: white;
-            border-color: var(--accent-color);
-        }
-        
-        /* --- SIDEBAR --- */
-        .sidebar-section {
-            border-bottom: 1px solid var(--border-color);
-            padding: 16px;
-        }
-        .sidebar-section h3 {
-            font-size: 16px;
-            margin-top: 0;
-            margin-bottom: 12px;
-            color: var(--primary-text);
-        }
-        
-        .composite-score-display { text-align: center; }
-        .score-value {
-            font-size: 48px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-        .score-label {
-            font-size: 18px;
+        h1, h2, h3 {
+            margin: 0 0 10px 0;
+            color: var(--text-color);
             font-weight: 500;
         }
-        .score-label.buy { color: var(--green); }
-        .score-label.sell { color: var(--red); }
-        .score-label.neutral { color: var(--secondary-text); }
-        
-        .signal-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            font-size: 13px;
-            max-height: 150px;
+
+        /* --- App Layout --- */
+        .app-container {
+            display: flex;
+            flex-grow: 1;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .panel {
+            background-color: var(--pane-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
             overflow-y: auto;
         }
-        .signal-list li {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-        }
-        .signal-list .signal-name { color: var(--secondary-text); }
         
-        .ml-controls .control-group { margin-bottom: 12px; }
-        .ml-controls label { display: block; margin-bottom: 4px; color: var(--secondary-text); }
-        .ml-controls input, .ml-controls select {
-            width: 100%;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--primary-text);
-            padding: 6px;
-            border-radius: 4px;
-        }
-        
-        .ml-actions button {
-            width: 100%;
-            padding: 8px;
-            font-size: 14px;
-            background-color: var(--accent-color);
-            color: white;
+        #main-panel {
+            flex: 3;
+            padding: 0;
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
         }
-        .ml-actions button:hover { background-color: var(--accent-hover); }
-        .ml-actions button:disabled { background-color: var(--border-color); cursor: not-allowed; }
-        
-        #ml-status { margin-top: 8px; font-style: italic; color: var(--secondary-text); text-align: center; }
-        
-        /* --- BOTTOM PANEL --- */
-        .bottom-panel {
-            height: 250px;
-            border-top: 1px solid var(--border-color);
-            background-color: var(--card-bg);
+
+        #controls-panel {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        #analysis-panel {
+            flex: 1;
+            min-width: 300px;
             display: flex;
             flex-direction: column;
         }
         
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .tab-button {
-            padding: 10px 16px;
-            cursor: pointer;
-            background: transparent;
-            border: none;
-            color: var(--secondary-text);
-            font-size: 14px;
-            border-bottom: 2px solid transparent;
-        }
-        .tab-button.active {
-            color: var(--primary-text);
-            border-bottom: 2px solid var(--accent-color);
-        }
-        
-        .tab-content {
-            display: none;
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-        }
-        .tab-content.active { display: block; }
-
-        table {
+        #chart-container {
             width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
+            height: 100%;
+            flex-grow: 1;
         }
-        th, td {
-            padding: 8px;
-            text-align: left;
+
+        /* --- Controls Styling --- */
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        select, button {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background-color: #2a2a2a;
+            color: var(--text-color);
+            font-size: 1em;
+            cursor: pointer;
+        }
+        
+        button {
+             background-color: var(--accent-color);
+             font-weight: bold;
+             border: none;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .timeframe-buttons button {
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            font-weight: normal;
+        }
+
+        .timeframe-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .timeframe-buttons button.active {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        /* --- Indicator Controls --- */
+        #indicator-controls h3 {
             border-bottom: 1px solid var(--border-color);
-        }
-        th { color: var(--secondary-text); }
-        
-        /* --- UTILITY & RESPONSIVE --- */
-        .hidden { display: none !important; }
-        
-        @media (max-width: 768px) {
-            .main-container { flex-direction: column; }
-            .sidebar {
-                width: 100%;
-                height: 40vh;
-                border-left: none;
-                border-top: 1px solid var(--border-color);
-            }
-            .price-info { display: none; }
-            .app-header h1 { font-size: 16px; }
-            .app-header { padding: 8px; gap: 8px;}
-        }
-
-        /* Toast Notifications */
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.5s, bottom 0.5s;
-        }
-
-        .toast.show {
-            opacity: 1;
-            bottom: 30px;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
         }
         
-        .toast.error { background-color: var(--red); }
-        .toast.success { background-color: var(--green); }
+        .indicator-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.95em;
+        }
+        
+        .indicator-item > div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .indicator-params {
+            display: flex;
+            gap: 5px;
+        }
 
+        .indicator-params input {
+            width: 40px;
+            padding: 4px;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* --- Analysis Summary --- */
+        #analysis-summary {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            margin-top: 15px;
+        }
+        
+        #analysis-summary h3 {
+             border-bottom: 1px solid var(--border-color);
+             padding-bottom: 10px;
+        }
+        
+        #summary-text {
+            flex-grow: 1;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #1f1f1f;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+            padding: 10px;
+            border-radius: 5px;
+            resize: none;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
 
-    <header class="app-header">
-        <h1>PTA</h1>
-        <div class="header-controls">
-            <select id="symbol-selector"></select>
-            <select id="interval-selector">
-                <option value="1m">1m</option>
-                <option value="5m">5m</option>
-                <option value="15m" selected>15m</option>
-                <option value="1h">1h</option>
-                <option value="4h">4h</option>
-                <option value="1d">1d</option>
-            </select>
-        </div>
-        <div class="price-info">
-            <span id="last-price">-.--</span>
-            <span id="price-change" class="change">-.--%</span>
-        </div>
-        <button id="theme-toggle" style="margin-left: auto;">☀️/🌙</button>
-    </header>
-
-    <div class="main-container">
-        <div class="chart-container">
-            <div class="indicator-toolbar">
+    <div class="app-container">
+        <div id="controls-panel" class="panel">
+            <h2>Controls</h2>
+            <div class="control-group">
+                <label for="crypto-select">Cryptocurrency</label>
+                <select id="crypto-select">
+                    </select>
+            </div>
+            <div class="control-group">
+                <label>Time Frame</label>
+                <div class="timeframe-buttons">
+                    <button data-days="1">24H</button>
+                    <button data-days="90" class="active">90D</button>
+                    <button data-days="365">1Y</button>
+                    <button data-days="max">Max</button>
                 </div>
-            <div id="chart"></div>
-            <div id="chart-loader">Loading chart data...</div>
+            </div>
+            <div class="control-group">
+                <button id="refresh-btn">Refresh Data</button>
+            </div>
+            <div id="indicator-controls">
+                <h3>Indicators</h3>
+                </div>
         </div>
 
-        <aside class="sidebar">
-            <div class="sidebar-section">
-                <h3>Composite Signal</h3>
-                <div id="composite-score" class="composite-score-display">
-                    <div class="score-value">0.00</div>
-                    <div class="score-label neutral">Neutral</div>
-                </div>
-                <h4 style="margin-top: 20px; margin-bottom: 8px;">Active Signals</h4>
-                <ul id="signal-list" class="signal-list">
-                    <li>No active signals</li>
-                </ul>
-            </div>
-            
-            <div class="sidebar-section">
-                <h3>ML Prediction</h3>
-                <div class="ml-controls">
-                    <div class="control-group">
-                        <label for="ml-horizon">Prediction Horizon (candles)</label>
-                        <input type="number" id="ml-horizon" value="5" min="1" max="20">
-                    </div>
-                    <div class="control-group">
-                        <label for="ml-epochs">Training Epochs</label>
-                        <input type="number" id="ml-epochs" value="10" min="1" max="50">
-                    </div>
-                </div>
-                <div class="ml-actions">
-                    <button id="train-model-btn">Train Model</button>
-                </div>
-                <div id="ml-status">Model not trained.</div>
-            </div>
-            
-             <div class="sidebar-section">
-                <h3>Paper Trading</h3>
-                 <div class="paper-trade-controls" style="display: flex; gap: 8px;">
-                     <input type="number" id="trade-amount" value="1000" placeholder="Amount (USDT)" style="flex: 1; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--primary-text); padding: 6px; border-radius: 4px;">
-                     <button id="paper-buy" style="flex: 1; padding: 8px; background-color: var(--green); color: white; border: none; border-radius: 4px; cursor: pointer;">Buy</button>
-                     <button id="paper-sell" style="flex: 1; padding: 8px; background-color: var(--red); color: white; border: none; border-radius: 4px; cursor: pointer;">Sell</button>
-                 </div>
-            </div>
+        <div id="main-panel">
+            <div id="chart-container"></div>
+        </div>
 
-        </aside>
+        <div id="analysis-panel" class="panel">
+            <div id="analysis-summary">
+                <h3>Analysis Summary</h3>
+                <textarea id="summary-text" readonly>Select a crypto and time frame to begin analysis...</textarea>
+            </div>
+        </div>
     </div>
 
-    <div class="bottom-panel">
-        <div class="tabs">
-            <button class="tab-button active" data-tab="positions">Positions</button>
-            <button class="tab-button" data-tab="history">History</button>
-            <button class="tab-button" data-tab="backtest">Backtest</button>
-        </div>
-        <div id="positions" class="tab-content active">
-             <table>
-                <thead><tr><th>Symbol</th><th>Side</th><th>Amount (USDT)</th><th>Entry Price</th><th>Current Price</th><th>P&L</th><th>Actions</th></tr></thead>
-                <tbody id="positions-table-body"></tbody>
-            </table>
-        </div>
-        <div id="history" class="tab-content">
-            <table>
-                <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Amount (USDT)</th><th>Price</th></tr></thead>
-                <tbody id="history-table-body"></tbody>
-            </table>
-        </div>
-        <div id="backtest" class="tab-content">
-             <div class="backtest-controls" style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
-                <span>Buy when Score ></span>
-                <input type="number" id="backtest-buy-threshold" value="0.6" step="0.1" style="width: 80px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--primary-text); padding: 4px;">
-                <span>Sell when Score <</span>
-                <input type="number" id="backtest-sell-threshold" value="-0.6" step="0.1" style="width: 80px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--primary-text); padding: 4px;">
-                <button id="run-backtest-btn" style="padding: 6px 12px; background-color: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Run Backtest</button>
-            </div>
-            <div id="backtest-results">Run a backtest to see results.</div>
-        </div>
-    </div>
-    
-    <div id="toast" class="toast"></div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Namespace for technical indicators library
+        const ti = technicalindicators;
 
-<script>
-// ========================================================================================================
-// # JAVASCRIPT APPLICATION LOGIC
-// # This script contains the entire functionality for the Personal Trading Assistant.
-// # It is structured into logical modules using an IIFE (Immediately Invoked Function Expression)
-// # to encapsulate the code and avoid polluting the global namespace.
-// ========================================================================================================
+        // --- 1. CONFIGURATION & STATE MANAGEMENT ---
 
-(function() {
-    'use strict';
+        // Map user-friendly names to CoinGecko API IDs
+        const CRYPTO_MAP = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'SOL': 'solana',
+            'WIF': 'dogwifcoin',
+            'AVAX': 'avalanche-2',
+            'BRETT': 'brett-2',
+            'ADA': 'cardano', // Replaced FARCOIN with a more common asset
+            'PYTH': 'pyth-network',
+            'LINK': 'chainlink',
+            'RNDR': 'render-token'
+        };
 
-    // --- GLOBAL CONFIGURATION & STATE ---
-    const config = {
-        // CORRECTED URL: Using data.binance.com which has an open CORS policy and works from GitHub Pages.
-        binanceApiUrl: 'https://data.binance.com/api/v3',
-        binanceWsUrl: 'wss://stream.binance.com:9443/ws',
-        symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'WIFUSDT', 'AVAXUSDT', 'PYTHUSDT', 'ADAUSDT', 'MATICUSDT', 'BRETTUSDT', 'FARCOINUSDT'],
-        intervals: ['1m', '5m', '15m', '1h', '4h', '1d'],
-        candleLimit: 1000,
-        cacheTTL: 5 * 60 * 1000, // 5 minutes
-        defaultIndicators: [
-            { name: 'EMA', params: { period: 20 }, type: 'overlay', color: '#ff6d00' },
-            { name: 'EMA', params: { period: 50 }, type: 'overlay', color: '#2962ff' },
-        ]
-    };
+        // Initial state for indicators, parameters, and chart series objects
+        const indicatorSettings = {
+            sma:        { active: true,  period: 20, series: null, inputs: ['period'], color: '#ffa500' },
+            ema50:      { active: true,  period: 50, series: null, inputs: ['period'], color: '#4caf50' },
+            ema200:     { active: true,  period: 200, series: null, inputs: ['period'], color: '#f44336' },
+            bb:         { active: true,  period: 20, stdDev: 2, series: [null, null, null], inputs: ['period', 'stdDev'], color: '#2962FF' }, // upper, middle, lower
+            rsi:        { active: true,  period: 14, overbought: 70, oversold: 30, series: null, pane: 1, inputs: ['period', 'overbought', 'oversold'], color: '#9c27b0' },
+            macd:       { active: true,  fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, series: [null, null, null], pane: 2, inputs: ['fastPeriod', 'slowPeriod', 'signalPeriod'] }, // macd, signal, histogram
+            psar:       { active: false, step: 0.02, max: 0.2, series: null, inputs: ['step', 'max'], color: '#ffffff' },
+            stoch:      { active: false, period: 14, signalPeriod: 3, series: [null, null], pane: 1, inputs: ['period', 'signalPeriod'] }, // k, d
+            atr:        { active: false, period: 14, series: null, pane: 2, inputs: ['period'], color: '#ffeb3b' },
+            obv:        { active: false, series: null, pane: 2, inputs: [], color: '#00bcd4' }
+        };
 
-    const state = {
-        currentSymbol: null,
-        currentInterval: null,
-        klineData: [],
-        chart: null,
-        candleSeries: null,
-        indicatorSeries: {},
-        ws: null,
-        activeIndicators: new Set(),
-        mlModel: null,
-        isTraining: false,
-        paperTrades: {
-            positions: [],
-            history: [],
-        },
-    };
-    
-    // Technical Indicator definitions
-    const INDICATOR_DEFS = {
-        'SMA': { params: [{ name: 'period', default: 20 }], type: 'overlay' },
-        'EMA': { params: [{ name: 'period', default: 20 }], type: 'overlay' },
-        'Bollinger Bands': { params: [{ name: 'period', default: 20 }, { name: 'stdDev', default: 2 }], type: 'overlay' },
-        'MACD': { params: [{ name: 'fastPeriod', default: 12 }, { name: 'slowPeriod', default: 26 }, { name: 'signalPeriod', default: 9 }], type: 'pane' },
-        'RSI': { params: [{ name: 'period', default: 14 }], type: 'pane' },
-        'Stochastic': { params: [{ name: 'period', default: 14 }, { name: 'signalPeriod', default: 3 }], type: 'pane' },
-    };
+        let currentOhlcvData = [];
+        let chart, candlestickSeries;
+        const indicatorPanes = {}; // To store chart pane objects
 
+        // --- 2. DOM ELEMENT REFERENCES ---
 
-    // --- DOM ELEMENT REFERENCES ---
-    const dom = {
-        symbolSelector: document.getElementById('symbol-selector'),
-        intervalSelector: document.getElementById('interval-selector'),
-        lastPrice: document.getElementById('last-price'),
-        priceChange: document.getElementById('price-change'),
-        chartContainer: document.getElementById('chart'),
-        chartLoader: document.getElementById('chart-loader'),
-        indicatorToolbar: document.querySelector('.indicator-toolbar'),
-        compositeScoreValue: document.querySelector('.composite-score-display .score-value'),
-        compositeScoreLabel: document.querySelector('.composite-score-display .score-label'),
-        signalList: document.getElementById('signal-list'),
-        trainModelBtn: document.getElementById('train-model-btn'),
-        mlStatus: document.getElementById('ml-status'),
-        mlHorizon: document.getElementById('ml-horizon'),
-        mlEpochs: document.getElementById('ml-epochs'),
-        themeToggle: document.getElementById('theme-toggle'),
-        tabs: document.querySelectorAll('.tab-button'),
-        tabContents: document.querySelectorAll('.tab-content'),
-        paperBuyBtn: document.getElementById('paper-buy'),
-        paperSellBtn: document.getElementById('paper-sell'),
-        tradeAmountInput: document.getElementById('trade-amount'),
-        positionsTableBody: document.getElementById('positions-table-body'),
-        historyTableBody: document.getElementById('history-table-body'),
-        runBacktestBtn: document.getElementById('run-backtest-btn'),
-        backtestResults: document.getElementById('backtest-results'),
-        backtestBuyThreshold: document.getElementById('backtest-buy-threshold'),
-        backtestSellThreshold: document.getElementById('backtest-sell-threshold'),
-        toast: document.getElementById('toast'),
-    };
+        const cryptoSelect = document.getElementById('crypto-select');
+        const timeframeButtons = document.querySelectorAll('.timeframe-buttons button');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const chartContainer = document.getElementById('chart-container');
+        const summaryText = document.getElementById('summary-text');
+        const indicatorControlsContainer = document.getElementById('indicator-controls');
+        
+        // --- 3. INITIALIZATION ---
 
-    // ========================================================================================================
-    // # MODULE: API Handler
-    // # Handles fetching data from Binance REST API and WebSocket. Includes caching and error handling.
-    // ========================================================================================================
-    const API = {
-        async fetchKlines(symbol, interval) {
-            const cacheKey = `kline_${symbol}_${interval}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                const { timestamp, data } = JSON.parse(cached);
-                if (Date.now() - timestamp < config.cacheTTL) {
-                    console.log('Using cached kline data.');
-                    return data;
-                }
-            }
-            
-            try {
-                const url = `${config.binanceApiUrl}/klines?symbol=${symbol}&interval=${interval}&limit=${config.candleLimit}`;
-                const response = await fetch(url);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    if(errorData.code === -1121) { // Invalid symbol
-                        throw new Error(`Symbol ${symbol} not found on Binance.`);
-                    }
-                    throw new Error(`API Error: ${response.statusText} (${response.status})`);
-                }
-                const data = await response.json();
-                const formattedData = data.map(d => ({
-                    time: d[0] / 1000,
-                    open: parseFloat(d[1]),
-                    high: parseFloat(d[2]),
-                    low: parseFloat(d[3]),
-                    close: parseFloat(d[4]),
-                    volume: parseFloat(d[5]),
-                }));
-                
-                localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: formattedData }));
-                return formattedData;
-            } catch (error) {
-                console.error('Failed to fetch klines:', error);
-                UI.showToast(error.message, 'error');
-                return null;
-            }
-        },
-
-        connectWebSocket() {
-            if (state.ws) {
-                state.ws.close();
-            }
-            const url = `${config.binanceWsUrl}/${state.currentSymbol.toLowerCase()}@kline_${state.currentInterval}`;
-            state.ws = new WebSocket(url);
-
-            state.ws.onmessage = (event) => {
-                const msg = JSON.parse(event.data);
-                const candle = msg.k;
-                const formattedCandle = {
-                    time: candle.t / 1000,
-                    open: parseFloat(candle.o),
-                    high: parseFloat(candle.h),
-                    low: parseFloat(candle.l),
-                    close: parseFloat(candle.c),
-                    volume: parseFloat(candle.v),
-                };
-                
-                ChartManager.updateRealtime(formattedCandle);
-                UI.updateHeaderPrice(formattedCandle.close, state.klineData[state.klineData.length - 2]?.close);
-                
-                if(candle.x) { 
-                    state.klineData.push(formattedCandle);
-                    if(state.klineData.length > config.candleLimit) state.klineData.shift();
-                    runFullAnalysis();
-                } else {
-                     state.klineData[state.klineData.length - 1] = formattedCandle;
-                     runLightAnalysis(); 
-                }
-                PaperTrading.updateOpenPositions();
-            };
-
-            state.ws.onerror = (error) => {
-                console.error('WebSocket Error:', error);
-            };
+        function initialize() {
+            populateCryptoDropdown();
+            populateIndicatorControls();
+            initializeChart();
+            addEventListeners();
+            loadInitialData();
         }
-    };
-    
-    // ========================================================================================================
-    // # MODULE: UI Manager
-    // # Handles all DOM manipulations, event listeners, and visual feedback.
-    // ========================================================================================================
-    const UI = {
-        init() {
-            config.symbols.forEach(symbol => {
+
+        function populateCryptoDropdown() {
+            for (const symbol in CRYPTO_MAP) {
                 const option = document.createElement('option');
-                option.value = symbol;
+                option.value = CRYPTO_MAP[symbol];
                 option.textContent = symbol;
-                dom.symbolSelector.appendChild(option);
-            });
-
-            Object.keys(INDICATOR_DEFS).forEach(name => {
-                const button = document.createElement('button');
-                button.textContent = name;
-                button.dataset.indicator = name;
-                dom.indicatorToolbar.appendChild(button);
-                button.addEventListener('click', () => this.toggleIndicator(name));
-            });
-
-            dom.symbolSelector.addEventListener('change', (e) => Main.changeAsset(e.target.value, state.currentInterval));
-            dom.intervalSelector.addEventListener('change', (e) => Main.changeAsset(state.currentSymbol, e.target.value));
-            dom.trainModelBtn.addEventListener('click', () => ML.trainModel());
-            dom.themeToggle.addEventListener('click', this.toggleTheme);
-            dom.tabs.forEach(tab => tab.addEventListener('click', () => this.switchTab(tab.dataset.tab)));
-            dom.paperBuyBtn.addEventListener('click', () => PaperTrading.executeTrade('buy'));
-            dom.paperSellBtn.addEventListener('click', () => PaperTrading.executeTrade('sell'));
-            dom.runBacktestBtn.addEventListener('click', Backtester.run);
-            
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', savedTheme);
-        },
-        
-        showLoader(isLoading) {
-            dom.chartLoader.style.display = isLoading ? 'block' : 'none';
-        },
-        
-        updateHeaderPrice(price, prevClose) {
-            dom.lastPrice.textContent = price.toFixed(price > 100 ? 2 : 4);
-            const change = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
-            dom.priceChange.textContent = `${change.toFixed(2)}%`;
-            dom.priceChange.className = `change ${change >= 0 ? 'positive' : 'negative'}`;
-            document.title = `${price.toFixed(2)} | ${state.currentSymbol} | PTA`;
-        },
-        
-        updateCompositeScore(score, signals) {
-            dom.compositeScoreValue.textContent = score.toFixed(2);
-            let label, className;
-            if (score > 0.5) { label = 'Strong Buy'; className = 'buy'; }
-            else if (score > 0.1) { label = 'Buy'; className = 'buy'; }
-            else if (score < -0.5) { label = 'Strong Sell'; className = 'sell'; }
-            else if (score < -0.1) { label = 'Sell'; className = 'sell'; }
-            else { label = 'Neutral'; className = 'neutral'; }
-            dom.compositeScoreLabel.textContent = label;
-            dom.compositeScoreLabel.className = `score-label ${className}`;
-            
-            dom.signalList.innerHTML = '';
-            if (signals.length > 0) {
-                signals.forEach(s => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span class="signal-name">${s.name}</span><span class="signal-value ${s.type}">${s.type.toUpperCase()}</span>`;
-                    dom.signalList.appendChild(li);
-                });
-            } else {
-                dom.signalList.innerHTML = '<li>No active signals</li>';
+                cryptoSelect.appendChild(option);
             }
-        },
-
-        toggleIndicator(name) {
-            const button = dom.indicatorToolbar.querySelector(`[data-indicator="${name}"]`);
-            if (state.activeIndicators.has(name)) {
-                state.activeIndicators.delete(name);
-                button.classList.remove('active');
-                ChartManager.removeIndicator(name);
-            } else {
-                state.activeIndicators.add(name);
-                button.classList.add('active');
-                const data = IndicatorCalculator.calculate(name, state.klineData);
-                ChartManager.addIndicator(name, data);
-            }
-        },
-        
-        toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            ChartManager.applyTheme(newTheme);
-        },
-
-        switchTab(tabId) {
-            dom.tabContents.forEach(content => content.classList.remove('active'));
-            dom.tabs.forEach(tab => tab.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
-        },
-
-        showToast(message, type = 'info') { 
-            dom.toast.textContent = message;
-            dom.toast.className = `toast show ${type}`;
-            setTimeout(() => {
-                dom.toast.className = 'toast';
-            }, 3000);
         }
-    };
+        
+        function populateIndicatorControls() {
+            const createInput = (key, value, settingKey) => {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = value;
+                if (key === 'step' || key === 'max') {
+                    input.step = '0.01';
+                }
+                input.addEventListener('change', (e) => {
+                    indicatorSettings[settingKey][key] = parseFloat(e.target.value);
+                    updateIndicatorsAndAnalysis();
+                });
+                return input;
+            };
 
-    // ========================================================================================================
-    // # MODULE: Chart Manager
-    // # Manages the Lightweight Charts instance, including series for candles and indicators.
-    // ========================================================================================================
-    const ChartManager = {
-        init() {
-            const theme = localStorage.getItem('theme') || 'dark';
-            const chartOptions = {
-                width: dom.chartContainer.clientWidth,
-                height: dom.chartContainer.clientHeight,
+            for (const key in indicatorSettings) {
+                const setting = indicatorSettings[key];
+                const item = document.createElement('div');
+                item.className = 'indicator-item';
+
+                const leftDiv = document.createElement('div');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = setting.active;
+                checkbox.addEventListener('change', (e) => {
+                    setting.active = e.target.checked;
+                    updateIndicatorsAndAnalysis();
+                });
+                const label = document.createElement('label');
+                label.textContent = key.toUpperCase();
+                leftDiv.appendChild(checkbox);
+                leftDiv.appendChild(label);
+
+                const paramsDiv = document.createElement('div');
+                paramsDiv.className = 'indicator-params';
+                setting.inputs.forEach(paramKey => {
+                    paramsDiv.appendChild(createInput(paramKey, setting[paramKey], key));
+                });
+                
+                item.appendChild(leftDiv);
+                item.appendChild(paramsDiv);
+                indicatorControlsContainer.appendChild(item);
+            }
+        }
+
+        function initializeChart() {
+            chart = LightweightCharts.createChart(chartContainer, {
+                width: chartContainer.clientWidth,
+                height: chartContainer.clientHeight,
                 layout: {
-                    background: { color: 'transparent' },
-                    textColor: theme === 'dark' ? '#d1d4dc' : '#131722',
+                    backgroundColor: '#1a1a1a',
+                    textColor: 'rgba(255, 255, 255, 0.9)',
                 },
                 grid: {
-                    vertLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
-                    horzLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
+                    vertLines: { color: '#2a2a2a' },
+                    horzLines: { color: '#2a2a2a' },
                 },
                 crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                rightPriceScale: { borderColor: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
-                timeScale: { borderColor: theme === 'dark' ? '#2a2e39' : '#e0e3eb', timeVisible: true, secondsVisible: false },
-            };
-            state.chart = LightweightCharts.createChart(dom.chartContainer, chartOptions);
-            state.candleSeries = state.chart.addCandlestickSeries({
-                upColor: '#26a69a', wickUpColor: '#26a69a',
-                downColor: '#ef5350', wickDownColor: '#ef5350',
-                borderVisible: false,
+                rightPriceScale: { borderColor: '#485158' },
+                timeScale: { borderColor: '#485158', timeVisible: true, secondsVisible: false },
             });
 
-            new ResizeObserver(this.resize).observe(dom.chartContainer);
-        },
-        
-        resize() {
-            if (state.chart && dom.chartContainer.clientWidth > 0) {
-                state.chart.resize(dom.chartContainer.clientWidth, dom.chartContainer.clientHeight);
-            }
-        },
-
-        setData(data) {
-            state.candleSeries.setData(data);
-            state.chart.timeScale().fitContent();
-        },
-        
-        updateRealtime(candle) {
-            state.candleSeries.update(candle);
-        },
-        
-        applyTheme(theme) {
-            state.chart.applyOptions({
-                layout: { textColor: theme === 'dark' ? '#d1d4dc' : '#131722' },
-                grid: {
-                    vertLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
-                    horzLines: { color: theme === 'dark' ? '#2a2e39' : '#e0e3eb' },
-                },
+            candlestickSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a',
+                downColor: '#ef5350',
+                borderDownColor: '#ef5350',
+                borderUpColor: '#26a69a',
+                wickDownColor: '#ef5350',
+                wickUpColor: '#26a69a',
             });
-        },
 
-        addIndicator(name, data) {
-            this.removeIndicator(name);
-            const def = INDICATOR_DEFS[name];
-            if (!def) return;
-            
-            state.indicatorSeries[name] = {};
+            // Create dedicated panes for some indicators
+            indicatorPanes[1] = chart.addPriceScale({
+                scaleMargins: { top: 0.8, bottom: 0 },
+            });
+            indicatorPanes[2] = chart.addPriceScale({
+                scaleMargins: { top: 0.8, bottom: 0 },
+            });
 
-            if (def.type === 'overlay') {
-                if(name === 'Bollinger Bands') {
-                    state.indicatorSeries[name].upper = state.chart.addLineSeries({ color: 'rgba(76, 175, 80, 0.5)', lineWidth: 1, priceLineVisible: false });
-                    state.indicatorSeries[name].middle = state.chart.addLineSeries({ color: 'rgba(255, 205, 210, 0.5)', lineWidth: 1, priceLineVisible: false });
-                    state.indicatorSeries[name].lower = state.chart.addLineSeries({ color: 'rgba(76, 175, 80, 0.5)', lineWidth: 1, priceLineVisible: false });
-                    state.indicatorSeries[name].upper.setData(data.map(d => ({time: d.time, value: d.upper})));
-                    state.indicatorSeries[name].middle.setData(data.map(d => ({time: d.time, value: d.middle})));
-                    state.indicatorSeries[name].lower.setData(data.map(d => ({time: d.time, value: d.lower})));
-                } else {
-                    state.indicatorSeries[name].main = state.chart.addLineSeries({ color: '#2962ff', lineWidth: 2 });
-                    state.indicatorSeries[name].main.setData(data);
+            // Make chart responsive
+            new ResizeObserver(entries => {
+                if (entries.length > 0 && entries[0].contentRect.width > 0) {
+                    const { width, height } = entries[0].contentRect;
+                    chart.applyOptions({ width, height });
                 }
-            } else if (def.type === 'pane') {
-                 const pane = state.chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: name });
-                pane.setData(data);
-                state.indicatorSeries[name].pane = pane;
-            }
-        },
-
-        removeIndicator(name) {
-            if (state.indicatorSeries[name]) {
-                Object.values(state.indicatorSeries[name]).forEach(series => state.chart.removeSeries(series));
-                delete state.indicatorSeries[name];
-            }
-        },
-
-        showPredictions(predictions) {
-            console.log("ML Predictions:", predictions);
-            UI.showToast(`Model predicted next price: ${predictions[0].value.toFixed(2)}`, 'info');
+            }).observe(chartContainer);
         }
-    };
-
-    // ========================================================================================================
-    // # MODULE: Indicator Calculator
-    // # Uses the technicalindicators library to compute values for various indicators.
-    // ========================================================================================================
-    const IndicatorCalculator = {
-        calculateAll(data) {
-            const indicators = {};
-            const closePrices = data.map(d => d.close);
-            
-            indicators.rsi14 = technicalindicators.rsi({ period: 14, values: closePrices });
-            indicators.macd12_26_9 = technicalindicators.macd({
-                values: closePrices, fastPeriod: 12, slowPeriod: 26, signalPeriod: 9,
-                SimpleMAOscillator: false, SimpleMASignal: false
+        
+        function addEventListeners() {
+            cryptoSelect.addEventListener('change', loadInitialData);
+            refreshBtn.addEventListener('click', loadInitialData);
+            timeframeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    timeframeButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    loadInitialData();
+                });
             });
-            indicators.ema20 = technicalindicators.ema({ period: 20, values: closePrices });
-            indicators.ema50 = technicalindicators.ema({ period: 50, values: closePrices });
-            
-            return indicators;
-        },
-
-        calculate(name, data) {
-            const closes = data.map(d => d.close);
-            const def = INDICATOR_DEFS[name];
-            if (!def) return [];
-
-            let result;
-            if(name === 'SMA' || name === 'EMA') {
-                const period = def.params[0].default;
-                result = technicalindicators[name.toLowerCase()]({period, values: closes});
-            }
-            if(name === 'Bollinger Bands') {
-                result = technicalindicators.bollingerbands({period: 20, stdDev: 2, values: closes});
-            }
-            
-            if(Array.isArray(result) && typeof result[0] === 'number') {
-                return data.slice(data.length - result.length).map((d, i) => ({ time: d.time, value: result[i] }));
-            }
-             if(Array.isArray(result) && typeof result[0] === 'object') {
-                return data.slice(data.length - result.length).map((d, i) => ({ time: d.time, ...result[i] }));
-            }
-            return [];
         }
-    };
-    
-    // ========================================================================================================
-    // # MODULE: Signal Engine
-    // # Generates buy/sell signals based on indicator values and computes a composite score.
-    // ========================================================================================================
-    const SignalEngine = {
-        getCompositeScore(data, indicators) {
-            if (indicators.rsi14.length === 0) return { score: 0, signals: [] };
-
-            let score = 0;
-            const signals = [];
-            const lastCandle = data[data.length - 1];
-            
-            const lastRSI = indicators.rsi14[indicators.rsi14.length - 1];
-            if (lastRSI < 30) { score += 1; signals.push({ name: 'RSI(14)', type: 'buy' }); }
-            if (lastRSI > 70) { score -= 1; signals.push({ name: 'RSI(14)', type: 'sell' }); }
-
-            const lastMACD = indicators.macd12_26_9[indicators.macd12_26_9.length - 1];
-            const prevMACD = indicators.macd12_26_9[indicators.macd12_26_9.length - 2];
-            if (prevMACD.MACD < prevMACD.signal && lastMACD.MACD > lastMACD.signal) {
-                score += 1.5; signals.push({ name: 'MACD Cross', type: 'buy' });
-            }
-            if (prevMACD.MACD > prevMACD.signal && lastMACD.MACD < lastMACD.signal) {
-                score -= 1.5; signals.push({ name: 'MACD Cross', type: 'sell' });
-            }
-
-            const lastEMA50 = indicators.ema50[indicators.ema50.length - 1];
-            if (lastCandle.close > lastEMA50) { score += 0.5; signals.push({ name: 'Price > EMA(50)', type: 'buy'}); }
-            if (lastCandle.close < lastEMA50) { score -= 0.5; signals.push({ name: 'Price < EMA(50)', type: 'sell'}); }
-            
-            const normalizedScore = Math.max(-1, Math.min(1, score / 4.0));
-            return { score: normalizedScore, signals };
+        
+        function loadInitialData() {
+            const cryptoId = cryptoSelect.value;
+            const days = document.querySelector('.timeframe-buttons button.active').dataset.days;
+            fetchData(cryptoId, days);
         }
-    };
 
-    // ========================================================================================================
-    // # MODULE: Machine Learning
-    // # Handles in-browser model training and prediction with TensorFlow.js.
-    // ========================================================================================================
-    const ML = {
-        async trainModel() {
-            if (state.isTraining) return UI.showToast('Training is already in progress.', 'info');
-            state.isTraining = true;
-            dom.trainModelBtn.disabled = true;
-            dom.mlStatus.textContent = 'Preparing data...';
+        // --- 4. DATA FETCHING & PROCESSING ---
 
+        async function fetchData(cryptoId, days) {
+            summaryText.value = `Fetching ${cryptoId.toUpperCase()} data for ${days} days...`;
+            const url = `https://api.coingecko.com/api/v3/coins/${cryptoId}/ohlc?vs_currency=usd&days=${days}`;
             try {
-                const features = state.klineData.map(d => [d.open, d.high, d.low, d.close, d.volume]).slice(50);
-                if(features.length < 100) throw new Error("Not enough historical data to train (min 100 candles).");
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    summaryText.value = `No data found for ${cryptoId.toUpperCase()}.`;
+                    return;
+                }
+                
+                currentOhlcvData = data.map(d => ({
+                    time: d[0] / 1000,
+                    open: d[1],
+                    high: d[2],
+                    low: d[3],
+                    close: d[4]
+                }));
 
-                const { normalized, min, max } = this.normalize(features);
-                const sequenceLength = 60;
-                const horizon = parseInt(dom.mlHorizon.value, 10);
-                const { X, y } = this.createSequences(normalized, sequenceLength, horizon);
-                if(!X || X.length === 0) throw new Error("Could not create training sequences.");
+                // Fetch volume data separately as it's not in the OHLC endpoint
+                const volumeUrl = `https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
+                const volumeResponse = await fetch(volumeUrl);
+                const volumeData = await volumeResponse.json();
+                const volumeMap = new Map(volumeData.total_volumes.map(d => [d[0], d[1]]));
 
-                const X_tensor = tf.tensor3d(X);
-                const y_tensor = tf.tensor2d(y, [y.length, 1]);
-
-                state.mlModel = tf.sequential();
-                state.mlModel.add(tf.layers.lstm({ units: 50, returnSequences: true, inputShape: [sequenceLength, 5] }));
-                state.mlModel.add(tf.layers.dropout(0.2));
-                state.mlModel.add(tf.layers.lstm({ units: 50 }));
-                state.mlModel.add(tf.layers.dropout(0.2));
-                state.mlModel.add(tf.layers.dense({ units: 1 }));
-                state.mlModel.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
-
-                const epochs = parseInt(dom.mlEpochs.value, 10);
-                dom.mlStatus.textContent = `Training... Epoch 1/${epochs}`;
-                await state.mlModel.fit(X_tensor, y_tensor, {
-                    epochs: epochs,
-                    callbacks: {
-                        onEpochEnd: (epoch, logs) => {
-                            dom.mlStatus.textContent = `Training... Epoch ${epoch + 1}/${epochs} | Loss: ${logs.loss.toFixed(4)}`;
-                        }
-                    }
+                // Add volume to our OHLC data
+                currentOhlcvData.forEach(d => {
+                    // Find the closest timestamp in volume data
+                    const closestTimestamp = Array.from(volumeMap.keys()).reduce((a, b) => {
+                        return Math.abs(b - d.time * 1000) < Math.abs(a - d.time * 1000) ? b : a;
+                    });
+                    d.volume = volumeMap.get(closestTimestamp) || 0;
                 });
                 
-                state.mlModel.normalizationStats = { min, max };
-                UI.showToast('Model training complete!', 'success');
-                dom.mlStatus.textContent = 'Model trained. Ready to predict.';
-                await this.predict();
+                candlestickSeries.setData(currentOhlcvData);
+                chart.timeScale().fitContent();
+                updateIndicatorsAndAnalysis();
+
             } catch (error) {
-                console.error("ML Training Error:", error);
-                UI.showToast(error.message, 'error');
-                dom.mlStatus.textContent = `Error: ${error.message}`;
-            } finally {
-                state.isTraining = false;
-                dom.trainModelBtn.disabled = false;
+                console.error('Failed to fetch data:', error);
+                summaryText.value = `Error: ${error.message}`;
             }
-        },
-
-        async predict() {
-            if (!state.mlModel) return UI.showToast('Train a model first before predicting.', 'error');
-            
-            const sequenceLength = 60;
-            const lastSequenceRaw = state.klineData.slice(-sequenceLength).map(d => [d.open, d.high, d.low, d.close, d.volume]);
-            const { min, max } = state.mlModel.normalizationStats;
-            const lastSequenceNormalized = lastSequenceRaw.map(row => row.map((val, i) => (val - min[i]) / (max[i] - min[i])));
-
-            const inputTensor = tf.tensor3d([lastSequenceNormalized]);
-            const predictionTensor = state.mlModel.predict(inputTensor);
-            const predictionNormalized = await predictionTensor.data();
-            
-            const predictedClose = predictionNormalized[0] * (max[3] - min[3]) + min[3];
-
-            const horizon = parseInt(dom.mlHorizon.value, 10);
-            const lastTime = state.klineData[state.klineData.length - 1].time;
-            const intervalSeconds = this.getIntervalSeconds(state.currentInterval);
-            const predictionTime = lastTime + (horizon * intervalSeconds);
-            
-            ChartManager.showPredictions([{ time: predictionTime, value: predictedClose }]);
-        },
-        
-        normalize(data) {
-            const arr = tf.tensor2d(data);
-            const min = arr.min(0);
-            const max = arr.max(0);
-            const normalized = arr.sub(min).div(max.sub(min));
-            return { normalized: normalized.arraySync(), min: min.arraySync(), max: max.arraySync() };
-        },
-        
-        createSequences(data, seqLength, horizon) {
-            const X = [], y = [];
-            for (let i = 0; i < data.length - seqLength - horizon + 1; i++) {
-                X.push(data.slice(i, i + seqLength));
-                y.push(data[i + seqLength + horizon - 1][3]);
-            }
-            return { X, y };
-        },
-
-        getIntervalSeconds(interval) {
-            const unit = interval.slice(-1);
-            const value = parseInt(interval.slice(0, -1));
-            if (unit === 'm') return value * 60;
-            if (unit === 'h') return value * 3600;
-            if (unit === 'd') return value * 86400;
-            return 0;
         }
-    };
-    
-    // ========================================================================================================
-    // # MODULE: Paper Trading
-    // # Simulates trading based on user actions, tracks positions and history.
-    // ========================================================================================================
-    const PaperTrading = {
-        init() {
-            const savedTrades = localStorage.getItem('paperTrades');
-            if (savedTrades) state.paperTrades = JSON.parse(savedTrades);
-            this.renderTables();
-        },
+        
+        function updateIndicatorsAndAnalysis() {
+            if (currentOhlcvData.length === 0) return;
+            calculateAndDrawIndicators();
+            runAnalysis();
+        }
 
-        executeTrade(side) {
-            const amount = parseFloat(dom.tradeAmountInput.value);
-            if (isNaN(amount) || amount <= 0) return UI.showToast('Please enter a valid trade amount.', 'error');
-            
-            const currentPrice = state.klineData[state.klineData.length - 1].close;
-            const quantity = amount / currentPrice;
+        // --- 5. TECHNICAL INDICATORS CALCULATION & DRAWING ---
 
-            const position = {
-                id: Date.now(), symbol: state.currentSymbol, side: side === 'buy' ? 'long' : 'short',
-                amount, quantity, entryPrice: currentPrice,
+        function calculateAndDrawIndicators() {
+            const closes = currentOhlcvData.map(d => d.close);
+            const highs = currentOhlcvData.map(d => d.high);
+            const lows = currentOhlcvData.map(d => d.low);
+            const opens = currentOhlcvData.map(d => d.open);
+            const volumes = currentOhlcvData.map(d => d.volume);
+
+            const alignData = (indicatorData) => {
+                const offset = currentOhlcvData.length - indicatorData.length;
+                const aligned = Array(offset).fill(null).concat(indicatorData);
+                return currentOhlcvData.map((d, i) => ({ time: d.time, value: aligned[i] })).filter(d => d.value !== null);
             };
-            state.paperTrades.positions.push(position);
-            
-            state.paperTrades.history.unshift({
-                time: new Date().toISOString(), symbol: state.currentSymbol,
-                side, amount, price: currentPrice
-            });
-            
-            this.saveAndRender();
-            UI.showToast(`${side.toUpperCase()} order for ${amount} USDT filled.`, 'success');
-        },
 
-        closePosition(positionId) {
-            const index = state.paperTrades.positions.findIndex(p => p.id === positionId);
-            if(index === -1) return;
+            // SMA
+            const smaSetting = indicatorSettings.sma;
+            if (!smaSetting.series) smaSetting.series = chart.addLineSeries({ color: smaSetting.color, lineWidth: 2, priceLineVisible: false });
+            smaSetting.series.applyOptions({ visible: smaSetting.active });
+            if (smaSetting.active) {
+                const smaData = ti.sma({ period: smaSetting.period, values: closes });
+                smaSetting.series.setData(alignData(smaData));
+            }
 
-            const position = state.paperTrades.positions.splice(index, 1)[0];
-            const currentPrice = state.klineData[state.klineData.length-1].close;
-            state.paperTrades.history.unshift({
-                time: new Date().toISOString(), symbol: position.symbol, side: `close ${position.side}`,
-                amount: position.amount, price: currentPrice
-            });
-            this.saveAndRender();
-        },
+            // EMA 50
+            const ema50Setting = indicatorSettings.ema50;
+            if (!ema50Setting.series) ema50Setting.series = chart.addLineSeries({ color: ema50Setting.color, lineWidth: 2, priceLineVisible: false });
+            ema50Setting.series.applyOptions({ visible: ema50Setting.active });
+            if (ema50Setting.active) {
+                const ema50Data = ti.ema({ period: ema50Setting.period, values: closes });
+                ema50Setting.series.setData(alignData(ema50Data));
+            }
 
-        updateOpenPositions() {
-             if(state.paperTrades.positions.length > 0) {
-                 this.renderTables(state.klineData[state.klineData.length - 1].close);
+            // EMA 200
+            const ema200Setting = indicatorSettings.ema200;
+            if (!ema200Setting.series) ema200Setting.series = chart.addLineSeries({ color: ema200Setting.color, lineWidth: 2, priceLineVisible: false });
+            ema200Setting.series.applyOptions({ visible: ema200Setting.active });
+            if (ema200Setting.active) {
+                const ema200Data = ti.ema({ period: ema200Setting.period, values: closes });
+                ema200Setting.series.setData(alignData(ema200Data));
+            }
+
+            // Bollinger Bands
+            const bbSetting = indicatorSettings.bb;
+            if (!bbSetting.series[0]) {
+                const commonOptions = { priceLineVisible: false, lineWidth: 1, color: bbSetting.color, lastValueVisible: false };
+                bbSetting.series[0] = chart.addLineSeries({ ...commonOptions, lineStyle: LightweightCharts.LineStyle.Dotted });
+                bbSetting.series[1] = chart.addLineSeries({ ...commonOptions }); // Middle
+                bbSetting.series[2] = chart.addLineSeries({ ...commonOptions, lineStyle: LightweightCharts.LineStyle.Dotted });
+            }
+            bbSetting.series.forEach(s => s.applyOptions({ visible: bbSetting.active }));
+            if (bbSetting.active) {
+                const bbData = ti.bollingerbands({ period: bbSetting.period, values: closes, stdDev: bbSetting.stdDev });
+                const offset = currentOhlcvData.length - bbData.length;
+                const formattedData = currentOhlcvData.map((d, i) => i < offset ? null : { time: d.time, ...bbData[i - offset] }).filter(Boolean);
+                bbSetting.series[0].setData(formattedData.map(d => ({ time: d.time, value: d.upper })));
+                bbSetting.series[1].setData(formattedData.map(d => ({ time: d.time, value: d.middle })));
+                bbSetting.series[2].setData(formattedData.map(d => ({ time: d.time, value: d.lower })));
+            }
+
+            // RSI
+            const rsiSetting = indicatorSettings.rsi;
+            if (!rsiSetting.series) {
+                 rsiSetting.series = chart.addLineSeries({ color: rsiSetting.color, lineWidth: 2, priceScaleId: indicatorPanes[1] });
+                 // Overbought/oversold lines
+                 rsiSetting.series.createPriceLine({ price: rsiSetting.overbought, color: '#787B86', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: 'Overbought'});
+                 rsiSetting.series.createPriceLine({ price: rsiSetting.oversold, color: '#787B86', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: 'Oversold'});
+            }
+            rsiSetting.series.applyOptions({ visible: rsiSetting.active, priceScaleId: rsiSetting.active ? indicatorPanes[1] : '' });
+            if (rsiSetting.active) {
+                const rsiData = ti.rsi({ period: rsiSetting.period, values: closes });
+                rsiSetting.series.setData(alignData(rsiData));
+            }
+
+            // MACD
+            const macdSetting = indicatorSettings.macd;
+            if (!macdSetting.series[0]) {
+                macdSetting.series[0] = chart.addLineSeries({ color: '#2962FF', lineWidth: 2, priceScaleId: indicatorPanes[2], priceLineVisible: false }); // MACD line
+                macdSetting.series[1] = chart.addLineSeries({ color: '#FF6D00', lineWidth: 2, priceScaleId: indicatorPanes[2], priceLineVisible: false }); // Signal line
+                macdSetting.series[2] = chart.addHistogramSeries({ priceScaleId: indicatorPanes[2], priceLineVisible: false }); // Histogram
+            }
+             macdSetting.series.forEach(s => s.applyOptions({ visible: macdSetting.active, priceScaleId: macdSetting.active ? indicatorPanes[2] : '' }));
+             if (macdSetting.active) {
+                const macdInput = {
+                    values: closes,
+                    fastPeriod: macdSetting.fastPeriod,
+                    slowPeriod: macdSetting.slowPeriod,
+                    signalPeriod: macdSetting.signalPeriod,
+                    SimpleMAOscillator: false,
+                    SimpleMASignal: false
+                };
+                const macdData = ti.macd(macdInput);
+                const offset = currentOhlcvData.length - macdData.length;
+                const formattedMacd = currentOhlcvData.map((d, i) => i < offset ? null : { time: d.time, ...macdData[i - offset] }).filter(Boolean);
+                
+                macdSetting.series[0].setData(formattedMacd.map(d => ({ time: d.time, value: d.MACD })));
+                macdSetting.series[1].setData(formattedMacd.map(d => ({ time: d.time, value: d.signal })));
+                macdSetting.series[2].setData(formattedMacd.map(d => ({ time: d.time, value: d.histogram, color: d.histogram >= 0 ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)' })));
              }
-        },
-
-        renderTables(currentPrice) {
-            dom.positionsTableBody.innerHTML = '';
-            state.paperTrades.positions.forEach(pos => {
-                const price = (pos.symbol === state.currentSymbol && currentPrice) ? currentPrice : pos.entryPrice;
-                const pnl = (pos.side === 'long') ? (price - pos.entryPrice) * pos.quantity : (pos.entryPrice - price) * pos.quantity;
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${pos.symbol}</td>
-                    <td>${pos.side}</td>
-                    <td>${pos.amount.toFixed(2)}</td>
-                    <td>${pos.entryPrice.toFixed(4)}</td>
-                    <td>${price ? price.toFixed(4) : '-'}</td>
-                    <td style="color: ${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl.toFixed(2)} (${(pnl/pos.amount*100).toFixed(2)}%)</td>
-                    <td><button class="close-pos-btn" data-id="${pos.id}">Close</button></td>
-                `;
-                dom.positionsTableBody.appendChild(row);
-            });
-            
-            document.querySelectorAll('.close-pos-btn').forEach(btn => 
-                btn.addEventListener('click', (e) => this.closePosition(parseInt(e.target.dataset.id, 10))));
-
-            dom.historyTableBody.innerHTML = '';
-            state.paperTrades.history.slice(0, 100).forEach(trade => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${new Date(trade.time).toLocaleString()}</td>
-                    <td>${trade.symbol}</td>
-                    <td>${trade.side}</td>
-                    <td>${trade.amount.toFixed(2)}</td>
-                    <td>${trade.price.toFixed(4)}</td>
-                `;
-                dom.historyTableBody.appendChild(row);
-            });
-        },
-
-        saveAndRender() {
-            localStorage.setItem('paperTrades', JSON.stringify(state.paperTrades));
-            this.renderTables(state.klineData.length ? state.klineData[state.klineData.length-1].close : null);
         }
-    };
-    
-    // ========================================================================================================
-    // # MODULE: Backtester
-    // # Runs a simple strategy over historical data and provides performance metrics.
-    // ========================================================================================================
-    const Backtester = {
-        run() {
-            const buyThreshold = parseFloat(dom.backtestBuyThreshold.value);
-            const sellThreshold = parseFloat(dom.backtestSellThreshold.value);
-            let inPosition = false, entryPrice = 0, trades = [], balance = 10000;
-            const initialBalance = balance;
+        
+        // --- 6. ANALYSIS & SIGNAL GENERATION ENGINE ---
 
-            for (let i = 50; i < state.klineData.length; i++) {
-                const historicalData = state.klineData.slice(0, i + 1);
-                const indicators = IndicatorCalculator.calculateAll(historicalData);
-                const { score } = SignalEngine.getCompositeScore(historicalData, indicators);
-                const currentClose = historicalData[historicalData.length - 1].close;
+        function runAnalysis() {
+            const signals = [];
+            const dataLength = currentOhlcvData.length;
+            if (dataLength < 2) {
+                summaryText.value = "Not enough data for analysis.";
+                return;
+            }
+            
+            // Get latest values
+            const lastCandle = currentOhlcvData[dataLength - 1];
+            const prevCandle = currentOhlcvData[dataLength - 2];
 
-                if (!inPosition && score > buyThreshold) {
-                    inPosition = true;
-                    entryPrice = currentClose;
-                } else if (inPosition && score < sellThreshold) {
-                    inPosition = false;
-                    const pnl = (currentClose - entryPrice) / entryPrice;
-                    trades.push(pnl);
-                    balance *= (1 + pnl);
+            const closes = currentOhlcvData.map(d => d.close);
+            const highs = currentOhlcvData.map(d => d.high);
+            const lows = currentOhlcvData.map(d => d.low);
+
+            // --- Indicator Calculations for Analysis ---
+            const rsiSetting = indicatorSettings.rsi;
+            const rsi = ti.rsi({ period: rsiSetting.period, values: closes });
+            const lastRsi = rsi[rsi.length - 1];
+
+            const macdSetting = indicatorSettings.macd;
+            const macdInput = { values: closes, fastPeriod: macdSetting.fastPeriod, slowPeriod: macdSetting.slowPeriod, signalPeriod: macdSetting.signalPeriod, SimpleMAOscillator: false, SimpleMASignal: false };
+            const macd = ti.macd(macdInput);
+            const lastMacd = macd[macd.length - 1];
+            
+            const bbSetting = indicatorSettings.bb;
+            const bb = ti.bollingerbands({ period: bbSetting.period, values: closes, stdDev: bbSetting.stdDev });
+            const lastBb = bb[bb.length - 1];
+            
+            const ema50Setting = indicatorSettings.ema50;
+            const ema50 = ti.ema({ period: ema50Setting.period, values: closes });
+            const lastEma50 = ema50[ema50.length - 1];
+            
+            const ema200Setting = indicatorSettings.ema200;
+            const ema200 = ti.ema({ period: ema200Setting.period, values: closes });
+            const lastEma200 = ema200[ema200.length - 1];
+            const prevEma50 = ema50[ema50.length - 2];
+            const prevEma200 = ema200[ema200.length - 2];
+
+
+            // --- Signal Logic ---
+            
+            // 1. Strong Bullish Momentum
+            if (lastRsi > 60 && lastMacd.MACD > lastMacd.signal && lastCandle.close > lastEma50) {
+                signals.push("📈 Strong Bullish Momentum: RSI > 60, MACD cross up, and Price > 50-EMA.");
+            }
+
+            // 2. Strong Bearish Momentum
+            if (lastRsi < 40 && lastMacd.MACD < lastMacd.signal && lastCandle.close < lastEma50) {
+                signals.push("📉 Strong Bearish Momentum: RSI < 40, MACD cross down, and Price < 50-EMA.");
+            }
+            
+            // 3. Potential Reversal (Oversold)
+            if (lastRsi < rsiSetting.oversold && (lastCandle.low <= lastBb.lower)) {
+                signals.push("⬆️ Potential Reversal (Oversold): RSI is below " + rsiSetting.oversold + " and price touched the lower Bollinger Band.");
+            }
+            
+            // 4. Potential Reversal (Overbought)
+            if (lastRsi > rsiSetting.overbought && (lastCandle.high >= lastBb.upper)) {
+                signals.push("⬇️ Potential Reversal (Overbought): RSI is above " + rsiSetting.overbought + " and price touched the upper Bollinger Band.");
+            }
+            
+            // 5. Major Trend Signal (Golden/Death Cross)
+            if (prevEma50 <= prevEma200 && lastEma50 > lastEma200) {
+                signals.push("✨ Major Trend Signal (Golden Cross): 50-EMA crossed ABOVE 200-EMA.");
+            }
+            if (prevEma50 >= prevEma200 && lastEma50 < lastEma200) {
+                signals.push("💀 Major Trend Signal (Death Cross): 50-EMA crossed BELOW 200-EMA.");
+            }
+            
+            // 6. Bearish Divergence (Simplified)
+            const lookbackPeriod = 20;
+            if (dataLength > lookbackPeriod) {
+                const recentHighs = highs.slice(-lookbackPeriod);
+                const recentRsi = rsi.slice(-lookbackPeriod);
+                const maxPrice = Math.max(...recentHighs);
+                if (lastCandle.high >= maxPrice) { // Price is making a new high
+                    const maxRsi = Math.max(...recentRsi);
+                    if(lastRsi < maxRsi * 0.95) { // But RSI is not
+                         signals.push("📉 Possible Trend Exhaustion (Bearish Divergence): Price made a new high, but RSI did not.");
+                    }
                 }
             }
 
-            this.displayResults(trades, balance, initialBalance);
-        },
-
-        displayResults(trades, finalBalance, initialBalance) {
-            if (trades.length === 0) {
-                dom.backtestResults.innerHTML = '<p>No trades were executed with the current settings.</p>';
-                return;
-            }
-            const winRate = (trades.filter(t => t > 0).length / trades.length * 100).toFixed(2);
-            const totalReturn = ((finalBalance - initialBalance) / initialBalance * 100).toFixed(2);
-            dom.backtestResults.innerHTML = `
-                <h4>Backtest Results</h4>
-                <p>Total Trades: <strong>${trades.length}</strong></p>
-                <p>Win Rate: <strong>${winRate}%</strong></p>
-                <p>Total Return: <strong style="color: ${totalReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${totalReturn}%</strong></p>
-                <p>Final Balance: <strong>$${finalBalance.toFixed(2)}</strong></p>
-            `;
-        }
-    };
-
-    // ========================================================================================================
-    // # MAIN APPLICATION LOGIC & INITIALIZATION
-    // ========================================================================================================
-    const Main = {
-        async init() {
-            UI.init();
-            ChartManager.init();
-            PaperTrading.init();
-            
-            const initialSymbol = localStorage.getItem('lastSymbol') || 'BTCUSDT';
-            const initialInterval = localStorage.getItem('lastInterval') || '15m';
-            dom.symbolSelector.value = initialSymbol;
-            dom.intervalSelector.value = initialInterval;
-
-            await this.changeAsset(initialSymbol, initialInterval);
-        },
-
-        async changeAsset(symbol, interval) {
-            UI.showLoader(true);
-            state.currentSymbol = symbol;
-            state.currentInterval = interval;
-            localStorage.setItem('lastSymbol', symbol);
-            localStorage.setItem('lastInterval', interval);
-            document.title = `${symbol} | PTA`;
-
-            const klineData = await API.fetchKlines(symbol, interval);
-            
-            if (klineData && klineData.length > 0) {
-                state.klineData = klineData;
-                ChartManager.setData(state.klineData);
-                API.connectWebSocket();
-                runFullAnalysis();
+            // --- Display Final Analysis ---
+            if (signals.length > 0) {
+                summaryText.value = "Generated Signals:\n\n- " + signals.join("\n- ");
             } else {
-                 state.klineData = [];
-                 ChartManager.setData([]);
-                 UI.updateHeaderPrice(0,0);
+                summaryText.value = "No strong signals detected based on the current indicator settings. Market appears to be neutral or consolidating.";
             }
-
-            UI.showLoader(false);
         }
-    };
-
-    function runFullAnalysis() {
-        if (state.klineData.length < 50) return;
-        const indicators = IndicatorCalculator.calculateAll(state.klineData);
-        const { score, signals } = SignalEngine.getCompositeScore(state.klineData, indicators);
-        UI.updateCompositeScore(score, signals);
         
-        state.activeIndicators.forEach(name => {
-             const data = IndicatorCalculator.calculate(name, state.klineData);
-             ChartManager.addIndicator(name, data);
-        });
-    }
-
-    function runLightAnalysis() {
-        if (state.klineData.length < 50) return;
-        runFullAnalysis();
-    }
-
-    document.addEventListener('DOMContentLoaded', () => Main.init());
-
-})();
-</script>
+        // --- START THE APPLICATION ---
+        initialize();
+    });
+    </script>
 </body>
 </html>
