@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Trading Assistant</title>
+    <title>Advanced Trading Assistant Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.0/math.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -14,50 +15,50 @@
             font-family: 'Inter', sans-serif;
         }
         
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
         
         .gradient-bg {
-            background: linear-gradient(135deg, #0f1419, #1a202c, #2d3748);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
-        .indicator-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
-        .indicator-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(59, 130, 246, 0.3);
-            transform: translateY(-2px);
+        .signal-strong { 
+            background: linear-gradient(90deg, #10b981, #059669);
+            animation: pulse-strong 2s infinite;
+        }
+        .signal-moderate { 
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            animation: pulse-moderate 2s infinite;
+        }
+        .signal-weak { 
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            animation: pulse-weak 2s infinite;
         }
         
-        .signal-meter {
-            height: 4px;
-            border-radius: 2px;
-            overflow: hidden;
+        @keyframes pulse-strong {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
         }
         
-        .signal-weak { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
-        .signal-moderate { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
-        .signal-strong { background: linear-gradient(90deg, #10b981, #047857); }
-        
-        .pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        @keyframes pulse-moderate {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
         }
         
-        .slide-in {
-            animation: slideIn 0.5s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes pulse-weak {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
         }
         
         .tooltip {
@@ -65,259 +66,211 @@
             display: inline-block;
         }
         
-        .tooltip .tooltip-text {
+        .tooltip .tooltiptext {
             visibility: hidden;
-            width: 240px;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            text-align: left;
-            border-radius: 8px;
-            padding: 8px 12px;
+            width: 200px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
             position: absolute;
             z-index: 1000;
             bottom: 125%;
             left: 50%;
-            margin-left: -120px;
+            margin-left: -100px;
             opacity: 0;
             transition: opacity 0.3s;
             font-size: 12px;
-            line-height: 1.4;
         }
         
-        .tooltip:hover .tooltip-text {
+        .tooltip:hover .tooltiptext {
             visibility: visible;
             opacity: 1;
         }
         
-        .prediction-card {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
-            border: 1px solid rgba(59, 130, 246, 0.2);
+        .confidence-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
         }
         
-        .alert-item {
-            animation: alertPulse 2s ease-in-out infinite;
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.5s ease;
         }
         
-        @keyframes alertPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+        .crypto-btn {
+            transition: all 0.3s ease;
+            transform: translateY(0);
         }
         
-        .switch {
-            position: relative;
+        .crypto-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .crypto-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .alert-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .alert-bullish { border-left-color: #10b981; }
+        .alert-bearish { border-left-color: #ef4444; }
+        .alert-warning { border-left-color: #f59e0b; }
+        .alert-info { border-left-color: #3b82f6; }
+        
+        .pattern-badge {
             display: inline-block;
-            width: 44px;
-            height: 24px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin: 2px;
         }
         
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+        .pattern-bullish { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .pattern-bearish { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .pattern-neutral { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
         
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #374151;
-            transition: .4s;
-            border-radius: 24px;
-        }
-        
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background: white;
-            transition: .4s;
+        .loading-spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
+            border-top: 2px solid #667eea;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
         }
         
-        input:checked + .slider {
-            background: #3b82f6;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
-        input:checked + .slider:before {
-            transform: translateX(20px);
+        .indicator-toggle {
+            transition: all 0.3s ease;
+        }
+        
+        .indicator-toggle.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-white overflow-hidden">
+<body class="bg-gray-900 text-white min-h-screen">
     <!-- Header -->
-    <div class="glass p-4 border-b border-gray-700">
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                Advanced Trading Assistant
-            </h1>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center space-x-2">
-                    <div id="connectionStatus" class="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span class="text-sm">WebSocket</span>
-                </div>
-                <div class="text-sm">
-                    <span id="currentTime"></span>
-                </div>
-            </div>
+    <div class="gradient-bg p-6 shadow-2xl">
+        <div class="max-w-7xl mx-auto">
+            <h1 class="text-4xl font-bold text-white mb-2">Advanced Trading Assistant Pro</h1>
+            <p class="text-gray-200 text-lg">Professional-grade technical analysis with AI-powered predictions and pattern recognition</p>
         </div>
     </div>
 
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <div class="w-80 glass p-6 border-r border-gray-700 overflow-y-auto">
-            <!-- Symbol Selection -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium mb-2">Trading Pair</label>
-                <select id="symbolSelect" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2">
-                    <option value="BTCUSDT">BTC/USDT</option>
-                    <option value="ETHUSDT">ETH/USDT</option>
-                    <option value="ADAUSDT">ADA/USDT</option>
-                    <option value="DOTUSDT">DOT/USDT</option>
-                    <option value="LINKUSDT">LINK/USDT</option>
-                </select>
-            </div>
-
-            <!-- Timeframe Selection -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium mb-2">Timeframe</label>
-                <select id="timeframeSelect" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2">
-                    <option value="1m">1 Minute</option>
-                    <option value="5m">5 Minutes</option>
-                    <option value="15m">15 Minutes</option>
-                    <option value="1h" selected>1 Hour</option>
-                    <option value="4h">4 Hours</option>
-                    <option value="1d">1 Day</option>
-                </select>
-            </div>
-
-            <!-- Indicator Toggles -->
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-3">Technical Indicators</h3>
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <div class="tooltip">
-                            <span>SMA/EMA</span>
-                            <span class="tooltip-text">Simple & Exponential Moving Averages help identify trend direction and momentum</span>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="toggleSMA" checked>
-                            <span class="slider"></span>
-                        </label>
+    <div class="max-w-7xl mx-auto p-6 space-y-6">
+        <!-- Main Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Crypto Selector -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 gradient-text">Select Cryptocurrency</h3>
+                    <div class="grid grid-cols-2 gap-2 mb-6" id="cryptoGrid">
+                        <!-- Populated by JS -->
                     </div>
-                    <div class="flex items-center justify-between">
-                        <div class="tooltip">
-                            <span>Bollinger Bands</span>
-                            <span class="tooltip-text">Shows volatility bands around price. Price touching bands may indicate reversal points</span>
+                    
+                    <!-- Timeframe Selector -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-medium text-gray-400 mb-3">Timeframe</h4>
+                        <div class="flex gap-2" id="timeframeButtons">
+                            <!-- Populated by JS -->
                         </div>
-                        <label class="switch">
-                            <input type="checkbox" id="toggleBB" checked>
-                            <span class="slider"></span>
-                        </label>
                     </div>
-                    <div class="flex items-center justify-between">
-                        <div class="tooltip">
-                            <span>Support/Resistance</span>
-                            <span class="tooltip-text">Key levels where price historically bounces or breaks through</span>
+                    
+                    <!-- Indicator Toggles -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-medium text-gray-400 mb-3">Chart Indicators</h4>
+                        <div class="space-y-2" id="indicatorToggles">
+                            <!-- Populated by JS -->
                         </div>
-                        <label class="switch">
-                            <input type="checkbox" id="toggleSR" checked>
-                            <span class="slider"></span>
-                        </label>
+                    </div>
+                </div>
+
+                <!-- Signal Summary -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4">Signal Summary</h3>
+                    <div id="signalSummary" class="space-y-3">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
 
-            <!-- Market Summary -->
-            <div class="indicator-card rounded-lg p-4 mb-6">
-                <h3 class="text-lg font-semibold mb-3">Market Summary</h3>
-                <div id="marketSummary" class="space-y-2">
-                    <div class="flex justify-between">
-                        <span class="text-gray-300">Bullish Signals:</span>
-                        <span id="bullishPercentage" class="text-green-400">0%</span>
+            <!-- Main Chart Area -->
+            <div class="lg:col-span-2">
+                <div class="glass-card rounded-2xl p-6 h-96">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold" id="chartTitle">BTC/USDT</h3>
+                        <div class="flex items-center gap-4">
+                            <div id="currentPrice" class="text-2xl font-bold"></div>
+                            <div id="priceChange" class="text-lg"></div>
+                        </div>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-300">Bearish Signals:</span>
-                        <span id="bearishPercentage" class="text-red-400">0%</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-300">Neutral Signals:</span>
-                        <span id="neutralPercentage" class="text-gray-400">0%</span>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <div class="signal-meter">
-                        <div id="overallSentiment" class="h-full transition-all duration-500"></div>
-                    </div>
-                    <div class="text-center mt-2">
-                        <span id="overallSentimentText" class="text-sm font-medium">Analyzing...</span>
-                    </div>
+                    <canvas id="mainChart" class="w-full h-80"></canvas>
                 </div>
             </div>
 
-            <!-- Alerts -->
-            <div class="indicator-card rounded-lg p-4">
-                <h3 class="text-lg font-semibold mb-3">Active Alerts</h3>
-                <div id="alertsList" class="space-y-2 max-h-40 overflow-y-auto">
-                    <div class="text-gray-400 text-sm">No alerts active</div>
+            <!-- Technical Indicators Panel -->
+            <div class="lg:col-span-1">
+                <div class="glass-card rounded-2xl p-6 h-96 overflow-y-auto">
+                    <h3 class="text-lg font-semibold mb-4">Technical Analysis</h3>
+                    <div id="indicatorsPanel" class="space-y-4">
+                        <!-- Populated by JS -->
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col">
-            <!-- Chart Section -->
-            <div class="flex-1 p-6">
-                <div class="indicator-card rounded-lg p-4 h-full">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold">
-                            <span id="currentSymbol">BTC/USDT</span>
-                            <span id="currentPrice" class="text-2xl ml-4 font-bold text-green-400">$0.00</span>
-                            <span id="priceChange" class="text-sm ml-2">+0.00%</span>
-                        </h2>
-                        <div class="flex items-center space-x-4">
-                            <div class="tooltip">
-                                <button id="patternDetection" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm">
-                                    Pattern Detection
-                                </button>
-                                <span class="tooltip-text">Detect candlestick patterns like Doji, Engulfing, Hammer, etc.</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="relative h-96">
-                        <canvas id="priceChart"></canvas>
+        <!-- Predictions & Alerts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- AI Predictions -->
+            <div class="glass-card rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4">AI Price Predictions</h3>
+                <div id="predictionsGrid" class="grid grid-cols-2 gap-4">
+                    <!-- Populated by JS -->
+                </div>
+                
+                <!-- Backtesting Results -->
+                <div class="mt-6 pt-6 border-t border-gray-700">
+                    <h4 class="text-md font-medium mb-3">Prediction Accuracy</h4>
+                    <div id="backtestResults" class="space-y-2">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
 
-            <!-- Bottom Panels -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-                <!-- Technical Indicators -->
-                <div class="indicator-card rounded-lg p-4">
-                    <h3 class="text-lg font-semibold mb-4">Technical Indicators</h3>
-                    <div id="technicalIndicators" class="grid grid-cols-2 gap-4">
-                        <!-- Indicators will be populated here -->
-                    </div>
-                </div>
-
-                <!-- Predictions -->
-                <div class="prediction-card rounded-lg p-4">
-                    <h3 class="text-lg font-semibold mb-4">AI Predictions</h3>
-                    <div id="predictionsList" class="space-y-3">
-                        <!-- Predictions will be populated here -->
-                    </div>
-                    <div class="mt-4 p-3 bg-gray-800 rounded-lg">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm text-gray-300">Prediction Accuracy</span>
-                            <span id="accuracyScore" class="text-sm font-semibold">0%</span>
+            <!-- Alerts & Patterns -->
+            <div class="glass-card rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4">Trading Alerts & Patterns</h3>
+                <div class="space-y-4">
+                    <!-- Pattern Recognition -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-400 mb-2">Detected Patterns</h4>
+                        <div id="patternList" class="flex flex-wrap gap-2">
+                            <!-- Populated by JS -->
                         </div>
-                        <div class="signal-meter">
-                            <div id="accuracyBar" class="h-full bg-gradient-to-r from-red-500 to-green-500 transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    
+                    <!-- Active Alerts -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-400 mb-2">Active Alerts</h4>
+                        <div id="alertsList" class="space-y-3 max-h-64 overflow-y-auto">
+                            <!-- Populated by JS -->
                         </div>
                     </div>
                 </div>
@@ -326,1576 +279,1247 @@
     </div>
 
     <script>
-        // Global State
-        let state = {
-            currentSymbol: 'BTCUSDT',
-            currentTimeframe: '1h',
-            websocket: null,
-            chart: null,
-            priceData: [],
-            indicators: {},
-            predictions: [],
-            alerts: [],
-            patterns: [],
-            isConnected: false
-        };
-
-        // Configuration
-        const CONFIG = {
-            binanceWsUrl: 'wss://stream.binance.com:9443/ws/',
-            binanceApiUrl: 'https://api.binance.com/api/v3/',
-            indicators: {
-                sma: { period: 20, enabled: true },
-                ema: { period: 20, enabled: true },
-                rsi: { period: 14, enabled: true },
-                macd: { fast: 12, slow: 26, signal: 9, enabled: true },
-                bb: { period: 20, stdDev: 2, enabled: true },
-                stochastic: { kPeriod: 14, dPeriod: 3, enabled: true },
-                williamsR: { period: 14, enabled: true },
-                atr: { period: 14, enabled: true },
-                cci: { period: 20, enabled: true },
-                momentum: { period: 10, enabled: true }
-            }
-        };
-
-        // Utility Functions
-        function formatPrice(price, symbol = 'BTCUSDT') {
-            const decimals = symbol.includes('USDT') ? 2 : 8;
-            return parseFloat(price).toFixed(decimals);
-        }
-
-        function formatPercentage(value) {
-            return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-        }
-
-        function updateConnectionStatus(connected) {
-            state.isConnected = connected;
-            const statusEl = document.getElementById('connectionStatus');
-            statusEl.className = `w-3 h-3 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`;
-        }
-
-        function updateCurrentTime() {
-            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString();
-        }
-
-        // Technical Indicators Calculations
-        class TechnicalIndicators {
-            static sma(data, period) {
-                const result = [];
-                for (let i = period - 1; i < data.length; i++) {
-                    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
-                    result.push(sum / period);
-                }
-                return result;
-            }
-
-            static ema(data, period) {
-                const result = [];
-                const multiplier = 2 / (period + 1);
-                result[0] = data[0];
-                
-                for (let i = 1; i < data.length; i++) {
-                    result[i] = (data[i] * multiplier) + (result[i - 1] * (1 - multiplier));
-                }
-                return result;
-            }
-
-            static rsi(prices, period = 14) {
-                const changes = [];
-                for (let i = 1; i < prices.length; i++) {
-                    changes.push(prices[i] - prices[i - 1]);
-                }
-
-                const gains = changes.map(c => c > 0 ? c : 0);
-                const losses = changes.map(c => c < 0 ? Math.abs(c) : 0);
-
-                const avgGains = this.sma(gains, period);
-                const avgLosses = this.sma(losses, period);
-
-                const rsi = [];
-                for (let i = 0; i < avgGains.length; i++) {
-                    const rs = avgGains[i] / avgLosses[i];
-                    rsi.push(100 - (100 / (1 + rs)));
-                }
-                return rsi;
-            }
-
-            static bollingerBands(prices, period = 20, stdDev = 2) {
-                const sma = this.sma(prices, period);
-                const upper = [];
-                const lower = [];
-
-                for (let i = period - 1; i < prices.length; i++) {
-                    const slice = prices.slice(i - period + 1, i + 1);
-                    const mean = sma[i - period + 1];
-                    const variance = slice.reduce((sum, price) => sum + Math.pow(price - mean, 2), 0) / period;
-                    const standardDeviation = Math.sqrt(variance);
-                    
-                    upper.push(mean + (standardDeviation * stdDev));
-                    lower.push(mean - (standardDeviation * stdDev));
-                }
-
-                return { upper, middle: sma, lower };
-            }
-
-            static macd(prices, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
-                const emaFast = this.ema(prices, fastPeriod);
-                const emaSlow = this.ema(prices, slowPeriod);
-                
-                const macdLine = [];
-                for (let i = 0; i < Math.min(emaFast.length, emaSlow.length); i++) {
-                    macdLine.push(emaFast[i] - emaSlow[i]);
-                }
-
-                const signalLine = this.ema(macdLine, signalPeriod);
-                const histogram = [];
-                
-                for (let i = 0; i < Math.min(macdLine.length, signalLine.length); i++) {
-                    histogram.push(macdLine[i] - signalLine[i]);
-                }
-
-                return { macd: macdLine, signal: signalLine, histogram };
-            }
-
-            static stochastic(highs, lows, closes, kPeriod = 14, dPeriod = 3) {
-                const k = [];
-                
-                for (let i = kPeriod - 1; i < closes.length; i++) {
-                    const highestHigh = Math.max(...highs.slice(i - kPeriod + 1, i + 1));
-                    const lowestLow = Math.min(...lows.slice(i - kPeriod + 1, i + 1));
-                    const currentClose = closes[i];
-                    
-                    k.push(((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100);
-                }
-
-                const d = this.sma(k, dPeriod);
-                return { k, d };
-            }
-
-            static williamsR(highs, lows, closes, period = 14) {
-                const result = [];
-                
-                for (let i = period - 1; i < closes.length; i++) {
-                    const highestHigh = Math.max(...highs.slice(i - period + 1, i + 1));
-                    const lowestLow = Math.min(...lows.slice(i - period + 1, i + 1));
-                    const currentClose = closes[i];
-                    
-                    result.push(((highestHigh - currentClose) / (highestHigh - lowestLow)) * -100);
-                }
-                
-                return result;
-            }
-
-            static atr(highs, lows, closes, period = 14) {
-                const trueRanges = [];
-                
-                for (let i = 1; i < closes.length; i++) {
-                    const highLow = highs[i] - lows[i];
-                    const highClose = Math.abs(highs[i] - closes[i - 1]);
-                    const lowClose = Math.abs(lows[i] - closes[i - 1]);
-                    
-                    trueRanges.push(Math.max(highLow, highClose, lowClose));
-                }
-                
-                return this.sma(trueRanges, period);
-            }
-
-            static cci(highs, lows, closes, period = 20) {
-                const typicalPrices = closes.map((close, i) => (highs[i] + lows[i] + close) / 3);
-                const smaTP = this.sma(typicalPrices, period);
-                const cci = [];
-
-                for (let i = period - 1; i < typicalPrices.length; i++) {
-                    const slice = typicalPrices.slice(i - period + 1, i + 1);
-                    const meanDeviation = slice.reduce((sum, tp) => sum + Math.abs(tp - smaTP[i - period + 1]), 0) / period;
-                    cci.push((typicalPrices[i] - smaTP[i - period + 1]) / (0.015 * meanDeviation));
-                }
-
-                return cci;
-            }
-
-            static momentum(prices, period = 10) {
-                const result = [];
-                for (let i = period; i < prices.length; i++) {
-                    result.push(prices[i] - prices[i - period]);
-                }
-                return result;
-            }
-        }
-
-        // Signal Analysis
-        class SignalAnalyzer {
-            static analyzeRSI(rsi) {
-                const latest = rsi[rsi.length - 1];
-                if (latest > 70) {
-                    return {
-                        signal: 'Overbought',
-                        strength: 'Strong',
-                        meaning: 'High risk of price reversal downward',
-                        action: 'Consider selling or taking profits',
-                        sentiment: 'bearish'
-                    };
-                } else if (latest < 30) {
-                    return {
-                        signal: 'Oversold',
-                        strength: 'Strong',
-                        meaning: 'High potential for price bounce upward',
-                        action: 'Consider buying opportunity',
-                        sentiment: 'bullish'
-                    };
-                } else if (latest > 60) {
-                    return {
-                        signal: 'Bullish Territory',
-                        strength: 'Moderate',
-                        meaning: 'Upward momentum building',
-                        action: 'Monitor for continuation',
-                        sentiment: 'bullish'
-                    };
-                } else if (latest < 40) {
-                    return {
-                        signal: 'Bearish Territory',
-                        strength: 'Moderate',
-                        meaning: 'Downward pressure present',
-                        action: 'Wait for reversal signals',
-                        sentiment: 'bearish'
-                    };
-                } else {
-                    return {
-                        signal: 'Neutral',
-                        strength: 'Weak',
-                        meaning: 'No clear directional bias',
-                        action: 'Wait for clearer signals',
-                        sentiment: 'neutral'
-                    };
-                }
-            }
-
-            static analyzeMACD(macd) {
-                const latest = macd.macd[macd.macd.length - 1];
-                const latestSignal = macd.signal[macd.signal.length - 1];
-                const crossover = latest > latestSignal;
-                const previous = macd.macd[macd.macd.length - 2];
-                const previousSignal = macd.signal[macd.signal.length - 2];
-                const wasCrossedUnder = previous < previousSignal;
-
-                if (crossover && wasCrossedUnder) {
-                    return {
-                        signal: 'Bullish Crossover',
-                        strength: 'Strong',
-                        meaning: 'MACD line crossed above signal line',
-                        action: 'Possible uptrend beginning, consider entry',
-                        sentiment: 'bullish'
-                    };
-                } else if (!crossover && !wasCrossedUnder) {
-                    return {
-                        signal: 'Bearish Crossover',
-                        strength: 'Strong',
-                        meaning: 'MACD line crossed below signal line',
-                        action: 'Possible downtrend beginning, consider exit',
-                        sentiment: 'bearish'
-                    };
-                } else if (latest > 0) {
-                    return {
-                        signal: 'Above Zero',
-                        strength: 'Moderate',
-                        meaning: 'Overall bullish momentum',
-                        action: 'Look for continuation signals',
-                        sentiment: 'bullish'
-                    };
-                } else {
-                    return {
-                        signal: 'Below Zero',
-                        strength: 'Moderate',
-                        meaning: 'Overall bearish momentum',
-                        action: 'Wait for reversal confirmation',
-                        sentiment: 'bearish'
-                    };
-                }
-            }
-
-            static analyzeBollingerBands(price, bb) {
-                const latest = price[price.length - 1];
-                const upper = bb.upper[bb.upper.length - 1];
-                const middle = bb.middle[bb.middle.length - 1];
-                const lower = bb.lower[bb.lower.length - 1];
-
-                if (latest >= upper) {
-                    return {
-                        signal: 'Price at Upper Band',
-                        strength: 'Strong',
-                        meaning: 'Price hitting resistance, possible reversal',
-                        action: 'Consider taking profits or shorting',
-                        sentiment: 'bearish'
-                    };
-                } else if (latest <= lower) {
-                    return {
-                        signal: 'Price at Lower Band',
-                        strength: 'Strong',
-                        meaning: 'Price hitting support, possible bounce',
-                        action: 'Consider buying opportunity',
-                        sentiment: 'bullish'
-                    };
-                } else if (latest > middle) {
-                    return {
-                        signal: 'Above Middle Band',
-                        strength: 'Moderate',
-                        meaning: 'Price in upper half of range',
-                        action: 'Bullish bias, monitor for continuation',
-                        sentiment: 'bullish'
-                    };
-                } else {
-                    return {
-                        signal: 'Below Middle Band',
-                        strength: 'Moderate',
-                        meaning: 'Price in lower half of range',
-                        action: 'Bearish bias, look for support',
-                        sentiment: 'bearish'
-                    };
-                }
-            }
-
-            static analyzeStochastic(stoch) {
-                const kLatest = stoch.k[stoch.k.length - 1];
-                const dLatest = stoch.d[stoch.d.length - 1];
-
-                if (kLatest > 80 && dLatest > 80) {
-                    return {
-                        signal: 'Overbought',
-                        strength: 'Strong',
-                        meaning: 'Price momentum extremely high',
-                        action: 'Prepare for potential reversal',
-                        sentiment: 'bearish'
-                    };
-                } else if (kLatest < 20 && dLatest < 20) {
-                    return {
-                        signal: 'Oversold',
-                        strength: 'Strong',
-                        meaning: 'Price momentum extremely low',
-                        action: 'Look for reversal upward',
-                        sentiment: 'bullish'
-                    };
-                } else if (kLatest > dLatest) {
-                    return {
-                        signal: 'Bullish Momentum',
-                        strength: 'Moderate',
-                        meaning: '%K line above %D line',
-                        action: 'Upward momentum present',
-                        sentiment: 'bullish'
-                    };
-                } else {
-                    return {
-                        signal: 'Bearish Momentum',
-                        strength: 'Moderate',
-                        meaning: '%K line below %D line',
-                        action: 'Downward momentum present',
-                        sentiment: 'bearish'
-                    };
-                }
-            }
-        }
-
-        // Pattern Recognition
-        class PatternRecognition {
-            static detectPatterns(ohlc) {
-                const patterns = [];
-                const length = ohlc.length;
-                
-                if (length < 3) return patterns;
-
-                for (let i = 2; i < length; i++) {
-                    const current = ohlc[i];
-                    const prev = ohlc[i - 1];
-                    const prev2 = ohlc[i - 2];
-
-                    // Doji Pattern
-                    if (this.isDoji(current)) {
-                        patterns.push({
-                            name: 'Doji',
-                            index: i,
-                            type: 'reversal',
-                            strength: 'moderate',
-                            meaning: 'Indecision in the market, potential reversal'
-                        });
-                    }
-
-                    // Hammer Pattern
-                    if (this.isHammer(current)) {
-                        patterns.push({
-                            name: 'Hammer',
-                            index: i,
-                            type: 'bullish_reversal',
-                            strength: 'strong',
-                            meaning: 'Potential bullish reversal after downtrend'
-                        });
-                    }
-
-                    // Shooting Star Pattern
-                    if (this.isShootingStar(current)) {
-                        patterns.push({
-                            name: 'Shooting Star',
-                            index: i,
-                            type: 'bearish_reversal',
-                            strength: 'strong',
-                            meaning: 'Potential bearish reversal after uptrend'
-                        });
-                    }
-
-                    // Engulfing Patterns
-                    if (i >= 1) {
-                        if (this.isBullishEngulfing(prev, current)) {
-                            patterns.push({
-                                name: 'Bullish Engulfing',
-                                index: i,
-                                type: 'bullish_reversal',
-                                strength: 'strong',
-                                meaning: 'Strong bullish reversal signal'
-                            });
-                        }
-
-                        if (this.isBearishEngulfing(prev, current)) {
-                            patterns.push({
-                                name: 'Bearish Engulfing',
-                                index: i,
-                                type: 'bearish_reversal',
-                                strength: 'strong',
-                                meaning: 'Strong bearish reversal signal'
-                            });
-                        }
-                    }
-
-                    // Three White Soldiers
-                    if (i >= 2 && this.isThreeWhiteSoldiers(prev2, prev, current)) {
-                        patterns.push({
-                            name: 'Three White Soldiers',
-                            index: i,
-                            type: 'bullish_continuation',
-                            strength: 'very_strong',
-                            meaning: 'Very strong bullish continuation pattern'
-                        });
-                    }
-
-                    // Three Black Crows
-                    if (i >= 2 && this.isThreeBlackCrows(prev2, prev, current)) {
-                        patterns.push({
-                            name: 'Three Black Crows',
-                            index: i,
-                            type: 'bearish_continuation',
-                            strength: 'very_strong',
-                            meaning: 'Very strong bearish continuation pattern'
-                        });
-                    }
-                }
-
-                return patterns.slice(-10); // Return last 10 patterns
-            }
-
-            static isDoji(candle) {
-                const bodySize = Math.abs(candle.close - candle.open);
-                const range = candle.high - candle.low;
-                return bodySize <= (range * 0.1);
-            }
-
-            static isHammer(candle) {
-                const bodySize = Math.abs(candle.close - candle.open);
-                const lowerShadow = Math.min(candle.open, candle.close) - candle.low;
-                const upperShadow = candle.high - Math.max(candle.open, candle.close);
-                const range = candle.high - candle.low;
-                
-                return lowerShadow >= (bodySize * 2) && upperShadow <= (bodySize * 0.5) && range > 0;
-            }
-
-            static isShootingStar(candle) {
-                const bodySize = Math.abs(candle.close - candle.open);
-                const lowerShadow = Math.min(candle.open, candle.close) - candle.low;
-                const upperShadow = candle.high - Math.max(candle.open, candle.close);
-                const range = candle.high - candle.low;
-                
-                return upperShadow >= (bodySize * 2) && lowerShadow <= (bodySize * 0.5) && range > 0;
-            }
-
-            static isBullishEngulfing(prev, current) {
-                return prev.close < prev.open && // Previous candle is bearish
-                       current.close > current.open && // Current candle is bullish
-                       current.open < prev.close && // Current opens below previous close
-                       current.close > prev.open; // Current closes above previous open
-            }
-
-            static isBearishEngulfing(prev, current) {
-                return prev.close > prev.open && // Previous candle is bullish
-                       current.close < current.open && // Current candle is bearish
-                       current.open > prev.close && // Current opens above previous close
-                       current.close < prev.open; // Current closes below previous open
-            }
-
-            static isThreeWhiteSoldiers(candle1, candle2, candle3) {
-                return candle1.close > candle1.open &&
-                       candle2.close > candle2.open &&
-                       candle3.close > candle3.open &&
-                       candle2.close > candle1.close &&
-                       candle3.close > candle2.close;
-            }
-
-            static isThreeBlackCrows(candle1, candle2, candle3) {
-                return candle1.close < candle1.open &&
-                       candle2.close < candle2.open &&
-                       candle3.close < candle3.open &&
-                       candle2.close < candle1.close &&
-                       candle3.close < candle2.close;
-            }
-        }
-
-        // Prediction Engine
-        class PredictionEngine {
-            static calculatePredictions(priceData, indicators) {
-                const predictions = [];
-                const prices = priceData.map(d => d.close);
-                
-                // Linear Regression Prediction
-                const linearPred = this.linearRegression(prices);
-                
-                // Polynomial Regression Prediction
-                const polyPred = this.polynomialRegression(prices, 2);
-                
-                // Trend-based Prediction
-                const trendPred = this.trendBasedPrediction(prices, indicators);
-                
-                // Ensemble Prediction (weighted average)
-                const ensemble = this.ensemblePrediction([
-                    { pred: linearPred, weight: 0.3 },
-                    { pred: polyPred, weight: 0.4 },
-                    { pred: trendPred, weight: 0.3 }
-                ]);
-
-                // Generate predictions for different timeframes
-                const timeframes = [
-                    { name: '1H', multiplier: 1, confidence: 0.8 },
-                    { name: '4H', multiplier: 4, confidence: 0.7 },
-                    { name: '24H', multiplier: 24, confidence: 0.6 },
-                    { name: '1W', multiplier: 168, confidence: 0.4 }
+        class AdvancedTradingAssistant {
+            constructor() {
+                this.cryptos = [
+                    { symbol: 'BTCUSDT', name: 'BTC', fullName: 'Bitcoin' },
+                    { symbol: 'ETHUSDT', name: 'ETH', fullName: 'Ethereum' },
+                    { symbol: 'SOLUSDT', name: 'SOL', fullName: 'Solana' },
+                    { symbol: 'AVAXUSDT', name: 'AVAX', fullName: 'Avalanche' },
+                    { symbol: 'ADAUSDT', name: 'ADA', fullName: 'Cardano' },
+                    { symbol: 'DOTUSDT', name: 'DOT', fullName: 'Polkadot' },
+                    { symbol: 'MATICUSDT', name: 'MATIC', fullName: 'Polygon' },
+                    { symbol: 'LINKUSDT', name: 'LINK', fullName: 'Chainlink' }
                 ];
-
-                timeframes.forEach(tf => {
-                    const prediction = ensemble.base + (ensemble.trend * tf.multiplier);
-                    const volatility = this.calculateVolatility(prices.slice(-20));
-                    const adjustedConfidence = tf.confidence * this.calculateConfidence(indicators, volatility);
-                    
-                    predictions.push({
-                        timeframe: tf.name,
-                        price: prediction,
-                        change: ((prediction - prices[prices.length - 1]) / prices[prices.length - 1] * 100),
-                        confidence: Math.max(0.1, Math.min(0.95, adjustedConfidence)),
-                        reasoning: this.generateReasoning(indicators, tf.name)
-                    });
-                });
-
-                return predictions;
-            }
-
-            static linearRegression(prices) {
-                const n = prices.length;
-                const x = Array.from({length: n}, (_, i) => i);
-                const sumX = x.reduce((a, b) => a + b, 0);
-                const sumY = prices.reduce((a, b) => a + b, 0);
-                const sumXY = x.reduce((sum, xi, i) => sum + xi * prices[i], 0);
-                const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
                 
-                const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-                const intercept = (sumY - slope * sumX) / n;
+                this.timeframes = [
+                    { id: '1h', label: '1H', interval: '1h' },
+                    { id: '4h', label: '4H', interval: '4h' },
+                    { id: '1d', label: '1D', interval: '1d' },
+                    { id: '1w', label: '1W', interval: '1w' }
+                ];
                 
-                return {
-                    base: prices[prices.length - 1],
-                    trend: slope
+                this.indicators = {
+                    sma20: { name: 'SMA 20', active: true, color: '#10b981' },
+                    sma50: { name: 'SMA 50', active: true, color: '#f59e0b' },
+                    ema12: { name: 'EMA 12', active: false, color: '#ef4444' },
+                    ema26: { name: 'EMA 26', active: false, color: '#8b5cf6' },
+                    bb: { name: 'Bollinger Bands', active: true, color: '#6b7280' }
                 };
-            }
-
-            static polynomialRegression(prices, degree) {
-                // Simplified polynomial regression
-                const n = prices.length;
-                const x = Array.from({length: n}, (_, i) => i);
                 
-                // For degree 2, calculate quadratic regression
-                let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, sumXXX = 0, sumXXXX = 0, sumXXY = 0;
+                this.currentSymbol = 'BTCUSDT';
+                this.currentTimeframe = '1h';
+                this.chart = null;
+                this.priceData = [];
+                this.wsConnection = null;
+                this.calculatedIndicators = {};
+                this.predictions = [];
+                this.backtestResults = [];
                 
-                for (let i = 0; i < n; i++) {
-                    sumX += x[i];
-                    sumY += prices[i];
-                    sumXY += x[i] * prices[i];
-                    sumXX += x[i] * x[i];
-                    sumXXX += x[i] * x[i] * x[i];
-                    sumXXXX += x[i] * x[i] * x[i] * x[i];
-                    sumXXY += x[i] * x[i] * prices[i];
-                }
-
-                // Solve system of equations for a, b, c in y = ax² + bx + c
-                const a = ((n * sumXXY - sumXX * sumY) * (n * sumXX - sumX * sumX) - 
-                          (n * sumXY - sumX * sumY) * (n * sumXXX - sumXX * sumX)) /
-                         ((n * sumXXXX - sumXX * sumXX) * (n * sumXX - sumX * sumX) - 
-                          (n * sumXXX - sumXX * sumX) * (n * sumXXX - sumXX * sumX));
-                
-                const b = ((n * sumXY - sumX * sumY) - a * (n * sumXXX - sumXX * sumX)) / 
-                         (n * sumXX - sumX * sumX);
-                
-                const c = (sumY - b * sumX - a * sumXX) / n;
-
-                // Calculate trend at the last point
-                const lastX = n - 1;
-                const trend = 2 * a * lastX + b;
-                
-                return {
-                    base: prices[prices.length - 1],
-                    trend: trend
-                };
+                this.init();
             }
-
-            static trendBasedPrediction(prices, indicators) {
-                let trendScore = 0;
-                let weight = 0;
-
-                // SMA trend
-                if (indicators.sma && indicators.sma.length > 1) {
-                    const smaSlope = indicators.sma[indicators.sma.length - 1] - 
-                                   indicators.sma[indicators.sma.length - 2];
-                    trendScore += smaSlope * 0.3;
-                    weight += 0.3;
-                }
-
-                // EMA trend
-                if (indicators.ema && indicators.ema.length > 1) {
-                    const emaSlope = indicators.ema[indicators.ema.length - 1] - 
-                                   indicators.ema[indicators.ema.length - 2];
-                    trendScore += emaSlope * 0.4;
-                    weight += 0.4;
-                }
-
-                // RSI momentum
-                if (indicators.rsi && indicators.rsi.length > 0) {
-                    const rsi = indicators.rsi[indicators.rsi.length - 1];
-                    const rsiTrend = rsi > 50 ? (rsi - 50) / 50 : -(50 - rsi) / 50;
-                    trendScore += rsiTrend * prices[prices.length - 1] * 0.01;
-                    weight += 0.3;
-                }
-
-                const avgTrend = weight > 0 ? trendScore / weight : 0;
-
-                return {
-                    base: prices[prices.length - 1],
-                    trend: avgTrend
-                };
+            
+            async init() {
+                this.renderUI();
+                this.setupEventListeners();
+                await this.loadInitialData();
+                this.setupWebSocket();
+                this.startUpdates();
             }
-
-            static ensemblePrediction(predictions) {
-                let weightedBase = 0;
-                let weightedTrend = 0;
-                let totalWeight = 0;
-
-                predictions.forEach(p => {
-                    weightedBase += p.pred.base * p.weight;
-                    weightedTrend += p.pred.trend * p.weight;
-                    totalWeight += p.weight;
-                });
-
-                return {
-                    base: weightedBase / totalWeight,
-                    trend: weightedTrend / totalWeight
-                };
+            
+            renderUI() {
+                this.renderCryptoButtons();
+                this.renderTimeframeButtons();
+                this.renderIndicatorToggles();
             }
-
-            static calculateVolatility(prices) {
-                const returns = [];
-                for (let i = 1; i < prices.length; i++) {
-                    returns.push((prices[i] - prices[i-1]) / prices[i-1]);
-                }
-                
-                const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-                const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) / returns.length;
-                return Math.sqrt(variance);
+            
+            renderCryptoButtons() {
+                const grid = document.getElementById('cryptoGrid');
+                grid.innerHTML = this.cryptos.map(crypto => `
+                    <button class="crypto-btn px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm font-medium transition-all ${crypto.symbol === this.currentSymbol ? 'active' : ''}" 
+                            data-symbol="${crypto.symbol}">
+                        ${crypto.name}
+                    </button>
+                `).join('');
             }
-
-            static calculateConfidence(indicators, volatility) {
-                let confidence = 0.7; // Base confidence
-
-                // Adjust based on RSI
-                if (indicators.rsi && indicators.rsi.length > 0) {
-                    const rsi = indicators.rsi[indicators.rsi.length - 1];
-                    if (rsi > 70 || rsi < 30) {
-                        confidence -= 0.1; // Lower confidence in extreme conditions
-                    }
-                }
-
-                // Adjust based on volatility
-                if (volatility > 0.05) {
-                    confidence -= 0.2;
-                } else if (volatility < 0.02) {
-                    confidence += 0.1;
-                }
-
-                // Adjust based on MACD divergence
-                if (indicators.macd && indicators.macd.macd.length > 1) {
-                    const macdDiff = Math.abs(indicators.macd.macd[indicators.macd.macd.length - 1] - 
-                                            indicators.macd.signal[indicators.macd.signal.length - 1]);
-                    if (macdDiff < 0.5) {
-                        confidence -= 0.05;
-                    }
-                }
-
-                return Math.max(0.1, Math.min(0.9, confidence));
+            
+            renderTimeframeButtons() {
+                const container = document.getElementById('timeframeButtons');
+                container.innerHTML = this.timeframes.map(tf => `
+                    <button class="timeframe-btn px-3 py-1 rounded text-sm ${tf.id === this.currentTimeframe ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}" 
+                            data-timeframe="${tf.id}">
+                        ${tf.label}
+                    </button>
+                `).join('');
             }
-
-            static generateReasoning(indicators, timeframe) {
-                const reasons = [];
-                
-                if (indicators.rsi && indicators.rsi.length > 0) {
-                    const rsi = indicators.rsi[indicators.rsi.length - 1];
-                    if (rsi > 70) reasons.push("RSI shows overbought conditions");
-                    else if (rsi < 30) reasons.push("RSI indicates oversold levels");
-                    else if (rsi > 50) reasons.push("RSI suggests bullish momentum");
-                    else reasons.push("RSI indicates bearish pressure");
-                }
-
-                if (indicators.macd && indicators.macd.macd.length > 0) {
-                    const macd = indicators.macd.macd[indicators.macd.macd.length - 1];
-                    const signal = indicators.macd.signal[indicators.macd.signal.length - 1];
-                    if (macd > signal) reasons.push("MACD shows bullish crossover");
-                    else reasons.push("MACD indicates bearish momentum");
-                }
-
-                if (reasons.length === 0) {
-                    reasons.push("Based on price trend analysis");
-                }
-
-                return reasons.join(", ");
+            
+            renderIndicatorToggles() {
+                const container = document.getElementById('indicatorToggles');
+                container.innerHTML = Object.entries(this.indicators).map(([key, indicator]) => `
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-sm">${indicator.name}</span>
+                        <input type="checkbox" ${indicator.active ? 'checked' : ''} 
+                               class="indicator-toggle" data-indicator="${key}">
+                    </label>
+                `).join('');
             }
-        }
-
-        // Alert System
-        class AlertSystem {
-            static checkAlerts(currentData, indicators, patterns) {
-                const alerts = [];
-                const price = currentData.close;
-
-                // RSI Alerts
-                if (indicators.rsi && indicators.rsi.length > 0) {
-                    const rsi = indicators.rsi[indicators.rsi.length - 1];
-                    if (rsi > 75) {
-                        alerts.push({
-                            type: 'RSI Overbought',
-                            message: `RSI at ${rsi.toFixed(1)} - Extremely overbought`,
-                            action: 'Consider taking profits or preparing for reversal',
-                            severity: 'high',
-                            timestamp: new Date()
-                        });
-                    } else if (rsi < 25) {
-                        alerts.push({
-                            type: 'RSI Oversold',
-                            message: `RSI at ${rsi.toFixed(1)} - Extremely oversold`,
-                            action: 'Potential buying opportunity if trend confirms',
-                            severity: 'high',
-                            timestamp: new Date()
-                        });
-                    }
-                }
-
-                // MACD Crossover Alerts
-                if (indicators.macd && indicators.macd.macd.length > 1) {
-                    const macd = indicators.macd.macd;
-                    const signal = indicators.macd.signal;
-                    const current = macd[macd.length - 1];
-                    const currentSignal = signal[signal.length - 1];
-                    const previous = macd[macd.length - 2];
-                    const previousSignal = signal[signal.length - 2];
-
-                    if (previous <= previousSignal && current > currentSignal) {
-                        alerts.push({
-                            type: 'MACD Bullish Crossover',
-                            message: 'MACD line crossed above signal line',
-                            action: 'Possible uptrend beginning - consider entry',
-                            severity: 'medium',
-                            timestamp: new Date()
-                        });
-                    } else if (previous >= previousSignal && current < currentSignal) {
-                        alerts.push({
-                            type: 'MACD Bearish Crossover',
-                            message: 'MACD line crossed below signal line',
-                            action: 'Possible downtrend beginning - consider exit',
-                            severity: 'medium',
-                            timestamp: new Date()
-                        });
-                    }
-                }
-
-                // Volume Spike Alerts (simulated)
-                const avgVolume = 1000000; // Would be calculated from real volume data
-                const currentVolume = avgVolume * (1 + Math.random() * 2);
-                if (currentVolume > avgVolume * 2) {
-                    alerts.push({
-                        type: 'Volume Spike',
-                        message: `Volume ${((currentVolume/avgVolume - 1) * 100).toFixed(0)}% above average`,
-                        action: 'Significant interest - monitor for breakout',
-                        severity: 'medium',
-                        timestamp: new Date()
-                    });
-                }
-
-                // Pattern Alerts
-                patterns.forEach(pattern => {
-                    if (pattern.strength === 'strong' || pattern.strength === 'very_strong') {
-                        alerts.push({
-                            type: `Pattern: ${pattern.name}`,
-                            message: pattern.meaning,
-                            action: `${pattern.type.includes('bullish') ? 'Bullish' : 'Bearish'} signal detected`,
-                            severity: pattern.strength === 'very_strong' ? 'high' : 'medium',
-                            timestamp: new Date()
-                        });
+            
+            setupEventListeners() {
+                // Crypto selection
+                document.getElementById('cryptoGrid').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('crypto-btn')) {
+                        document.querySelectorAll('.crypto-btn').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.currentSymbol = e.target.dataset.symbol;
+                        this.updateChartTitle();
+                        this.loadInitialData();
                     }
                 });
-
-                return alerts.slice(-10); // Keep only last 10 alerts
-            }
-        }
-
-        // Chart Management
-        class ChartManager {
-            static initializeChart() {
-                const ctx = document.getElementById('priceChart').getContext('2d');
                 
-                state.chart = new Chart(ctx, {
-                    type: 'candlestick',
-                    data: {
-                        datasets: [{
-                            label: 'Price',
-                            data: [],
-                            borderColor: '#3b82f6',
-                            backgroundColor: '#3b82f6'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-                        scales: {
-                            x: {
-                                type: 'time',
-                                time: {
-                                    unit: 'minute'
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#9ca3af'
-                                }
-                            },
-                            y: {
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: '#9ca3af',
-                                    callback: function(value) {
-                                        return ' + formatPrice(value);
-                                    }
-                                }
-                            }
-                        },
-                        interaction: {
-                            intersect: false
-                        },
-                        animation: {
-                            duration: 0
-                        }
+                // Timeframe selection
+                document.getElementById('timeframeButtons').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('timeframe-btn')) {
+                        document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                            btn.className = 'timeframe-btn px-3 py-1 rounded text-sm bg-gray-700 hover:bg-gray-600';
+                        });
+                        e.target.className = 'timeframe-btn px-3 py-1 rounded text-sm bg-blue-600';
+                        this.currentTimeframe = e.target.dataset.timeframe;
+                        this.loadInitialData();
                     }
                 });
-
-                // Add custom candlestick chart type
-                Chart.register({
-                    id: 'candlestick',
-                    beforeDatasetsDraw: function(chart, args, options) {
-                        const ctx = chart.ctx;
-                        const dataset = chart.data.datasets[0];
-                        const meta = chart.getDatasetMeta(0);
-                        
-                        if (!dataset.data || dataset.data.length === 0) return;
-
-                        dataset.data.forEach((dataPoint, index) => {
-                            if (!dataPoint || !meta.data[index]) return;
-                            
-                            const x = meta.data[index].x;
-                            const yScale = chart.scales.y;
-                            
-                            const open = yScale.getPixelForValue(dataPoint.o);
-                            const high = yScale.getPixelForValue(dataPoint.h);
-                            const low = yScale.getPixelForValue(dataPoint.l);
-                            const close = yScale.getPixelForValue(dataPoint.c);
-                            
-                            const candleWidth = 8;
-                            const isGreen = dataPoint.c >= dataPoint.o;
-                            
-                            ctx.strokeStyle = isGreen ? '#10b981' : '#ef4444';
-                            ctx.fillStyle = isGreen ? '#10b981' : '#ef4444';
-                            ctx.lineWidth = 1;
-                            
-                            // Draw wick
-                            ctx.beginPath();
-                            ctx.moveTo(x, high);
-                            ctx.lineTo(x, low);
-                            ctx.stroke();
-                            
-                            // Draw body
-                            const bodyHeight = Math.abs(close - open);
-                            const bodyTop = Math.min(open, close);
-                            
-                            if (isGreen) {
-                                ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
-                            } else {
-                                ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
-                            }
-                        });
+                
+                // Indicator toggles
+                document.getElementById('indicatorToggles').addEventListener('change', (e) => {
+                    if (e.target.classList.contains('indicator-toggle')) {
+                        const indicator = e.target.dataset.indicator;
+                        this.indicators[indicator].active = e.target.checked;
+                        this.renderChart();
                     }
                 });
             }
-
-            static updateChart(priceData, indicators) {
-                if (!state.chart) return;
-
-                // Update candlestick data
-                const candlestickData = priceData.map(d => ({
-                    x: d.time,
-                    o: d.open,
-                    h: d.high,
-                    l: d.low,
-                    c: d.close
-                }));
-
-                state.chart.data.datasets[0].data = candlestickData;
-
-                // Add indicator overlays
-                this.updateIndicatorOverlays(indicators);
-                
-                state.chart.update('none');
+            
+            updateChartTitle() {
+                const crypto = this.cryptos.find(c => c.symbol === this.currentSymbol);
+                document.getElementById('chartTitle').textContent = `${crypto.name}/USDT`;
             }
-
-            static updateIndicatorOverlays(indicators) {
-                // Remove existing indicator datasets
-                state.chart.data.datasets = state.chart.data.datasets.filter(d => !d.indicator);
-
-                // Add SMA if enabled
-                if (CONFIG.indicators.sma.enabled && indicators.sma) {
-                    state.chart.data.datasets.push({
-                        label: 'SMA',
-                        data: indicators.sma.map((value, index) => ({
-                            x: state.priceData[index + CONFIG.indicators.sma.period - 1]?.time,
-                            y: value
-                        })).filter(d => d.x),
-                        borderColor: '#fbbf24',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        type: 'line',
-                        indicator: true
-                    });
-                }
-
-                // Add EMA if enabled
-                if (CONFIG.indicators.ema.enabled && indicators.ema) {
-                    state.chart.data.datasets.push({
-                        label: 'EMA',
-                        data: indicators.ema.map((value, index) => ({
-                            x: state.priceData[index]?.time,
-                            y: value
-                        })).filter(d => d.x),
-                        borderColor: '#8b5cf6',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        type: 'line',
-                        indicator: true
-                    });
-                }
-
-                // Add Bollinger Bands if enabled
-                if (CONFIG.indicators.bb.enabled && indicators.bb) {
-                    const startIndex = CONFIG.indicators.bb.period - 1;
-                    
-                    // Upper band
-                    state.chart.data.datasets.push({
-                        label: 'BB Upper',
-                        data: indicators.bb.upper.map((value, index) => ({
-                            x: state.priceData[index + startIndex]?.time,
-                            y: value
-                        })).filter(d => d.x),
-                        borderColor: 'rgba(239, 68, 68, 0.5)',
-                        backgroundColor: 'transparent',
-                        borderWidth: 1,
-                        pointRadius: 0,
-                        type: 'line',
-                        indicator: true
-                    });
-
-                    // Lower band
-                    state.chart.data.datasets.push({
-                        label: 'BB Lower',
-                        data: indicators.bb.lower.map((value, index) => ({
-                            x: state.priceData[index + startIndex]?.time,
-                            y: value
-                        })).filter(d => d.x),
-                        borderColor: 'rgba(239, 68, 68, 0.5)',
-                        backgroundColor: 'transparent',
-                        borderWidth: 1,
-                        pointRadius: 0,
-                        type: 'line',
-                        indicator: true
-                    });
-                }
-            }
-
-            static addSupportResistance() {
-                if (!state.priceData.length) return;
-
-                const highs = state.priceData.map(d => d.high);
-                const lows = state.priceData.map(d => d.low);
-                
-                // Simple support/resistance calculation
-                const support = Math.min(...lows.slice(-20));
-                const resistance = Math.max(...highs.slice(-20));
-
-                // Add support line
-                state.chart.data.datasets.push({
-                    label: 'Support',
-                    data: [
-                        { x: state.priceData[0].time, y: support },
-                        { x: state.priceData[state.priceData.length - 1].time, y: support }
-                    ],
-                    borderColor: 'rgba(16, 185, 129, 0.7)',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    type: 'line',
-                    indicator: true
-                });
-
-                // Add resistance line
-                state.chart.data.datasets.push({
-                    label: 'Resistance',
-                    data: [
-                        { x: state.priceData[0].time, y: resistance },
-                        { x: state.priceData[state.priceData.length - 1].time, y: resistance }
-                    ],
-                    borderColor: 'rgba(239, 68, 68, 0.7)',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    type: 'line',
-                    indicator: true
-                });
-            }
-        }
-
-        // Data Management
-        class DataManager {
-            static async fetchHistoricalData(symbol, interval = '1h', limit = 100) {
+            
+            async loadInitialData() {
                 try {
+                    const timeframe = this.timeframes.find(tf => tf.id === this.currentTimeframe);
                     const response = await fetch(
-                        `${CONFIG.binanceApiUrl}klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+                        `https://api.binance.com/api/v3/klines?symbol=${this.currentSymbol}&interval=${timeframe.interval}&limit=200`
                     );
                     const data = await response.json();
                     
-                    return data.map(candle => ({
-                        time: candle[0],
+                    this.priceData = data.map(candle => ({
+                        timestamp: candle[0],
                         open: parseFloat(candle[1]),
                         high: parseFloat(candle[2]),
                         low: parseFloat(candle[3]),
                         close: parseFloat(candle[4]),
                         volume: parseFloat(candle[5])
                     }));
+                    
+                    this.calculateAllIndicators();
+                    this.renderChart();
+                    this.generatePredictions();
+                    this.detectPatterns();
+                    this.updateAlerts();
+                    this.updatePriceDisplay();
+                    
                 } catch (error) {
-                    console.error('Error fetching historical data:', error);
-                    return [];
+                    console.error('Error loading data:', error);
                 }
             }
-
-            static calculateAllIndicators(priceData) {
-                const closes = priceData.map(d => d.close);
-                const highs = priceData.map(d => d.high);
-                const lows = priceData.map(d => d.low);
-                const opens = priceData.map(d => d.open);
-
-                return {
-                    sma: TechnicalIndicators.sma(closes, CONFIG.indicators.sma.period),
-                    ema: TechnicalIndicators.ema(closes, CONFIG.indicators.ema.period),
-                    rsi: TechnicalIndicators.rsi(closes, CONFIG.indicators.rsi.period),
-                    macd: TechnicalIndicators.macd(closes, CONFIG.indicators.macd.fast, 
-                                                 CONFIG.indicators.macd.slow, CONFIG.indicators.macd.signal),
-                    bb: TechnicalIndicators.bollingerBands(closes, CONFIG.indicators.bb.period, CONFIG.indicators.bb.stdDev),
-                    stochastic: TechnicalIndicators.stochastic(highs, lows, closes, 
-                                                             CONFIG.indicators.stochastic.kPeriod, CONFIG.indicators.stochastic.dPeriod),
-                    williamsR: TechnicalIndicators.williamsR(highs, lows, closes, CONFIG.indicators.williamsR.period),
-                    atr: TechnicalIndicators.atr(highs, lows, closes, CONFIG.indicators.atr.period),
-                    cci: TechnicalIndicators.cci(highs, lows, closes, CONFIG.indicators.cci.period),
-                    momentum: TechnicalIndicators.momentum(closes, CONFIG.indicators.momentum.period)
-                };
-            }
-        }
-
-        // WebSocket Management
-        class WebSocketManager {
-            static connect() {
-                const symbol = state.currentSymbol.toLowerCase();
-                const wsUrl = `${CONFIG.binanceWsUrl}${symbol}@kline_${state.currentTimeframe}`;
+            
+            calculateAllIndicators() {
+                const prices = this.priceData.map(d => d.close);
+                const highs = this.priceData.map(d => d.high);
+                const lows = this.priceData.map(d => d.low);
+                const volumes = this.priceData.map(d => d.volume);
                 
-                if (state.websocket) {
-                    state.websocket.close();
+                // Calculate all indicators
+                this.calculatedIndicators = {
+                    sma20: this.calculateSMA(prices, 20),
+                    sma50: this.calculateSMA(prices, 50),
+                    ema12: this.calculateEMA(prices, 12),
+                    ema26: this.calculateEMA(prices, 26),
+                    rsi: this.calculateRSI(prices, 14),
+                    macd: this.calculateMACD(prices),
+                    bb: this.calculateBollingerBands(prices, 20, 2),
+                    stochastic: this.calculateStochastic(highs, lows, prices, 14),
+                    williamsR: this.calculateWilliamsR(highs, lows, prices, 14),
+                    atr: this.calculateATR(highs, lows, prices, 14),
+                    cci: this.calculateCCI(highs, lows, prices, 20),
+                    momentum: this.calculateMomentum(prices, 10),
+                    volumeSMA: this.calculateSMA(volumes, 20),
+                    supportResistance: this.calculateSupportResistance()
+                };
+                
+                this.renderIndicatorsPanel();
+                this.renderSignalSummary();
+            }
+            
+            renderChart() {
+                const ctx = document.getElementById('mainChart').getContext('2d');
+                
+                if (this.chart) {
+                    this.chart.destroy();
                 }
-
-                state.websocket = new WebSocket(wsUrl);
                 
-                state.websocket.onopen = () => {
-                    console.log('WebSocket connected');
-                    updateConnectionStatus(true);
-                };
-
-                state.websocket.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    if (data.e === 'kline') {
-                        this.handleKlineData(data.k);
-                    }
-                };
-
-                state.websocket.onclose = () => {
-                    console.log('WebSocket disconnected');
-                    updateConnectionStatus(false);
-                    // Attempt to reconnect after 5 seconds
-                    setTimeout(() => this.connect(), 5000);
-                };
-
-                state.websocket.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    updateConnectionStatus(false);
-                };
-            }
-
-            static handleKlineData(kline) {
-                const newCandle = {
-                    time: kline.t,
-                    open: parseFloat(kline.o),
-                    high: parseFloat(kline.h),
-                    low: parseFloat(kline.l),
-                    close: parseFloat(kline.c),
-                    volume: parseFloat(kline.v)
-                };
-
-                // Update or add the latest candle
-                if (state.priceData.length > 0) {
-                    const lastCandle = state.priceData[state.priceData.length - 1];
-                    if (lastCandle.time === newCandle.time) {
-                        // Update existing candle
-                        state.priceData[state.priceData.length - 1] = newCandle;
-                    } else {
-                        // Add new candle
-                        state.priceData.push(newCandle);
-                        // Keep only last 200 candles for performance
-                        if (state.priceData.length > 200) {
-                            state.priceData = state.priceData.slice(-200);
+                const labels = this.priceData.map(d => new Date(d.timestamp));
+                
+                // Prepare candlestick data
+                const candlestickData = this.priceData.map(d => ({
+                    x: new Date(d.timestamp),
+                    o: d.open,
+                    h: d.high,
+                    l: d.low,
+                    c: d.close
+                }));
+                
+                const datasets = [];
+                
+                // Add active indicators
+                if (this.indicators.sma20.active && this.calculatedIndicators.sma20) {
+                    datasets.push({
+                        label: 'SMA 20',
+                        data: this.calculatedIndicators.sma20,
+                        borderColor: this.indicators.sma20.color,
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.1
+                    });
+                }
+                
+                if (this.indicators.sma50.active && this.calculatedIndicators.sma50) {
+                    datasets.push({
+                        label: 'SMA 50',
+                        data: this.calculatedIndicators.sma50,
+                        borderColor: this.indicators.sma50.color,
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.1
+                    });
+                }
+                
+                if (this.indicators.ema12.active && this.calculatedIndicators.ema12) {
+                    datasets.push({
+                        label: 'EMA 12',
+                        data: this.calculatedIndicators.ema12,
+                        borderColor: this.indicators.ema12.color,
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0.1
+                    });
+                }
+                
+                if (this.indicators.bb.active && this.calculatedIndicators.bb) {
+                    const bbUpper = this.calculatedIndicators.bb.map(b => b ? b.upper : null);
+                    const bbLower = this.calculatedIndicators.bb.map(b => b ? b.lower : null);
+                    const bbMiddle = this.calculatedIndicators.bb.map(b => b ? b.middle : null);
+                    
+                    datasets.push(
+                        {
+                            label: 'BB Upper',
+                            data: bbUpper,
+                            borderColor: this.indicators.bb.color,
+                            backgroundColor: 'transparent',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            fill: '+1'
+                        },
+                        {
+                            label: 'BB Lower',
+                            data: bbLower,
+                            borderColor: this.indicators.bb.color,
+                            backgroundColor: 'rgba(107, 114, 128, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 0
+                        }
+                    );
+                }
+                
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Price',
+                                data: this.priceData.map(d => d.close),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.1,
+                                pointRadius: 0
+                            },
+                            ...datasets
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                ticks: { color: '#9ca3af' },
+                                grid: { color: 'rgba(156, 163, 175, 0.1)' }
+                            },
+                            y: {
+                                ticks: { color: '#9ca3af' },
+                                grid: { color: 'rgba(156, 163, 175, 0.1)' }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: { color: '#d1d5db' },
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff'
+                            }
                         }
                     }
-                } else {
-                    state.priceData.push(newCandle);
-                }
-
-                // Update indicators and UI
-                this.updateData();
-            }
-
-            static updateData() {
-                if (state.priceData.length < 50) return; // Need enough data for indicators
-
-                // Calculate indicators
-                state.indicators = DataManager.calculateAllIndicators(state.priceData);
-                
-                // Update predictions
-                state.predictions = PredictionEngine.calculatePredictions(state.priceData, state.indicators);
-                
-                // Detect patterns
-                state.patterns = PatternRecognition.detectPatterns(state.priceData.slice(-50));
-                
-                // Check alerts
-                const newAlerts = AlertSystem.checkAlerts(
-                    state.priceData[state.priceData.length - 1], 
-                    state.indicators, 
-                    state.patterns
-                );
-                
-                // Add only new alerts
-                newAlerts.forEach(alert => {
-                    if (!state.alerts.some(existingAlert => 
-                        existingAlert.type === alert.type && 
-                        Math.abs(existingAlert.timestamp - alert.timestamp) < 60000)) {
-                        state.alerts.push(alert);
-                    }
                 });
+            }
+            
+            renderIndicatorsPanel() {
+                const panel = document.getElementById('indicatorsPanel');
+                if (!this.calculatedIndicators.rsi) return;
                 
-                // Keep only last 20 alerts
-                state.alerts = state.alerts.slice(-20);
-
-                // Update UI
-                UIManager.updateAll();
-            }
-        }
-
-        // UI Management
-        class UIManager {
-            static updateAll() {
-                this.updatePriceDisplay();
-                this.updateChart();
-                this.updateIndicators();
-                this.updatePredictions();
-                this.updateAlerts();
-                this.updateMarketSummary();
-            }
-
-            static updatePriceDisplay() {
-                if (!state.priceData.length) return;
-
-                const currentPrice = state.priceData[state.priceData.length - 1].close;
-                const prevPrice = state.priceData.length > 1 ? 
-                    state.priceData[state.priceData.length - 2].close : currentPrice;
-                const change = ((currentPrice - prevPrice) / prevPrice * 100);
-
-                document.getElementById('currentSymbol').textContent = state.currentSymbol;
-                document.getElementById('currentPrice').textContent = '
-                     + formatPrice(currentPrice);
+                const currentIndex = this.calculatedIndicators.rsi.length - 1;
+                const rsi = this.calculatedIndicators.rsi[currentIndex];
+                const macd = this.calculatedIndicators.macd[currentIndex];
+                const bb = this.calculatedIndicators.bb[currentIndex];
+                const stoch = this.calculatedIndicators.stochastic[currentIndex];
+                const atr = this.calculatedIndicators.atr[currentIndex];
                 
-                const changeEl = document.getElementById('priceChange');
-                changeEl.textContent = formatPercentage(change);
-                changeEl.className = change >= 0 ? 'text-sm ml-2 text-green-400' : 'text-sm ml-2 text-red-400';
+                panel.innerHTML = `
+                    <div class="space-y-4">
+                        ${this.createIndicatorCard('RSI', rsi?.toFixed(2), this.getRSISignal(rsi), 'Relative Strength Index - measures momentum')}
+                        ${this.createIndicatorCard('MACD', macd?.macd?.toFixed(4), this.getMACDSignal(macd), 'Moving Average Convergence Divergence')}
+                        ${this.createIndicatorCard('Stochastic %K', stoch?.k?.toFixed(2), this.getStochasticSignal(stoch), 'Momentum oscillator comparing closing price to price range')}
+                        ${this.createIndicatorCard('ATR', atr?.toFixed(4), this.getATRSignal(atr), 'Average True Range - measures volatility')}
+                    </div>
+                `;
             }
-
-            static updateChart() {
-                ChartManager.updateChart(state.priceData, state.indicators);
-                if (document.getElementById('toggleSR').checked) {
-                    ChartManager.addSupportResistance();
+            
+            createIndicatorCard(name, value, signal, tooltip) {
+                const signalClass = signal.strength === 'strong' ? 'text-green-400' : 
+                                  signal.strength === 'moderate' ? 'text-yellow-400' : 'text-red-400';
+                
+                return `
+                    <div class="bg-gray-800 rounded-lg p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="tooltip">
+                                <span class="text-sm font-medium text-gray-300">${name}</span>
+                                <span class="tooltiptext">${tooltip}</span>
+                            </div>
+                            <span class="text-white font-semibold">${value || 'N/A'}</span>
+                        </div>
+                        <div class="text-xs ${signalClass} font-medium mb-1">${signal.text}</div>
+                        <div class="text-xs text-gray-400">${signal.explanation}</div>
+                    </div>
+                `;
+            }
+            
+            getRSISignal(rsi) {
+                if (!rsi) return { strength: 'weak', text: 'No Signal', explanation: 'Insufficient data' };
+                if (rsi > 70) return { strength: 'strong', text: 'OVERBOUGHT', explanation: 'High risk of price reversal downward' };
+                if (rsi < 30) return { strength: 'strong', text: 'OVERSOLD', explanation: 'Potential buying opportunity' };
+                if (rsi > 60) return { strength: 'moderate', text: 'Selling Pressure', explanation: 'Consider taking profits' };
+                if (rsi < 40) return { strength: 'moderate', text: 'Buying Opportunity', explanation: 'Weakness may present entry point' };
+                return { strength: 'weak', text: 'Neutral', explanation: 'No clear directional bias' };
+            }
+            
+            getMACDSignal(macd) {
+                if (!macd) return { strength: 'weak', text: 'No Signal', explanation: 'Insufficient data' };
+                if (macd.macd > macd.signal && macd.histogram > 0) {
+                    return { strength: 'strong', text: 'BULLISH CROSSOVER', explanation: 'Uptrend momentum building' };
                 }
+                if (macd.macd < macd.signal && macd.histogram < 0) {
+                    return { strength: 'strong', text: 'BEARISH CROSSOVER', explanation: 'Downtrend momentum building' };
+                }
+                return { strength: 'moderate', text: 'Sideways', explanation: 'Trend direction unclear' };
             }
-
-            static updateIndicators() {
-                const container = document.getElementById('technicalIndicators');
-                container.innerHTML = '';
-
-                const indicators = [
-                    { name: 'RSI', value: state.indicators.rsi, analyzer: SignalAnalyzer.analyzeRSI },
-                    { name: 'MACD', value: state.indicators.macd, analyzer: SignalAnalyzer.analyzeMACD },
-                    { name: 'Bollinger', value: state.indicators.bb, analyzer: (bb) => 
-                        SignalAnalyzer.analyzeBollingerBands(state.priceData.map(d => d.close), bb) },
-                    { name: 'Stochastic', value: state.indicators.stochastic, analyzer: SignalAnalyzer.analyzeStochastic }
+            
+            getStochasticSignal(stoch) {
+                if (!stoch) return { strength: 'weak', text: 'No Signal', explanation: 'Insufficient data' };
+                if (stoch.k > 80) return { strength: 'moderate', text: 'Overbought', explanation: 'Price may pull back' };
+                if (stoch.k < 20) return { strength: 'moderate', text: 'Oversold', explanation: 'Price may bounce up' };
+                return { strength: 'weak', text: 'Neutral', explanation: 'No extreme reading' };
+            }
+            
+            getATRSignal(atr) {
+                if (!atr) return { strength: 'weak', text: 'No Signal', explanation: 'Insufficient data' };
+                // ATR interpretation is context-dependent, providing general guidance
+                return { strength: 'weak', text: `Volatility: ${atr > 0.05 ? 'High' : 'Low'}`, explanation: `Current volatility ${atr > 0.05 ? 'suggests larger price swings' : 'indicates stable price movement'}` };
+            }
+            
+            renderSignalSummary() {
+                const summary = this.calculateOverallSignal();
+                const container = document.getElementById('signalSummary');
+                
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-400">Overall Signal</span>
+                            <span class="font-semibold ${summary.overall === 'Bullish' ? 'text-green-400' : summary.overall === 'Bearish' ? 'text-red-400' : 'text-yellow-400'}">
+                                ${summary.overall}
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-green-400">Bullish: ${summary.bullish}%</span>
+                                <span class="text-red-400">Bearish: ${summary.bearish}%</span>
+                                <span class="text-yellow-400">Neutral: ${summary.neutral}%</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div class="flex h-2 rounded-full overflow-hidden">
+                                    <div class="bg-green-500" style="width: ${summary.bullish}%"></div>
+                                    <div class="bg-red-500" style="width: ${summary.bearish}%"></div>
+                                    <div class="bg-yellow-500" style="width: ${summary.neutral}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-400">${summary.explanation}</div>
+                    </div>
+                `;
+            }
+            
+            calculateOverallSignal() {
+                if (!this.calculatedIndicators.rsi) return { overall: 'Loading...', bullish: 0, bearish: 0, neutral: 100, explanation: 'Calculating signals...' };
+                
+                const signals = [];
+                const currentIndex = this.calculatedIndicators.rsi.length - 1;
+                
+                // RSI
+                const rsi = this.calculatedIndicators.rsi[currentIndex];
+                if (rsi) {
+                    if (rsi > 70) signals.push('bearish');
+                    else if (rsi < 30) signals.push('bullish');
+                    else signals.push('neutral');
+                }
+                
+                // MACD
+                const macd = this.calculatedIndicators.macd[currentIndex];
+                if (macd && macd.macd && macd.signal) {
+                    signals.push(macd.macd > macd.signal ? 'bullish' : 'bearish');
+                }
+                
+                // Moving Averages
+                const prices = this.priceData.map(d => d.close);
+                const currentPrice = prices[currentIndex];
+                const sma20 = this.calculatedIndicators.sma20[currentIndex];
+                const sma50 = this.calculatedIndicators.sma50[currentIndex];
+                
+                if (sma20 && sma50) {
+                    if (currentPrice > sma20 && sma20 > sma50) signals.push('bullish');
+                    else if (currentPrice < sma20 && sma20 < sma50) signals.push('bearish');
+                    else signals.push('neutral');
+                }
+                
+                // Calculate percentages
+                const bullishCount = signals.filter(s => s === 'bullish').length;
+                const bearishCount = signals.filter(s => s === 'bearish').length;
+                const neutralCount = signals.filter(s => s === 'neutral').length;
+                const total = signals.length;
+                
+                const bullish = Math.round((bullishCount / total) * 100);
+                const bearish = Math.round((bearishCount / total) * 100);
+                const neutral = 100 - bullish - bearish;
+                
+                let overall = 'Neutral';
+                let explanation = 'Mixed signals from technical indicators';
+                
+                if (bullish > 60) {
+                    overall = 'Bullish';
+                    explanation = 'Multiple indicators suggest upward momentum';
+                } else if (bearish > 60) {
+                    overall = 'Bearish';
+                    explanation = 'Multiple indicators suggest downward pressure';
+                }
+                
+                return { overall, bullish, bearish, neutral, explanation };
+            }
+            
+            updatePriceDisplay() {
+                const currentPrice = this.priceData[this.priceData.length - 1];
+                const prevPrice = this.priceData[this.priceData.length - 2];
+                
+                if (!currentPrice || !prevPrice) return;
+                
+                const change = currentPrice.close - prevPrice.close;
+                const changePercent = (change / prevPrice.close) * 100;
+                
+                document.getElementById('currentPrice').textContent = `${currentPrice.close.toFixed(2)}`;
+                
+                const changeElement = document.getElementById('priceChange');
+                const isPositive = change >= 0;
+                changeElement.className = `text-lg ${isPositive ? 'text-green-400' : 'text-red-400'}`;
+                changeElement.textContent = `${isPositive ? '+' : ''}${change.toFixed(2)} (${isPositive ? '+' : ''}${changePercent.toFixed(2)}%)`;
+            }
+            
+            generatePredictions() {
+                const prices = this.priceData.map(d => d.close);
+                const currentPrice = prices[prices.length - 1];
+                
+                // Generate predictions using ensemble approach
+                const timeframes = [
+                    { hours: 1, label: '1H' },
+                    { hours: 4, label: '4H' },
+                    { hours: 24, label: '1D' },
+                    { hours: 168, label: '1W' }
                 ];
-
-                indicators.forEach(indicator => {
-                    if (!indicator.value) return;
-
-                    const signal = indicator.analyzer(indicator.value);
-                    const indicatorEl = document.createElement('div');
-                    indicatorEl.className = 'indicator-card p-3 rounded-lg';
-                    
-                    const strengthClass = signal.strength === 'Strong' ? 'signal-strong' : 
-                                        signal.strength === 'Moderate' ? 'signal-moderate' : 'signal-weak';
-                    
-                    const sentimentColor = signal.sentiment === 'bullish' ? 'text-green-400' : 
-                                         signal.sentiment === 'bearish' ? 'text-red-400' : 'text-gray-400';
-
-                    indicatorEl.innerHTML = `
-                        <div class="flex justify-between items-start mb-2">
-                            <h4 class="font-semibold text-sm">${indicator.name}</h4>
-                            <span class="text-xs px-2 py-1 rounded ${sentimentColor} bg-gray-800">${signal.signal}</span>
-                        </div>
-                        <div class="signal-meter ${strengthClass} mb-2"></div>
-                        <p class="text-xs text-gray-300 mb-1">${signal.meaning}</p>
-                        <p class="text-xs text-blue-300">${signal.action}</p>
-                    `;
-
-                    container.appendChild(indicatorEl);
+                
+                this.predictions = timeframes.map(tf => {
+                    const prediction = this.advancedPredict(prices, tf.hours);
+                    return {
+                        timeframe: tf.label,
+                        hours: tf.hours,
+                        price: prediction.price,
+                        confidence: prediction.confidence,
+                        change: ((prediction.price - currentPrice) / currentPrice) * 100
+                    };
                 });
+                
+                this.runBacktest();
+                this.renderPredictions();
             }
-
-            static updatePredictions() {
-                const container = document.getElementById('predictionsList');
-                container.innerHTML = '';
-
-                state.predictions.forEach(pred => {
-                    const predEl = document.createElement('div');
-                    predEl.className = 'bg-gray-800 p-3 rounded-lg';
+            
+            advancedPredict(prices, hoursAhead) {
+                // Ensemble prediction using multiple models
+                const models = [
+                    this.linearRegressionPredict(prices, hoursAhead),
+                    this.polynomialRegressionPredict(prices, hoursAhead),
+                    this.movingAveragePredict(prices, hoursAhead),
+                    this.momentumPredict(prices, hoursAhead)
+                ];
+                
+                // Calculate weighted average
+                const weights = [0.3, 0.3, 0.2, 0.2];
+                const weightedPrice = models.reduce((sum, model, i) => sum + model.price * weights[i], 0);
+                
+                // Calculate confidence based on model agreement and other factors
+                const variance = models.reduce((sum, model) => sum + Math.pow(model.price - weightedPrice, 2), 0) / models.length;
+                const standardDeviation = Math.sqrt(variance);
+                const modelAgreement = 1 - (standardDeviation / weightedPrice);
+                
+                const volatility = this.calculateVolatility(prices.slice(-20));
+                const timeDecay = Math.exp(-hoursAhead / 48);
+                const trendStrength = Math.abs(this.calculateTrend(prices)) * 10;
+                
+                let confidence = (modelAgreement * 0.4 + timeDecay * 0.3 + (1 - volatility * 5) * 0.2 + trendStrength * 0.1);
+                
+                // Apply realistic bounds
+                if (hoursAhead <= 1) confidence = Math.min(confidence, 0.78);
+                else if (hoursAhead <= 4) confidence = Math.min(confidence, 0.68);
+                else if (hoursAhead <= 24) confidence = Math.min(confidence, 0.58);
+                else confidence = Math.min(confidence, 0.38);
+                
+                confidence = Math.max(confidence, 0.25);
+                
+                return { price: weightedPrice, confidence };
+            }
+            
+            linearRegressionPredict(prices, periods) {
+                const n = Math.min(50, prices.length);
+                const recentPrices = prices.slice(-n);
+                
+                let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+                
+                for (let i = 0; i < n; i++) {
+                    sumX += i;
+                    sumY += recentPrices[i];
+                    sumXY += i * recentPrices[i];
+                    sumXX += i * i;
+                }
+                
+                const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+                const intercept = (sumY - slope * sumX) / n;
+                
+                return { price: slope * (n + periods) + intercept };
+            }
+            
+            polynomialRegressionPredict(prices, periods) {
+                const n = Math.min(30, prices.length);
+                const recentPrices = prices.slice(-n);
+                
+                // Simple quadratic regression for demonstration
+                const x = Array.from({ length: n }, (_, i) => i);
+                const y = recentPrices;
+                
+                try {
+                    // Using math.js for polynomial fitting
+                    const xMatrix = x.map(xi => [1, xi, xi * xi]);
+                    const coefficients = math.lusolve(xMatrix, y);
                     
-                    const changeColor = pred.change >= 0 ? 'text-green-400' : 'text-red-400';
-                    const confidenceWidth = (pred.confidence * 100).toFixed(0);
-
-                    predEl.innerHTML = `
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-semibold">${pred.timeframe}</span>
-                            <span class="${changeColor}">${formatPercentage(pred.change)}</span>
-                        </div>
-                        <div class="text-sm text-gray-300 mb-2">
-                            Target: ${formatPrice(pred.price)}
-                        </div>
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs text-gray-400">Confidence</span>
-                            <span class="text-xs">${(pred.confidence * 100).toFixed(0)}%</span>
-                        </div>
-                        <div class="signal-meter signal-moderate mb-2">
-                            <div class="h-full bg-blue-500" style="width: ${confidenceWidth}%"></div>
-                        </div>
-                        <p class="text-xs text-gray-400">${pred.reasoning}</p>
-                    `;
-
-                    container.appendChild(predEl);
-                });
-
-                // Update accuracy display (simulated)
-                const accuracy = 65 + Math.random() * 20; // Simulated accuracy between 65-85%
-                document.getElementById('accuracyScore').textContent = `${accuracy.toFixed(1)}%`;
-                document.getElementById('accuracyBar').style.width = `${accuracy}%`;
+                    const futureX = n + periods;
+                    const prediction = coefficients[0][0] + coefficients[1][0] * futureX + coefficients[2][0] * futureX * futureX;
+                    
+                    return { price: prediction };
+                } catch (error) {
+                    // Fallback to linear if polynomial fails
+                    return this.linearRegressionPredict(prices, periods);
+                }
             }
-
-            static updateAlerts() {
-                const container = document.getElementById('alertsList');
-                container.innerHTML = '';
-
-                if (state.alerts.length === 0) {
-                    container.innerHTML = '<div class="text-gray-400 text-sm">No alerts active</div>';
+            
+            movingAveragePredict(prices, periods) {
+                const shortMA = this.calculateSMA(prices, 10);
+                const longMA = this.calculateSMA(prices, 30);
+                
+                const trend = shortMA[shortMA.length - 1] - longMA[longMA.length - 1];
+                return { price: prices[prices.length - 1] + (trend * periods * 0.1) };
+            }
+            
+            momentumPredict(prices, periods) {
+                const momentum = this.calculateMomentum(prices, 14);
+                const avgMomentum = momentum.slice(-5).reduce((a, b) => a + b, 0) / 5;
+                
+                return { price: prices[prices.length - 1] * (1 + avgMomentum * periods * 0.01) };
+            }
+            
+            runBacktest() {
+                // Simple backtesting for demonstration
+                if (this.priceData.length < 50) return;
+                
+                const backtestResults = [];
+                const lookback = 10;
+                
+                for (let i = 0; i < lookback; i++) {
+                    const testIndex = this.priceData.length - 1 - i;
+                    if (testIndex < 20) continue;
+                    
+                    const historicalPrices = this.priceData.slice(0, testIndex).map(d => d.close);
+                    const actualPrice = this.priceData[testIndex].close;
+                    
+                    const prediction = this.advancedPredict(historicalPrices, 1);
+                    const error = Math.abs(prediction.price - actualPrice) / actualPrice;
+                    const accuracy = Math.max(0, 1 - error);
+                    
+                    backtestResults.push({
+                        predicted: prediction.price,
+                        actual: actualPrice,
+                        accuracy: accuracy,
+                        error: error
+                    });
+                }
+                
+                this.backtestResults = backtestResults;
+            }
+            
+            renderPredictions() {
+                const grid = document.getElementById('predictionsGrid');
+                
+                grid.innerHTML = this.predictions.map(pred => {
+                    const isPositive = pred.change >= 0;
+                    const confidenceColor = pred.confidence > 0.6 ? 'bg-green-500' : pred.confidence > 0.4 ? 'bg-yellow-500' : 'bg-red-500';
+                    
+                    return `
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <div class="text-sm text-gray-400 mb-2">${pred.timeframe} Prediction</div>
+                            <div class="text-xl font-bold mb-2">${pred.price.toFixed(2)}</div>
+                            <div class="text-sm ${isPositive ? 'text-green-400' : 'text-red-400'} mb-2">
+                                ${isPositive ? '+' : ''}${pred.change.toFixed(2)}%
+                            </div>
+                            <div class="mb-2">
+                                <div class="text-xs text-gray-400 mb-1">Confidence: ${Math.round(pred.confidence * 100)}%</div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill ${confidenceColor}" style="width: ${pred.confidence * 100}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Render backtest results
+                const backtestContainer = document.getElementById('backtestResults');
+                if (this.backtestResults.length > 0) {
+                    const avgAccuracy = this.backtestResults.reduce((sum, r) => sum + r.accuracy, 0) / this.backtestResults.length;
+                    const successRate = this.backtestResults.filter(r => r.accuracy > 0.8).length / this.backtestResults.length;
+                    
+                    backtestContainer.innerHTML = `
+                        <div class="text-sm">
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-400">Average Accuracy:</span>
+                                <span class="font-semibold">${Math.round(avgAccuracy * 100)}%</span>
+                            </div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-400">Success Rate (>80%):</span>
+                                <span class="font-semibold">${Math.round(successRate * 100)}%</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">Based on last ${this.backtestResults.length} predictions</div>
+                        </div>
+                    `;
+                }
+            }
+            
+            detectPatterns() {
+                const patterns = [];
+                const ohlc = this.priceData.slice(-10); // Look at last 10 candles
+                
+                // Pattern detection logic
+                for (let i = 1; i < ohlc.length - 1; i++) {
+                    const prev = ohlc[i - 1];
+                    const curr = ohlc[i];
+                    const next = ohlc[i + 1];
+                    
+                    // Doji pattern
+                    if (this.isDoji(curr)) {
+                        patterns.push({ name: 'Doji', type: 'neutral', strength: 'moderate' });
+                    }
+                    
+                    // Hammer pattern
+                    if (this.isHammer(curr)) {
+                        patterns.push({ name: 'Hammer', type: 'bullish', strength: 'strong' });
+                    }
+                    
+                    // Shooting Star
+                    if (this.isShootingStar(curr)) {
+                        patterns.push({ name: 'Shooting Star', type: 'bearish', strength: 'strong' });
+                    }
+                    
+                    // Engulfing patterns
+                    if (this.isBullishEngulfing(prev, curr)) {
+                        patterns.push({ name: 'Bullish Engulfing', type: 'bullish', strength: 'strong' });
+                    }
+                    
+                    if (this.isBearishEngulfing(prev, curr)) {
+                        patterns.push({ name: 'Bearish Engulfing', type: 'bearish', strength: 'strong' });
+                    }
+                }
+                
+                this.renderPatterns(patterns);
+            }
+            
+            isDoji(candle) {
+                const bodySize = Math.abs(candle.close - candle.open);
+                const range = candle.high - candle.low;
+                return bodySize < (range * 0.1);
+            }
+            
+            isHammer(candle) {
+                const bodySize = Math.abs(candle.close - candle.open);
+                const upperShadow = candle.high - Math.max(candle.open, candle.close);
+                const lowerShadow = Math.min(candle.open, candle.close) - candle.low;
+                
+                return lowerShadow > (bodySize * 2) && upperShadow < (bodySize * 0.5);
+            }
+            
+            isShootingStar(candle) {
+                const bodySize = Math.abs(candle.close - candle.open);
+                const upperShadow = candle.high - Math.max(candle.open, candle.close);
+                const lowerShadow = Math.min(candle.open, candle.close) - candle.low;
+                
+                return upperShadow > (bodySize * 2) && lowerShadow < (bodySize * 0.5);
+            }
+            
+            isBullishEngulfing(prev, curr) {
+                return prev.close < prev.open && // Previous candle is bearish
+                       curr.close > curr.open && // Current candle is bullish
+                       curr.open < prev.close &&  // Current opens below previous close
+                       curr.close > prev.open;    // Current closes above previous open
+            }
+            
+            isBearishEngulfing(prev, curr) {
+                return prev.close > prev.open && // Previous candle is bullish
+                       curr.close < curr.open && // Current candle is bearish
+                       curr.open > prev.close &&  // Current opens above previous close
+                       curr.close < prev.open;    // Current closes below previous open
+            }
+            
+            renderPatterns(patterns) {
+                const container = document.getElementById('patternList');
+                
+                if (patterns.length === 0) {
+                    container.innerHTML = '<span class="text-xs text-gray-500">No patterns detected</span>';
                     return;
                 }
-
-                const recentAlerts = state.alerts.slice(-5).reverse();
-                recentAlerts.forEach(alert => {
-                    const alertEl = document.createElement('div');
-                    alertEl.className = `alert-item p-2 rounded border-l-4 text-sm ${
-                        alert.severity === 'high' ? 'border-red-500 bg-red-900 bg-opacity-20' :
-                        alert.severity === 'medium' ? 'border-yellow-500 bg-yellow-900 bg-opacity-20' :
-                        'border-blue-500 bg-blue-900 bg-opacity-20'
-                    }`;
-
-                    alertEl.innerHTML = `
-                        <div class="font-semibold mb-1">${alert.type}</div>
-                        <div class="text-xs text-gray-300 mb-1">${alert.message}</div>
-                        <div class="text-xs text-blue-300">${alert.action}</div>
-                    `;
-
-                    container.appendChild(alertEl);
-                });
+                
+                container.innerHTML = patterns.map(pattern => `
+                    <span class="pattern-badge pattern-${pattern.type}">${pattern.name}</span>
+                `).join('');
             }
-
-            static updateMarketSummary() {
-                if (!state.indicators.rsi || !state.indicators.macd || !state.indicators.stochastic) return;
-
-                let bullish = 0, bearish = 0, neutral = 0;
-                const signals = [];
-
-                // Analyze RSI
-                const rsiSignal = SignalAnalyzer.analyzeRSI(state.indicators.rsi);
-                signals.push(rsiSignal.sentiment);
-
-                // Analyze MACD
-                const macdSignal = SignalAnalyzer.analyzeMACD(state.indicators.macd);
-                signals.push(macdSignal.sentiment);
-
-                // Analyze Bollinger Bands
-                if (state.indicators.bb) {
-                    const bbSignal = SignalAnalyzer.analyzeBollingerBands(
-                        state.priceData.map(d => d.close), 
-                        state.indicators.bb
-                    );
-                    signals.push(bbSignal.sentiment);
-                }
-
-                // Analyze Stochastic
-                const stochSignal = SignalAnalyzer.analyzeStochastic(state.indicators.stochastic);
-                signals.push(stochSignal.sentiment);
-
-                // Count sentiments
-                signals.forEach(sentiment => {
-                    if (sentiment === 'bullish') bullish++;
-                    else if (sentiment === 'bearish') bearish++;
-                    else neutral++;
-                });
-
-                const total = signals.length;
-                const bullishPct = ((bullish / total) * 100).toFixed(0);
-                const bearishPct = ((bearish / total) * 100).toFixed(0);
-                const neutralPct = ((neutral / total) * 100).toFixed(0);
-
-                document.getElementById('bullishPercentage').textContent = `${bullishPct}%`;
-                document.getElementById('bearishPercentage').textContent = `${bearishPct}%`;
-                document.getElementById('neutralPercentage').textContent = `${neutralPct}%`;
-
-                // Update overall sentiment
-                const sentimentEl = document.getElementById('overallSentiment');
-                const sentimentTextEl = document.getElementById('overallSentimentText');
-                
-                if (bullish > bearish && bullish > neutral) {
-                    sentimentEl.className = 'h-full signal-strong transition-all duration-500';
-                    sentimentEl.style.width = `${bullishPct}%`;
-                    sentimentTextEl.textContent = 'Overall: Bullish';
-                    sentimentTextEl.className = 'text-sm font-medium text-green-400';
-                } else if (bearish > bullish && bearish > neutral) {
-                    sentimentEl.className = 'h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-500';
-                    sentimentEl.style.width = `${bearishPct}%`;
-                    sentimentTextEl.textContent = 'Overall: Bearish';
-                    sentimentTextEl.className = 'text-sm font-medium text-red-400';
-                } else {
-                    sentimentEl.className = 'h-full signal-moderate transition-all duration-500';
-                    sentimentEl.style.width = '50%';
-                    sentimentTextEl.textContent = 'Overall: Neutral';
-                    sentimentTextEl.className = 'text-sm font-medium text-gray-400';
-                }
-            }
-        }
-
-        // Event Handlers
-        function setupEventHandlers() {
-            // Symbol selection
-            document.getElementById('symbolSelect').addEventListener('change', async (e) => {
-                state.currentSymbol = e.target.value;
-                state.priceData = [];
-                
-                // Fetch new historical data
-                const historicalData = await DataManager.fetchHistoricalData(
-                    state.currentSymbol, 
-                    state.currentTimeframe, 
-                    100
-                );
-                state.priceData = historicalData;
-                
-                // Reconnect WebSocket with new symbol
-                WebSocketManager.connect();
-                
-                // Update UI
-                if (state.priceData.length >= 50) {
-                    WebSocketManager.updateData();
-                }
-            });
-
-            // Timeframe selection
-            document.getElementById('timeframeSelect').addEventListener('change', async (e) => {
-                state.currentTimeframe = e.target.value;
-                state.priceData = [];
-                
-                // Fetch new historical data
-                const historicalData = await DataManager.fetchHistoricalData(
-                    state.currentSymbol, 
-                    state.currentTimeframe, 
-                    100
-                );
-                state.priceData = historicalData;
-                
-                // Reconnect WebSocket with new timeframe
-                WebSocketManager.connect();
-                
-                // Update UI
-                if (state.priceData.length >= 50) {
-                    WebSocketManager.updateData();
-                }
-            });
-
-            // Indicator toggles
-            document.getElementById('toggleSMA').addEventListener('change', (e) => {
-                CONFIG.indicators.sma.enabled = e.target.checked;
-                CONFIG.indicators.ema.enabled = e.target.checked;
-                if (state.priceData.length >= 50) {
-                    UIManager.updateChart();
-                }
-            });
-
-            document.getElementById('toggleBB').addEventListener('change', (e) => {
-                CONFIG.indicators.bb.enabled = e.target.checked;
-                if (state.priceData.length >= 50) {
-                    UIManager.updateChart();
-                }
-            });
-
-            document.getElementById('toggleSR').addEventListener('change', (e) => {
-                if (state.priceData.length >= 50) {
-                    UIManager.updateChart();
-                }
-            });
-
-            // Pattern detection button
-            document.getElementById('patternDetection').addEventListener('click', () => {
-                if (state.patterns.length > 0) {
-                    const patternList = state.patterns.map(p => 
-                        `${p.name}: ${p.meaning}`
-                    ).join('\n');
-                    alert(`Detected Patterns:\n\n${patternList}`);
-                } else {
-                    alert('No significant patterns detected in recent candles.');
-                }
-            });
-        }
-
-        // Initialize Application
-        async function initializeApp() {
-            console.log('Initializing Advanced Trading Assistant...');
             
-            // Setup event handlers
-            setupEventHandlers();
-            
-            // Initialize chart
-            ChartManager.initializeChart();
-            
-            // Start time updates
-            setInterval(updateCurrentTime, 1000);
-            updateCurrentTime();
-            
-            // Fetch initial historical data
-            try {
-                const historicalData = await DataManager.fetchHistoricalData(
-                    state.currentSymbol, 
-                    state.currentTimeframe, 
-                    100
-                );
+            updateAlerts() {
+                const alerts = [];
+                const currentIndex = this.calculatedIndicators.rsi.length - 1;
                 
-                if (historicalData.length > 0) {
-                    state.priceData = historicalData;
-                    
-                    // Calculate initial indicators
-                    if (state.priceData.length >= 50) {
-                        WebSocketManager.updateData();
+                // RSI Alerts
+                const rsi = this.calculatedIndicators.rsi[currentIndex];
+                if (rsi > 75) {
+                    alerts.push({
+                        type: 'warning',
+                        title: 'RSI Overbought Alert',
+                        message: `RSI = ${rsi.toFixed(2)} → Market severely overbought`,
+                        action: 'Consider taking profits or setting stop losses',
+                        strength: 'strong'
+                    });
+                } else if (rsi < 25) {
+                    alerts.push({
+                        type: 'opportunity',
+                        title: 'RSI Oversold Alert',
+                        message: `RSI = ${rsi.toFixed(2)} → Market oversold`,
+                        action: 'Potential buying opportunity - wait for confirmation',
+                        strength: 'strong'
+                    });
+                }
+                
+                // MACD Alerts
+                const macd = this.calculatedIndicators.macd[currentIndex];
+                const prevMACD = this.calculatedIndicators.macd[currentIndex - 1];
+                
+                if (macd && prevMACD) {
+                    if (macd.macd > macd.signal && prevMACD.macd <= prevMACD.signal) {
+                        alerts.push({
+                            type: 'bullish',
+                            title: 'MACD Bullish Crossover',
+                            message: 'MACD line crossed above signal line',
+                            action: 'Possible uptrend beginning - consider entry',
+                            strength: 'strong'
+                        });
+                    } else if (macd.macd < macd.signal && prevMACD.macd >= prevMACD.signal) {
+                        alerts.push({
+                            type: 'bearish',
+                            title: 'MACD Bearish Crossover',
+                            message: 'MACD line crossed below signal line',
+                            action: 'Possible downtrend beginning - consider risk management',
+                            strength: 'strong'
+                        });
                     }
-                    
-                    // Connect WebSocket for real-time updates
-                    WebSocketManager.connect();
-                } else {
-                    console.error('Failed to fetch initial data');
                 }
-            } catch (error) {
-                console.error('Error initializing app:', error);
+                
+                // Volume Alerts
+                const volumes = this.priceData.map(d => d.volume);
+                const volumeMA = this.calculatedIndicators.volumeSMA[currentIndex];
+                const currentVolume = volumes[currentIndex];
+                
+                if (currentVolume > volumeMA * 2) {
+                    alerts.push({
+                        type: 'info',
+                        title: 'Volume Spike Detected',
+                        message: `Volume ${((currentVolume / volumeMA) * 100).toFixed(0)}% above average`,
+                        action: 'Increased market interest - monitor for breakout',
+                        strength: 'moderate'
+                    });
+                }
+                
+                this.renderAlerts(alerts);
             }
             
-            console.log('Trading Assistant initialized successfully!');
-        }
-
-        // Start the application when DOM is loaded
-        document.addEventListener('DOMContentLoaded', initializeApp);
-
-        // Handle page visibility changes for WebSocket management
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                if (state.websocket) {
-                    state.websocket.close();
+            renderAlerts(alerts) {
+                const container = document.getElementById('alertsList');
+                
+                if (alerts.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            <div class="text-sm">No active alerts</div>
+                            <div class="text-xs mt-1">System monitoring for signals...</div>
+                        </div>
+                    `;
+                    return;
                 }
-            } else {
-                WebSocketManager.connect();
+                
+                container.innerHTML = alerts.map(alert => `
+                    <div class="alert-card glass-card rounded-lg p-3 alert-${alert.type}">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="font-medium text-sm">${alert.title}</div>
+                            <div class="signal-strength signal-${alert.strength} text-xs px-2 py-1 rounded-full">
+                                ${alert.strength.toUpperCase()}
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-300 mb-2">${alert.message}</div>
+                        <div class="text-xs text-gray-400">${alert.action}</div>
+                    </div>
+                `).join('');
             }
-        });
-
-        // Handle window beforeunload
-        window.addEventListener('beforeunload', () => {
-            if (state.websocket) {
-                state.websocket.close();
+            
+            setupWebSocket() {
+                if (this.wsConnection) {
+                    this.wsConnection.close();
+                }
+                
+                const wsUrl = `wss://stream.binance.com:9443/ws/${this.currentSymbol.toLowerCase()}@ticker`;
+                this.wsConnection = new WebSocket(wsUrl);
+                
+                this.wsConnection.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    this.updateRealTimePrice(data);
+                };
+                
+                this.wsConnection.onerror = () => {
+                    console.log('WebSocket error, retrying...');
+                    setTimeout(() => this.setupWebSocket(), 5000);
+                };
+                
+                this.wsConnection.onclose = () => {
+                    console.log('WebSocket closed, retrying...');
+                    setTimeout(() => this.setupWebSocket(), 5000);
+                };
             }
+            
+            updateRealTimePrice(tickerData) {
+                const currentPrice = parseFloat(tickerData.c);
+                const priceChange = parseFloat(tickerData.P);
+                
+                document.getElementById('currentPrice').textContent = `${currentPrice.toFixed(2)}`;
+                
+                const changeElement = document.getElementById('priceChange');
+                const isPositive = priceChange >= 0;
+                changeElement.className = `text-lg ${isPositive ? 'text-green-400' : 'text-red-400'}`;
+                changeElement.textContent = `${isPositive ? '+' : ''}${priceChange.toFixed(2)}%`;
+            }
+            
+            startUpdates() {
+                // Update data every 5 minutes
+                setInterval(() => {
+                    this.loadInitialData();
+                }, 300000);
+                
+                // Update predictions every 2 minutes
+                setInterval(() => {
+                    if (this.priceData.length > 0) {
+                        this.generatePredictions();
+                    }
+                }, 120000);
+                
+                // Update alerts every minute
+                setInterval(() => {
+                    if (this.calculatedIndicators.rsi) {
+                        this.updateAlerts();
+                    }
+                }, 60000);
+            }
+            
+            // Technical Analysis Helper Functions
+            calculateSMA(data, period) {
+                const result = [];
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period - 1) {
+                        result.push(null);
+                    } else {
+                        const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                        result.push(sum / period);
+                    }
+                }
+                return result;
+            }
+            
+            calculateEMA(data, period) {
+                const result = [];
+                const multiplier = 2 / (period + 1);
+                
+                result[0] = data[0];
+                
+                for (let i = 1; i < data.length; i++) {
+                    result[i] = (data[i] * multiplier) + (result[i - 1] * (1 - multiplier));
+                }
+                
+                return result;
+            }
+            
+            calculateRSI(data, period) {
+                const gains = [];
+                const losses = [];
+                
+                for (let i = 1; i < data.length; i++) {
+                    const change = data[i] - data[i - 1];
+                    gains.push(change > 0 ? change : 0);
+                    losses.push(change < 0 ? Math.abs(change) : 0);
+                }
+                
+                const avgGains = this.calculateSMA(gains, period);
+                const avgLosses = this.calculateSMA(losses, period);
+                
+                const rsi = [];
+                for (let i = 0; i < avgGains.length; i++) {
+                    if (avgGains[i] === null || avgLosses[i] === null) {
+                        rsi.push(null);
+                    } else {
+                        const rs = avgGains[i] / (avgLosses[i] || 0.0001);
+                        rsi.push(100 - (100 / (1 + rs)));
+                    }
+                }
+                
+                return rsi;
+            }
+            
+            calculateMACD(data) {
+                const ema12 = this.calculateEMA(data, 12);
+                const ema26 = this.calculateEMA(data, 26);
+                
+                const macdLine = [];
+                for (let i = 0; i < data.length; i++) {
+                    if (ema12[i] && ema26[i]) {
+                        macdLine.push(ema12[i] - ema26[i]);
+                    } else {
+                        macdLine.push(null);
+                    }
+                }
+                
+                const signalLine = this.calculateEMA(macdLine.filter(m => m !== null), 9);
+                
+                // Align signal line with macd line
+                const alignedSignal = [];
+                let signalIndex = 0;
+                for (let i = 0; i < macdLine.length; i++) {
+                    if (macdLine[i] !== null && signalIndex < signalLine.length) {
+                        alignedSignal.push(signalLine[signalIndex]);
+                        signalIndex++;
+                    } else {
+                        alignedSignal.push(null);
+                    }
+                }
+                
+                const result = [];
+                for (let i = 0; i < data.length; i++) {
+                    const macd = macdLine[i];
+                    const signal = alignedSignal[i];
+                    result.push({
+                        macd: macd,
+                        signal: signal,
+                        histogram: (macd && signal) ? macd - signal : null
+                    });
+                }
+                
+                return result;
+            }
+            
+            calculateBollingerBands(data, period, multiplier) {
+                const sma = this.calculateSMA(data, period);
+                const result = [];
+                
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period - 1 || sma[i] === null) {
+                        result.push(null);
+                    } else {
+                        const slice = data.slice(i - period + 1, i + 1);
+                        const mean = sma[i];
+                        const variance = slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period;
+                        const stdDev = Math.sqrt(variance);
+                        
+                        result.push({
+                            upper: mean + (multiplier * stdDev),
+                            middle: mean,
+                            lower: mean - (multiplier * stdDev)
+                        });
+                    }
+                }
+                
+                return result;
+            }
+            
+            calculateStochastic(highs, lows, closes, period) {
+                const result = [];
+                
+                for (let i = 0; i < closes.length; i++) {
+                    if (i < period - 1) {
+                        result.push(null);
+                    } else {
+                        const periodHighs = highs.slice(i - period + 1, i + 1);
+                        const periodLows = lows.slice(i - period + 1, i + 1);
+                        
+                        const highestHigh = Math.max(...periodHighs);
+                        const lowestLow = Math.min(...periodLows);
+                        
+                        const k = ((closes[i] - lowestLow) / (highestHigh - lowestLow)) * 100;
+                        result.push({ k: k, d: null });
+                    }
+                }
+                
+                // Calculate %D (3-period SMA of %K)
+                const kValues = result.map(r => r ? r.k : null);
+                const dValues = this.calculateSMA(kValues.filter(k => k !== null), 3);
+                
+                let dIndex = 0;
+                for (let i = 0; i < result.length; i++) {
+                    if (result[i] && result[i].k !== null && dIndex < dValues.length) {
+                        result[i].d = dValues[dIndex];
+                        dIndex++;
+                    }
+                }
+                
+                return result;
+            }
+            
+            calculateWilliamsR(highs, lows, closes, period) {
+                const result = [];
+                
+                for (let i = 0; i < closes.length; i++) {
+                    if (i < period - 1) {
+                        result.push(null);
+                    } else {
+                        const periodHighs = highs.slice(i - period + 1, i + 1);
+                        const periodLows = lows.slice(i - period + 1, i + 1);
+                        
+                        const highestHigh = Math.max(...periodHighs);
+                        const lowestLow = Math.min(...periodLows);
+                        
+                        const willR = ((highestHigh - closes[i]) / (highestHigh - lowestLow)) * -100;
+                        result.push(willR);
+                    }
+                }
+                
+                return result;
+            }
+            
+            calculateATR(highs, lows, closes, period) {
+                const trueRanges = [];
+                
+                for (let i = 1; i < closes.length; i++) {
+                    const hl = highs[i] - lows[i];
+                    const hc = Math.abs(highs[i] - closes[i - 1]);
+                    const lc = Math.abs(lows[i] - closes[i - 1]);
+                    
+                    trueRanges.push(Math.max(hl, hc, lc));
+                }
+                
+                return this.calculateSMA(trueRanges, period);
+            }
+            
+            calculateCCI(highs, lows, closes, period) {
+                const typicalPrices = [];
+                for (let i = 0; i < closes.length; i++) {
+                    typicalPrices.push((highs[i] + lows[i] + closes[i]) / 3);
+                }
+                
+                const smaTP = this.calculateSMA(typicalPrices, period);
+                const result = [];
+                
+                for (let i = 0; i < closes.length; i++) {
+                    if (i < period - 1 || smaTP[i] === null) {
+                        result.push(null);
+                    } else {
+                        const slice = typicalPrices.slice(i - period + 1, i + 1);
+                        const meanDeviation = slice.reduce((sum, val) => sum + Math.abs(val - smaTP[i]), 0) / period;
+                        const cci = (typicalPrices[i] - smaTP[i]) / (0.015 * meanDeviation);
+                        result.push(cci);
+                    }
+                }
+                
+                return result;
+            }
+            
+            calculateMomentum(data, period) {
+                const result = [];
+                
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period) {
+                        result.push(null);
+                    } else {
+                        result.push((data[i] - data[i - period]) / data[i - period]);
+                    }
+                }
+                
+                return result;
+            }
+            
+            calculateVolatility(data) {
+                if (data.length < 2) return 0;
+                
+                const returns = [];
+                for (let i = 1; i < data.length; i++) {
+                    returns.push((data[i] - data[i - 1]) / data[i - 1]);
+                }
+                
+                const mean = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+                const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) / returns.length;
+                
+                return Math.sqrt(variance);
+            }
+            
+            calculateTrend(data) {
+                const n = Math.min(20, data.length);
+                const recentData = data.slice(-n);
+                const x = recentData.map((_, i) => i);
+                const y = recentData;
+                
+                const sumX = x.reduce((a, b) => a + b, 0);
+                const sumY = y.reduce((a, b) => a + b, 0);
+                const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+                const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
+                
+                const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+                return slope / (sumY / n); // Normalize by average price
+            }
+            
+            calculateSupportResistance() {
+                const highs = this.priceData.map(d => d.high);
+                const lows = this.priceData.map(d => d.low);
+                const recentData = 50;
+                
+                const recentHighs = highs.slice(-recentData);
+                const recentLows = lows.slice(-recentData);
+                
+                // Find resistance (recent highs)
+                const sortedHighs = [...recentHighs].sort((a, b) => b - a);
+                const resistance = sortedHighs.slice(0, 3).reduce((sum, h) => sum + h, 0) / 3;
+                
+                // Find support (recent lows)  
+                const sortedLows = [...recentLows].sort((a, b) => a - b);
+                const support = sortedLows.slice(0, 3).reduce((sum, l) => sum + l, 0) / 3;
+                
+                return { support, resistance };
+            }
+        }
+        
+        // Initialize the trading assistant when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new AdvancedTradingAssistant();
         });
+        
+        // Add some utility functions for enhanced market analysis
+        class MarketUtils {
+            static formatCurrency(amount, decimals = 2) {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }).format(amount);
+            }
+            
+            static formatPercentage(value, decimals = 2) {
+                return `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}%`;
+            }
+            
+            static getSignalStrength(signals) {
+                const bullishCount = signals.filter(s => s === 'bullish').length;
+                const bearishCount = signals.filter(s => s === 'bearish').length;
+                const total = signals.length;
+                
+                if (bullishCount / total > 0.7) return 'strong-bullish';
+                if (bearishCount / total > 0.7) return 'strong-bearish';
+                if (bullishCount > bearishCount) return 'moderate-bullish';
+                if (bearishCount > bullishCount) return 'moderate-bearish';
+                return 'neutral';
+            }
+            
+            static debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+        }
     </script>
 </body>
 </html>
