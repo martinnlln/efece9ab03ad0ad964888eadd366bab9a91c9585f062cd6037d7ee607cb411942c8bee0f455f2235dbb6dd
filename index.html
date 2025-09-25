@@ -847,9 +847,10 @@
         BINANCE_API: 'https://api.binance.com',
         WS_BASE: 'wss://stream.binance.com:9443/ws',
         CORS_PROXIES: [
-            '', // Try direct first
+            'https://corsproxy.io/?', // Most reliable public proxy
             'https://api.allorigins.win/raw?url=',
-            'https://cors-anywhere.herokuapp.com/'
+            'https://cors.2z.workers.dev/?',
+            '' // Try direct last
         ],
         CACHE_TTL: 60000, // 1 minute
         RATE_LIMIT_WEIGHT: 1200,
@@ -941,33 +942,48 @@
     // ================================================================================
     
     async function fetchWithCORS(url, retries = 3) {
-        for (let i = 0; i < retries; i++) {
+        console.log('Fetching:', url);
+        
+        for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+            const proxy = CONFIG.CORS_PROXIES[i];
+            const finalUrl = proxy ? proxy + encodeURIComponent(url) : url;
+            
+            console.log(`Attempt ${i + 1} with proxy:`, proxy || 'direct', finalUrl);
+            
             try {
-                const proxy = CONFIG.CORS_PROXIES[state.corsProxyIndex % CONFIG.CORS_PROXIES.length];
-                const finalUrl = proxy ? proxy + encodeURIComponent(url) : url;
+                const response = await fetch(finalUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
                 
-                const response = await fetch(finalUrl);
+                console.log('Response status:', response.status);
+                
                 if (response.ok) {
-                    return await response.json();
+                    const data = await response.json();
+                    console.log('Data fetched successfully');
+                    return data;
                 }
                 
                 if (response.status === 429) {
                     // Rate limited, wait and retry
+                    console.log('Rate limited, waiting...');
                     await sleep(Math.pow(2, i) * 1000);
                     continue;
                 }
                 
-                // Try next proxy
-                state.corsProxyIndex++;
             } catch (error) {
-                console.error(`Fetch attempt ${i + 1} failed:`, error);
-                if (i < retries - 1) {
-                    state.corsProxyIndex++;
-                    await sleep(Math.pow(2, i) * 1000);
+                console.error(`Fetch attempt ${i + 1} failed:`, error.message);
+                if (i < CONFIG.CORS_PROXIES.length - 1) {
+                    console.log('Trying next proxy...');
+                    await sleep(1000);
                 }
             }
         }
-        throw new Error('Failed to fetch data after retries');
+        
+        // If all proxies fail, throw error
+        throw new Error('Failed to fetch data from all proxies. Please check console for details.');
     }
     
     function getCacheKey(symbol, interval, type) {
@@ -1014,18 +1030,28 @@
             await sleep(5000);
         }
         
-        // Check cache first
-        const cacheKey = getCacheKey(symbol, interval, 'klines');
-        const cached = getFromCache(cacheKey);
-        if (cached && cached.length >= limit) {
-            return cached;
+        // Check cache first if enabled
+        if (document.getElementById('cacheData').checked) {
+            const cacheKey = getCacheKey(symbol, interval, 'klines');
+            const cached = getFromCache(cacheKey);
+            if (cached && cached.length >= limit) {
+                console.log('Using cached data');
+                return cached;
+            }
         }
         
         const url = `${CONFIG.BINANCE_API}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
         
+        console.log('Fetching klines from:', url);
+        
         try {
             const data = await fetchWithCORS(url);
             state.rateLimit.weight += 1;
+            
+            if (!Array.isArray(data)) {
+                console.error('Invalid data format received:', data);
+                throw new Error('Invalid data format from API');
+            }
             
             const candles = data.map(candle => ({
                 time: candle[0],
@@ -1039,11 +1065,20 @@
                 trades: candle[8]
             }));
             
-            saveToCache(cacheKey, candles);
+            console.log(`Fetched ${candles.length} candles`);
+            
+            // Cache if enabled
+            if (document.getElementById('cacheData').checked) {
+                const cacheKey = getCacheKey(symbol, interval, 'klines');
+                saveToCache(cacheKey, candles);
+            }
+            
             return candles;
         } catch (error) {
             console.error('Error fetching klines:', error);
-            showAlert('Failed to fetch market data. Please check your connection.', 'error');
+            showAlert(`Failed to fetch market data: ${error.message}`, 'error');
+            
+            // Return empty array to prevent app crash
             return [];
         }
     }
@@ -2402,3 +2437,585 @@
         // Update chart theme
         if (state.chart) {
             const textColor = state.theme === 'dark' ? '#c9d1d9' : '#24292f';
+            const gridColor = state.theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            
+            state.chart.options.scales.x.grid.color = gridColor;
+            state.chart.options.scales.x.ticks.color = textColor;
+            state.chart.options.scales.y.grid.color = gridColor;
+            state.chart.options.scales.y.ticks.color = textColor;
+            state.chart.update();
+            
+            state.volumeChart.options.scales.y.grid.color = gridColor;
+            state.volumeChart.options.scales.y.ticks.color = textColor;
+            state.volumeChart.update();
+        }
+    }
+    
+    function handleTabSwitch(event) {
+        const tab = event.target;
+        if (!tab.classList.contains('tab')) return;
+        
+        // Update active tab
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(tab.dataset.tab + 'Tab').classList.add('active');
+        
+        // Load analysis if switching to analysis tab
+        if (tab.dataset.tab === 'analysis') {
+            loadAnalysis();
+        }
+    }
+    
+    async function loadAnalysis() {
+        const analysisContent = document.getElementById('analysisContent');
+        
+        if (state.candles.length === 0) {
+            analysisContent.innerHTML = '<p>No data available for analysis</p>';
+            return;
+        }
+        
+        const closes = state.candles.map(c => c.close);
+        const volumes = state.candles.map(c => c.volume);
+        const lastClose = closes[closes.length - 1];
+        const firstClose = closes[0];
+        const priceChange = ((lastClose - firstClose) / firstClose) * 100;
+        
+        // Calculate statistics
+        const avgPrice = closes.reduce((a, b) => a + b, 0) / closes.length;
+        const maxPrice = Math.max(...closes);
+        const minPrice = Math.min(...closes);
+        const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+        const volatility = calculateVolatility(closes);
+        
+        // Trend analysis
+        const trend = analyzeTrend(closes);
+        const support = findSupportResistance(state.candles).support;
+        const resistance = findSupportResistance(state.candles).resistance;
+        
+        analysisContent.innerHTML = `
+            <div style="display: grid; gap: 1rem;">
+                <div>
+                    <h4>Price Analysis</h4>
+                    <div style="display: grid; gap: 0.5rem; font-size: 0.875rem;">
+                        <div>Current Price: ${formatNumber(lastClose, 2)}</div>
+                        <div>Period Change: <span class="${priceChange >= 0 ? 'positive' : 'negative'}">${priceChange.toFixed(2)}%</span></div>
+                        <div>Average Price: ${formatNumber(avgPrice, 2)}</div>
+                        <div>Range: ${formatNumber(minPrice, 2)} - ${formatNumber(maxPrice, 2)}</div>
+                        <div>Volatility: ${volatility.toFixed(2)}%</div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4>Technical Analysis</h4>
+                    <div style="display: grid; gap: 0.5rem; font-size: 0.875rem;">
+                        <div>Trend: <span style="color: ${trend.direction === 'up' ? 'var(--accent-green)' : trend.direction === 'down' ? 'var(--accent-red)' : 'var(--accent-yellow)'}">${trend.description}</span></div>
+                        <div>Support Level: ${formatNumber(support, 2)}</div>
+                        <div>Resistance Level: ${formatNumber(resistance, 2)}</div>
+                        <div>Trend Strength: ${trend.strength.toFixed(0)}%</div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4>Volume Analysis</h4>
+                    <div style="display: grid; gap: 0.5rem; font-size: 0.875rem;">
+                        <div>Current Volume: ${formatNumber(volumes[volumes.length - 1], 0)}</div>
+                        <div>Average Volume: ${formatNumber(avgVolume, 0)}</div>
+                        <div>Volume Trend: ${analyzeVolumeTrend(volumes)}</div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4>Market Sentiment</h4>
+                    <div style="display: grid; gap: 0.5rem; font-size: 0.875rem;">
+                        ${generateMarketSentiment()}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    function calculateVolatility(prices) {
+        const returns = [];
+        for (let i = 1; i < prices.length; i++) {
+            returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
+        }
+        
+        const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+        const variance = returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
+        return Math.sqrt(variance) * 100;
+    }
+    
+    function analyzeTrend(prices) {
+        if (prices.length < 20) {
+            return { direction: 'neutral', strength: 0, description: 'Insufficient data' };
+        }
+        
+        const sma20 = TechnicalIndicators.SMA(prices, 20);
+        const lastSMA = sma20[sma20.length - 1];
+        const prevSMA = sma20[sma20.length - 10];
+        const currentPrice = prices[prices.length - 1];
+        
+        const trendAngle = Math.atan2(lastSMA - prevSMA, 10) * 180 / Math.PI;
+        const strength = Math.min(100, Math.abs(trendAngle) * 10);
+        
+        if (currentPrice > lastSMA && trendAngle > 5) {
+            return { direction: 'up', strength, description: '📈 Strong Uptrend' };
+        } else if (currentPrice > lastSMA && trendAngle > 0) {
+            return { direction: 'up', strength, description: '📈 Uptrend' };
+        } else if (currentPrice < lastSMA && trendAngle < -5) {
+            return { direction: 'down', strength, description: '📉 Strong Downtrend' };
+        } else if (currentPrice < lastSMA && trendAngle < 0) {
+            return { direction: 'down', strength, description: '📉 Downtrend' };
+        } else {
+            return { direction: 'neutral', strength, description: '➡️ Sideways/Consolidation' };
+        }
+    }
+    
+    function findSupportResistance(candles) {
+        const prices = candles.map(c => c.close);
+        const highs = candles.map(c => c.high);
+        const lows = candles.map(c => c.low);
+        
+        // Simple approach: use recent lows for support, highs for resistance
+        const recentLows = lows.slice(-20);
+        const recentHighs = highs.slice(-20);
+        
+        const support = Math.min(...recentLows);
+        const resistance = Math.max(...recentHighs);
+        
+        return { support, resistance };
+    }
+    
+    function analyzeVolumeTrend(volumes) {
+        const recent = volumes.slice(-10);
+        const previous = volumes.slice(-20, -10);
+        
+        const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+        const previousAvg = previous.reduce((a, b) => a + b, 0) / previous.length;
+        
+        const change = ((recentAvg - previousAvg) / previousAvg) * 100;
+        
+        if (change > 20) return '📊 Increasing significantly';
+        if (change > 5) return '📊 Increasing';
+        if (change < -20) return '📊 Decreasing significantly';
+        if (change < -5) return '📊 Decreasing';
+        return '📊 Stable';
+    }
+    
+    function generateMarketSentiment() {
+        if (!state.indicators.rsi || !state.indicators.macd) {
+            return '<div>Calculating sentiment...</div>';
+        }
+        
+        const rsi = state.indicators.rsi[state.indicators.rsi.length - 1];
+        const macdHist = state.indicators.macd.histogram[state.indicators.macd.histogram.length - 1];
+        
+        let sentiment = 'Neutral';
+        let score = 50;
+        
+        if (rsi < 30 && macdHist > 0) {
+            sentiment = 'Strongly Bullish';
+            score = 85;
+        } else if (rsi < 40 || macdHist > 0) {
+            sentiment = 'Bullish';
+            score = 65;
+        } else if (rsi > 70 && macdHist < 0) {
+            sentiment = 'Strongly Bearish';
+            score = 15;
+        } else if (rsi > 60 || macdHist < 0) {
+            sentiment = 'Bearish';
+            score = 35;
+        }
+        
+        return `
+            <div>Overall Sentiment: <strong style="color: ${score > 60 ? 'var(--accent-green)' : score < 40 ? 'var(--accent-red)' : 'var(--accent-yellow)'}">${sentiment}</strong></div>
+            <div>Sentiment Score: ${score}/100</div>
+            <div>RSI Reading: ${rsi.toFixed(1)} ${rsi < 30 ? '(Oversold)' : rsi > 70 ? '(Overbought)' : ''}</div>
+            <div>MACD Signal: ${macdHist > 0 ? '🟢 Bullish' : '🔴 Bearish'}</div>
+        `;
+    }
+    
+    function exportData() {
+        const data = {
+            version: '1.0',
+            timestamp: Date.now(),
+            settings: {
+                theme: state.theme,
+                symbol: state.symbol,
+                interval: state.interval,
+                indicators: Array.from(document.querySelectorAll('.indicator-toggle input:checked')).map(cb => cb.value),
+                modelEpochs: document.getElementById('modelEpochs').value,
+                sequenceLength: document.getElementById('sequenceLength').value,
+                predictionHorizon: document.getElementById('predictionHorizon').value
+            },
+            paperTrading: state.paperTrading,
+            alerts: state.alerts,
+            modelWeights: state.model && state.modelTrained ? 'Model trained but weights export not implemented' : null
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pta-export-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showAlert('Data exported successfully', 'success');
+    }
+    
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                // Restore settings
+                if (data.settings) {
+                    state.theme = data.settings.theme || 'dark';
+                    state.symbol = data.settings.symbol || 'BTCUSDT';
+                    state.interval = data.settings.interval || '15m';
+                    
+                    document.getElementById('symbolSelect').value = state.symbol;
+                    document.getElementById('intervalSelect').value = state.interval;
+                    document.getElementById('modelEpochs').value = data.settings.modelEpochs || 50;
+                    document.getElementById('sequenceLength').value = data.settings.sequenceLength || 20;
+                    document.getElementById('predictionHorizon').value = data.settings.predictionHorizon || '1';
+                    
+                    handleThemeToggle();
+                    
+                    // Restore indicators
+                    if (data.settings.indicators) {
+                        document.querySelectorAll('.indicator-toggle input').forEach(cb => {
+                            cb.checked = data.settings.indicators.includes(cb.value);
+                        });
+                    }
+                }
+                
+                // Restore paper trading
+                if (data.paperTrading) {
+                    state.paperTrading = data.paperTrading;
+                    updatePaperTradingDisplay();
+                }
+                
+                // Restore alerts
+                if (data.alerts) {
+                    state.alerts = data.alerts;
+                    updateAlertsDisplay();
+                }
+                
+                showAlert('Data imported successfully', 'success');
+                
+                // Reload market data
+                loadMarketData();
+                
+            } catch (error) {
+                console.error('Import error:', error);
+                showAlert('Failed to import data', 'error');
+            }
+        };
+        
+        reader.readAsText(file);
+    }
+    
+    async function takeSnapshot() {
+        try {
+            const canvas = document.getElementById('mainChart');
+            const dataURL = canvas.toDataURL('image/png');
+            
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = `chart-${state.symbol}-${Date.now()}.png`;
+            a.click();
+            
+            showAlert('Chart snapshot saved', 'success');
+        } catch (error) {
+            console.error('Snapshot error:', error);
+            showAlert('Failed to take snapshot', 'error');
+        }
+    }
+    
+    // ================================================================================
+    // INITIALIZATION
+    // ================================================================================
+    
+    async function loadMarketData() {
+        try {
+            console.log(`Loading market data for ${state.symbol} ${state.interval}`);
+            
+            // Show loading state
+            document.getElementById('currentPrice').textContent = 'Loading...';
+            
+            // Fetch klines with smaller initial request
+            const candles = await fetchKlines(state.symbol, state.interval, 100);
+            
+            if (!candles || candles.length === 0) {
+                console.error('No candles received');
+                document.getElementById('currentPrice').textContent = 'No data';
+                
+                // Show helpful message
+                showAlert('Unable to fetch data. This is likely a CORS issue. Please install a CORS extension or check the console for details.', 'error');
+                return;
+            }
+            
+            state.candles = candles;
+            console.log(`Loaded ${candles.length} candles`);
+            
+            // Calculate indicators
+            if (candles.length >= 30) {
+                calculateIndicators();
+                generateSignals();
+            }
+            
+            // Update displays
+            updateChart();
+            const lastCandle = candles[candles.length - 1];
+            updatePriceDisplay(lastCandle.close);
+            
+            // Fetch 24hr stats separately
+            try {
+                const stats = await fetch24hrStats(state.symbol);
+                if (stats) {
+                    const priceChangePercent = parseFloat(stats.priceChangePercent);
+                    const volume24h = parseFloat(stats.volume);
+                    
+                    const changeElement = document.getElementById('priceChange');
+                    changeElement.textContent = `${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`;
+                    changeElement.className = priceChangePercent >= 0 ? 'price-change positive' : 'price-change negative';
+                    
+                    document.getElementById('volume24h').textContent = formatNumber(volume24h / 1000000, 1) + 'M';
+                }
+            } catch (error) {
+                console.error('Failed to fetch 24hr stats:', error);
+                // Non-critical, continue
+            }
+            
+            // Make prediction if model is trained
+            if (state.modelTrained) {
+                makePrediction();
+            }
+            
+        } catch (error) {
+            console.error('Error loading market data:', error);
+            document.getElementById('currentPrice').textContent = 'Error';
+            showAlert('Failed to load market data. Check console for details.', 'error');
+        }
+    }
+    
+    function initializeIndicatorsList() {
+        const container = document.getElementById('indicatorsList');
+        container.innerHTML = '';
+        
+        CONFIG.INDICATORS.forEach(indicator => {
+            const div = document.createElement('div');
+            div.className = 'indicator-toggle';
+            div.innerHTML = `
+                <input type="checkbox" id="ind_${indicator.replace(/\s/g, '_')}" value="${indicator}">
+                <label for="ind_${indicator.replace(/\s/g, '_')}">${indicator}</label>
+            `;
+            container.appendChild(div);
+        });
+        
+        // Add event listeners
+        container.querySelectorAll('input').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateChart();
+            });
+        });
+    }
+    
+    function setupEventListeners() {
+        // Market controls
+        document.getElementById('symbolSelect').addEventListener('change', handleSymbolChange);
+        document.getElementById('intervalSelect').addEventListener('change', handleIntervalChange);
+        document.getElementById('themeToggle').addEventListener('click', handleThemeToggle);
+        
+        // Settings
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            document.getElementById('settingsModal').classList.add('active');
+        });
+        
+        document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+            document.getElementById('settingsModal').classList.remove('active');
+        });
+        
+        document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+            localStorage.setItem('pta_settings', JSON.stringify({
+                useWebSocket: document.getElementById('useWebSocket').checked,
+                cacheData: document.getElementById('cacheData').checked,
+                candleHistory: document.getElementById('candleHistory').value,
+                modelEpochs: document.getElementById('modelEpochs').value,
+                sequenceLength: document.getElementById('sequenceLength').value,
+                predictionHorizon: document.getElementById('predictionHorizon').value
+            }));
+            document.getElementById('settingsModal').classList.remove('active');
+            showAlert('Settings saved', 'success');
+        });
+        
+        // Export/Import
+        document.getElementById('exportBtn').addEventListener('click', exportData);
+        document.getElementById('importBtn').addEventListener('click', () => {
+            document.getElementById('importFile').click();
+        });
+        document.getElementById('importFile').addEventListener('change', importData);
+        
+        // Tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', handleTabSwitch);
+        });
+        
+        // Chart controls
+        document.getElementById('snapshotBtn').addEventListener('click', takeSnapshot);
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            const chartSection = document.querySelector('.chart-section');
+            if (chartSection.requestFullscreen) {
+                chartSection.requestFullscreen();
+            }
+        });
+        
+        // Indicators
+        document.getElementById('toggleAllIndicators').addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('.indicator-toggle input');
+            const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !anyChecked);
+            updateChart();
+        });
+        
+        // ML Model
+        document.getElementById('trainModelBtn').addEventListener('click', trainModel);
+        
+        // Paper Trading
+        document.getElementById('buyBtn').addEventListener('click', () => executePaperTrade('buy'));
+        document.getElementById('sellBtn').addEventListener('click', () => executePaperTrade('sell'));
+        
+        // Backtest
+        document.getElementById('runBacktestBtn').addEventListener('click', runBacktest);
+        
+        // Alerts
+        document.getElementById('addAlertBtn').addEventListener('click', addPriceAlert);
+        document.getElementById('alertPrice').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addPriceAlert();
+        });
+        
+        // Close modal on outside click
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'settingsModal') {
+                document.getElementById('settingsModal').classList.remove('active');
+            }
+        });
+        
+        // WebSocket toggle
+        document.getElementById('useWebSocket').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                connectWebSocket(state.symbol, state.interval);
+            } else {
+                if (state.ws) {
+                    state.ws.close();
+                }
+            }
+        });
+    }
+    
+    async function initialize() {
+        console.log('Initializing Personal Trading Assistant...');
+        
+        // Show initialization message
+        document.getElementById('currentPrice').textContent = 'Initializing...';
+        showAlert('Loading market data... This may take a moment on first load.', 'info');
+        
+        // Set theme
+        if (state.theme === 'light') {
+            document.body.className = 'light-theme';
+            document.getElementById('themeToggle').textContent = '☀️';
+        }
+        
+        // Load saved settings
+        const savedSettings = localStorage.getItem('pta_settings');
+        if (savedSettings) {
+            try {
+                const settings = JSON.parse(savedSettings);
+                document.getElementById('useWebSocket').checked = settings.useWebSocket !== false;
+                document.getElementById('cacheData').checked = settings.cacheData !== false;
+                document.getElementById('candleHistory').value = settings.candleHistory || CONFIG.DEFAULT_CANDLES;
+                document.getElementById('modelEpochs').value = settings.modelEpochs || 50;
+                document.getElementById('sequenceLength').value = settings.sequenceLength || 20;
+                document.getElementById('predictionHorizon').value = settings.predictionHorizon || '1';
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+        
+        // Initialize components
+        initializeIndicatorsList();
+        initializeCharts();
+        setupEventListeners();
+        
+        // Test API connection first
+        console.log('Testing API connection...');
+        try {
+            const testUrl = `${CONFIG.BINANCE_API}/api/v3/ping`;
+            await fetchWithCORS(testUrl);
+            console.log('API connection successful');
+        } catch (error) {
+            console.error('API connection test failed:', error);
+            showAlert('Having trouble connecting to Binance API. Trying alternative methods...', 'warning');
+        }
+        
+        // Load initial data
+        console.log('Loading market data...');
+        try {
+            await loadMarketData();
+            showAlert('Market data loaded successfully!', 'success');
+        } catch (error) {
+            console.error('Failed to load initial market data:', error);
+            showAlert('Failed to load market data. Check console for details. You may need to use a CORS extension.', 'error');
+            
+            // Show manual instructions
+            document.getElementById('currentPrice').innerHTML = `
+                <div style="font-size: 0.8rem; color: var(--accent-yellow);">
+                    CORS Issue Detected<br>
+                    <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" 
+                       target="_blank" style="color: var(--accent-blue);">
+                       Install CORS Extension
+                    </a>
+                </div>
+            `;
+        }
+        
+        // Connect WebSocket if enabled
+        if (document.getElementById('useWebSocket').checked) {
+            console.log('Connecting WebSocket...');
+            connectWebSocket(state.symbol, state.interval);
+        }
+        
+        // Set up auto-refresh with longer interval for GitHub Pages
+        setInterval(async () => {
+            if (!document.getElementById('useWebSocket').checked) {
+                console.log('Auto-refreshing data...');
+                try {
+                    await loadMarketData();
+                } catch (error) {
+                    console.error('Auto-refresh failed:', error);
+                }
+            }
+        }, 120000); // Refresh every 2 minutes
+        
+        console.log('Personal Trading Assistant initialized');
+    }
+    
+    // Start the application
+    document.addEventListener('DOMContentLoaded', initialize);
+    
+    // Export functions for global access (needed for inline onclick handlers)
+    window.removeAlert = removeAlert;
+    </script>
+</body>
+</html>
