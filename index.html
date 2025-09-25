@@ -1683,23 +1683,35 @@
                 container.innerHTML = indicatorCards;
             }
 
-            async updateMLPredictions() {
-                if (!this.mlModels.size || this.priceHistory.length < 60) return;
-                
-                try {
-                    // Prepare different input formats for different models
-                return {
-                    transformer: tf.tensor2d([normalizedPrices], [1, 60]),
-                    lstm: tf.tensor3d([normalizedPrices.map((price, i) => [
-                        price,
-                        normalizedVolumes[i],
-                        this.calculateRSI(prices.slice(0, i + 14)) || 0,
-                        this.calculateSMA(prices.slice(0, i + 20), 20) || price,
-                        this.calculateEMA(prices.slice(0, i + 12), 12) || price
-                    ])], [1, 60, 5]),
-                    features: tf.tensor2d([this.extractFeatures(prices, volumes)], [1, 200])
-                };
-            }
+        async updateMLPredictions() {
+    if (!this.mlModels.size || this.priceHistory.length < 60) return;
+
+    try {
+        const prices = this.priceHistory.map(p => p.price);
+        const volumes = this.priceHistory.map(p => p.volume || 1);
+
+        const normalizedPrices = this.normalizeArray(prices);
+        const normalizedVolumes = this.normalizeArray(volumes);
+
+        return {
+            transformer: tf.tensor2d([normalizedPrices.slice(-60)], [1, 60]),
+            lstm: tf.tensor3d([
+                normalizedPrices.slice(-60).map((price, i) => [
+                    price,
+                    normalizedVolumes[i] || 0,
+                    this.calculateRSI(prices.slice(0, i + 14)) || 0,
+                    this.calculateSMA(prices.slice(0, i + 20), 20) || price,
+                    this.calculateEMA(prices.slice(0, i + 12), 12) || price
+                ])
+            ], [1, 60, 5]),
+            features: tf.tensor2d([this.extractFeatures(prices, volumes)], [1, 200])
+        };
+    } catch (error) {
+        console.error("ML prediction update failed:", error);
+        return null;
+    }
+}
+
 
             extractFeatures(prices, volumes) {
                 const features = [];
