@@ -931,8 +931,33 @@
             ws: null,
             allSymbols: [],
             watchlist: ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT'],
-            scannerData: []
+            scannerData: [],
+            symbolsLoaded: false
         };
+        
+        // FALLBACK: Popular symbols if API fails
+        const POPULAR_SYMBOLS = [
+            { symbol: 'BTCUSDT', base: 'BTC' },
+            { symbol: 'ETHUSDT', base: 'ETH' },
+            { symbol: 'BNBUSDT', base: 'BNB' },
+            { symbol: 'SOLUSDT', base: 'SOL' },
+            { symbol: 'XRPUSDT', base: 'XRP' },
+            { symbol: 'ADAUSDT', base: 'ADA' },
+            { symbol: 'DOGEUSDT', base: 'DOGE' },
+            { symbol: 'MATICUSDT', base: 'MATIC' },
+            { symbol: 'DOTUSDT', base: 'DOT' },
+            { symbol: 'AVAXUSDT', base: 'AVAX' },
+            { symbol: 'LINKUSDT', base: 'LINK' },
+            { symbol: 'ATOMUSDT', base: 'ATOM' },
+            { symbol: 'UNIUSDT', base: 'UNI' },
+            { symbol: 'LTCUSDT', base: 'LTC' },
+            { symbol: 'NEARUSDT', base: 'NEAR' },
+            { symbol: 'APTUSDT', base: 'APT' },
+            { symbol: 'ARBUSDT', base: 'ARB' },
+            { symbol: 'OPUSDT', base: 'OP' },
+            { symbol: 'ICPUSDT', base: 'ICP' },
+            { symbol: 'FILUSDT', base: 'FIL' }
+        ];
 
         // ==================== API LAYER ====================
         class API {
@@ -1854,36 +1879,82 @@
         document.getElementById('searchInput').addEventListener('input', async (e) => {
             clearTimeout(searchTO);
             const q = e.target.value.toUpperCase();
+            
             if (q.length < 1) {
                 document.getElementById('searchResults').classList.remove('active');
                 return;
             }
+            
+            // Show loading immediately
+            document.getElementById('searchResults').innerHTML = '<div style="padding:20px;text-align:center;color:#9CA3AF;">🔍 Searching...</div>';
+            document.getElementById('searchResults').classList.add('active');
+            
             searchTO = setTimeout(async () => {
-                if (QT.allSymbols.length === 0) QT.allSymbols = await API.fetchSymbols();
-                const res = QT.allSymbols.filter(s => s.base.includes(q) || s.symbol.includes(q)).slice(0, 20);
-                const ticks = await API.fetch24h();
-                const html = res.map(s => {
-                    const t = ticks.find(x => x.symbol === s.symbol);
-                    const chg = t ? parseFloat(t.priceChangePercent) : 0;
-                    return `
-                        <div class="search-item" data-symbol="${s.symbol}">
-                            <div><strong>${s.base}/USDT</strong></div>
-                            <div style="font-size:11px;font-weight:700;color:${chg >= 0 ? '#10B981' : '#EF4444'}">
-                                ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+                try {
+                    // Fetch symbols if not cached
+                    if (QT.allSymbols.length === 0) {
+                        console.log('Fetching all symbols from Binance...');
+                        QT.allSymbols = await API.fetchSymbols();
+                        console.log(`Loaded ${QT.allSymbols.length} symbols`);
+                    }
+                    
+                    // Filter results
+                    const res = QT.allSymbols.filter(s => 
+                        s.base.includes(q) || s.symbol.includes(q)
+                    ).slice(0, 20);
+                    
+                    console.log(`Found ${res.length} matches for "${q}"`);
+                    
+                    if (res.length === 0) {
+                        document.getElementById('searchResults').innerHTML = '<div style="padding:20px;text-align:center;color:#9CA3AF;">No symbols found</div>';
+                        return;
+                    }
+                    
+                    // Get price data
+                    const ticks = await API.fetch24h();
+                    
+                    // Generate HTML
+                    const html = res.map(s => {
+                        const t = ticks.find(x => x.symbol === s.symbol);
+                        const chg = t ? parseFloat(t.priceChangePercent) : 0;
+                        const price = t ? parseFloat(t.lastPrice) : 0;
+                        
+                        return `
+                            <div class="search-item" data-symbol="${s.symbol}">
+                                <div>
+                                    <strong>${s.base}/USDT</strong>
+                                    ${price > 0 ? `<div style="font-size:10px;color:#6B7280;">${price < 1 ? price.toFixed(6) : price.toFixed(2)}</div>` : ''}
+                                </div>
+                                <div style="font-size:11px;font-weight:700;color:${chg >= 0 ? '#10B981' : '#EF4444'}">
+                                    ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+                                </div>
                             </div>
+                        `;
+                    }).join('');
+                    
+                    document.getElementById('searchResults').innerHTML = html;
+                    document.getElementById('searchResults').classList.add('active');
+                    
+                    // Add click handlers
+                    document.querySelectorAll('.search-item').forEach(el => {
+                        el.addEventListener('click', () => {
+                            QT.symbol = el.dataset.symbol;
+                            document.getElementById('searchInput').value = el.dataset.symbol;
+                            document.getElementById('searchResults').classList.remove('active');
+                            loadData(QT.symbol, QT.timeframe);
+                        });
+                    });
+                    
+                } catch (error) {
+                    console.error('Search error:', error);
+                    document.getElementById('searchResults').innerHTML = `
+                        <div style="padding:20px;text-align:center;color:#EF4444;">
+                            ❌ Error loading symbols<br>
+                            <span style="font-size:11px;color:#9CA3AF;">${error.message}</span><br>
+                            <button onclick="location.reload()" style="margin-top:10px;padding:6px 12px;background:#6366F1;border:none;border-radius:6px;color:#fff;cursor:pointer;">Retry</button>
                         </div>
                     `;
-                }).join('');
-                document.getElementById('searchResults').innerHTML = html;
-                document.getElementById('searchResults').classList.add('active');
-                document.querySelectorAll('.search-item').forEach(el => {
-                    el.addEventListener('click', () => {
-                        QT.symbol = el.dataset.symbol;
-                        document.getElementById('searchInput').value = el.dataset.symbol;
-                        document.getElementById('searchResults').classList.remove('active');
-                        loadData(QT.symbol, QT.timeframe);
-                    });
-                });
+                }
             }, 300);
         });
 
@@ -1925,8 +1996,33 @@
         // ==================== INIT ====================
         window.addEventListener('DOMContentLoaded', () => {
             console.log('%c⚡ QUANTUM TERMINAL PRO INITIALIZED', 'color:#6366F1;font-size:16px;font-weight:bold;');
+            
+            // Initialize chart
             UI.initChart();
+            
+            // Load markets
             UI.loadMarkets();
+            
+            // Preload symbols in background
+            console.log('🔄 Preloading symbols...');
+            document.getElementById('searchInput').placeholder = '⏳ Loading symbols...';
+            
+            API.fetchSymbols()
+                .then(symbols => {
+                    QT.allSymbols = symbols;
+                    QT.symbolsLoaded = true;
+                    console.log(`✅ Preloaded ${symbols.length} symbols - Search ready!`);
+                    document.getElementById('searchInput').placeholder = '🔍 Search any market (BTC, ETH, AAPL, TSLA)...';
+                })
+                .catch(error => {
+                    console.warn('⚠️ Symbol preload failed, using popular list:', error.message);
+                    QT.allSymbols = POPULAR_SYMBOLS;
+                    QT.symbolsLoaded = true;
+                    console.log(`✅ Loaded ${POPULAR_SYMBOLS.length} popular symbols as fallback`);
+                    document.getElementById('searchInput').placeholder = '🔍 Search popular symbols (BTC, ETH, SOL)...';
+                });
+            
+            // Load initial data
             setTimeout(() => loadData(QT.symbol, QT.timeframe), 500);
         });
     </script>
