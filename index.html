@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ QUANTUM TERMINAL PRO - Neural Trading AI</title>
+    <title>⚡ QUANTUM TERMINAL PRO V3.0 - Real-Time | 30+ Indicators | Multi-Timeframe</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
@@ -18,7 +18,7 @@
             --bg-primary: #0a0e1a;
             --bg-secondary: #0f172a;
             --bg-tertiary: #1e293b;
-            --bg-card: rgba(30, 41, 59, 0.8);
+            --bg-card: rgba(30, 41, 59, 0.9);
             --border: rgba(148, 163, 184, 0.1);
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
@@ -27,11 +27,14 @@
             --success: #10b981;
             --danger: #ef4444;
             --warning: #f59e0b;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --cyan: #06b6d4;
         }
         
         body {
             font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--bg-primary);
+            background: linear-gradient(135deg, #0a0e1a 0%, #0f172a 100%);
             color: var(--text-primary);
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
@@ -41,7 +44,7 @@
         
         .header {
             position: sticky; top: 0; z-index: 1000;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(15, 23, 42, 0.98);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
             padding: 12px 16px;
@@ -54,10 +57,36 @@
         
         .logo {
             font-size: 18px; font-weight: 900;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             white-space: nowrap;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .live-indicator {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 12px; border-radius: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            font-size: 11px; font-weight: 700;
+            color: var(--success);
+        }
+        
+        .live-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--success);
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
         
         .search-wrapper { position: relative; flex: 1; max-width: 400px; }
@@ -74,62 +103,32 @@
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
         }
         
-        .search-icon {
-            position: absolute; left: 14px; top: 50%;
-            transform: translateY(-50%); color: var(--text-secondary);
-            pointer-events: none;
-        }
-        
-        .search-results {
-            position: absolute; top: calc(100% + 8px);
-            left: 0; right: 0; background: var(--bg-secondary);
-            border: 1px solid var(--border); border-radius: 12px;
-            max-height: 400px; overflow-y: auto; z-index: 9999;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            opacity: 0; transform: translateY(-10px);
-            pointer-events: none; transition: all 0.3s;
-        }
-        
-        .search-results.active { opacity: 1; transform: translateY(0); pointer-events: all; }
-        
-        .search-item {
-            padding: 14px 16px; cursor: pointer;
-            border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between;
-            align-items: center; transition: background 0.2s;
-        }
-        
-        .search-item:hover { background: rgba(59, 130, 246, 0.1); }
-        
-        .price-display {
-            display: flex; flex-direction: column;
-            align-items: flex-end; gap: 2px;
-        }
-        
-        .price-main { font-size: 18px; font-weight: 800; white-space: nowrap; }
-        .price-change { font-size: 12px; font-weight: 700; }
-        
-        .up { color: var(--success); }
-        .down { color: var(--danger); }
-        
         .main-content {
             display: grid; grid-template-columns: 1fr;
             gap: 16px; padding: 16px;
             max-width: 1920px; margin: 0 auto; width: 100%;
         }
         
+        .control-bar {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px; padding: 12px;
+            display: flex; gap: 8px; flex-wrap: wrap;
+            align-items: center;
+        }
+        
         .tf-selector {
-            display: flex; gap: 6px; overflow-x: auto;
+            display: flex; gap: 4px;
             padding: 4px; background: var(--bg-secondary);
-            border-radius: 12px; margin-bottom: 16px;
-            -webkit-overflow-scrolling: touch;
+            border-radius: 10px;
         }
         
         .tf-btn {
             background: transparent; border: none;
             color: var(--text-secondary);
-            padding: 8px 16px; border-radius: 8px;
-            cursor: pointer; font-size: 13px;
+            padding: 6px 12px; border-radius: 6px;
+            cursor: pointer; font-size: 12px;
             font-weight: 700; white-space: nowrap;
             transition: all 0.2s;
         }
@@ -138,18 +137,72 @@
             background: var(--accent); color: white;
         }
         
-        .signal-card {
+        .divider {
+            width: 1px; height: 24px;
+            background: var(--border);
+            margin: 0 8px;
+        }
+        
+        .indicator-toggles {
+            display: flex; gap: 6px; flex-wrap: wrap;
+        }
+        
+        .toggle-btn {
+            padding: 6px 10px; border-radius: 8px;
+            font-size: 11px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+        
+        .toggle-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .toggle-btn.ma { --color: #3b82f6; }
+        .toggle-btn.bb { --color: #8b5cf6; }
+        .toggle-btn.ichimoku { --color: #ec4899; }
+        .toggle-btn.volume { --color: #10b981; }
+        .toggle-btn.patterns { --color: #f59e0b; }
+        
+        .toggle-btn.active.ma { background: #3b82f6; border-color: #3b82f6; }
+        .toggle-btn.active.bb { background: #8b5cf6; border-color: #8b5cf6; }
+        .toggle-btn.active.ichimoku { background: #ec4899; border-color: #ec4899; }
+        .toggle-btn.active.volume { background: #10b981; border-color: #10b981; }
+        .toggle-btn.active.patterns { background: #f59e0b; border-color: #f59e0b; }
+        
+        .signal-zone {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.05));
-            border: 2px solid rgba(59, 130, 246, 0.2);
+            border: 2px solid rgba(59, 130, 246, 0.3);
             border-radius: 16px; padding: 20px;
             position: relative; overflow: hidden;
         }
         
+        .signal-header {
+            display: grid; grid-template-columns: 1fr auto 1fr;
+            gap: 20px; align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .signal-section {
+            background: var(--bg-tertiary);
+            border-radius: 12px; padding: 16px;
+        }
+        
+        .signal-title {
+            font-size: 11px; font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
         .signal-badge {
             display: inline-flex; align-items: center;
-            gap: 10px; padding: 12px 20px;
-            border-radius: 12px; font-weight: 900;
-            font-size: 18px; margin-bottom: 16px;
+            gap: 8px; padding: 10px 16px;
+            border-radius: 10px; font-weight: 900;
+            font-size: 16px;
         }
         
         .signal-strong-buy { background: linear-gradient(135deg, #10b981, #059669); }
@@ -157,10 +210,26 @@
         .signal-hold { background: linear-gradient(135deg, #f59e0b, #d97706); }
         .signal-sell { background: linear-gradient(135deg, #f87171, #ef4444); }
         .signal-strong-sell { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .signal-conflict { 
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            animation: conflictPulse 2s infinite;
+        }
+        
+        @keyframes conflictPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(139, 92, 246, 0.5); }
+            50% { opacity: 0.9; box-shadow: 0 0 40px rgba(236, 72, 153, 0.5); }
+        }
+        
+        .vs-indicator {
+            font-size: 24px; font-weight: 900;
+            color: var(--warning);
+            text-align: center;
+            animation: pulse 1s infinite;
+        }
         
         .confidence-bar {
-            height: 8px; background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px; overflow: hidden; margin-top: 8px;
+            height: 6px; background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px; overflow: hidden; margin-top: 6px;
         }
         
         .confidence-fill {
@@ -169,164 +238,90 @@
             transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
+        .reconciliation-box {
+            background: rgba(139, 92, 246, 0.1);
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px; padding: 16px;
+            margin-top: 16px;
+        }
+        
+        .reconciliation-title {
+            font-size: 14px; font-weight: 800;
+            color: var(--purple);
+            margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        
         .chart-container {
             background: var(--bg-card);
             backdrop-filter: blur(20px);
             border: 1px solid var(--border);
             border-radius: 16px; padding: 16px;
-            height: 500px; position: relative;
+            height: 600px; position: relative;
         }
         
         #chartElement { width: 100%; height: 100%; }
         
-        .tabs {
-            display: flex; gap: 8px; overflow-x: auto;
-            padding: 4px; background: var(--bg-secondary);
-            border-radius: 12px; margin-bottom: 16px;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .tab {
-            background: transparent; border: none;
-            color: var(--text-secondary);
-            padding: 10px 16px; border-radius: 8px;
-            cursor: pointer; font-size: 13px;
-            font-weight: 700; white-space: nowrap;
-            transition: all 0.2s;
-        }
-        
-        .tab:hover, .tab.active {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--text-primary);
-        }
-        
-        .tab-panel { display: none; }
-        .tab-panel.active {
-            display: block;
-            animation: fadeIn 0.3s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .card {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 16px; padding: 16px;
-        }
-        
-        .card-title {
-            font-size: 16px; font-weight: 700;
-            margin-bottom: 16px; color: var(--text-primary);
-        }
-        
-        .indicator-item {
-            background: var(--bg-tertiary);
-            border-left: 3px solid transparent;
-            border-radius: 10px; padding: 12px;
-            margin-bottom: 10px;
-        }
-        
-        .indicator-item.bullish { border-left-color: var(--success); }
-        .indicator-item.bearish { border-left-color: var(--danger); }
-        .indicator-item.neutral { border-left-color: var(--text-secondary); }
-        
-        .indicator-header {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 6px;
-        }
-        
-        .indicator-name { font-weight: 700; font-size: 13px; }
-        
-        .indicator-badge {
-            font-size: 10px; padding: 4px 8px;
-            border-radius: 6px; font-weight: 700;
-        }
-        
-        .badge-buy { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-        .badge-sell { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-        .badge-neutral { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
-        
-        .indicator-value { font-size: 12px; color: var(--text-secondary); }
-        
-        .explanation-box {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 10px; padding: 14px;
-            margin-top: 12px; font-size: 13px;
-            line-height: 1.6;
-        }
-        
-        .metrics-grid {
+        .indicators-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 12px;
         }
         
-        .metric-box {
-            background: var(--bg-tertiary);
-            padding: 14px; border-radius: 12px;
-            transition: transform 0.2s;
-        }
-        
-        .metric-box:hover { transform: translateY(-2px); }
-        
-        .metric-label {
-            font-size: 11px; color: var(--text-secondary);
-            margin-bottom: 6px; font-weight: 600;
-        }
-        
-        .metric-value { font-size: 18px; font-weight: 800; }
-        
-        .market-item {
-            background: var(--bg-tertiary);
-            border-radius: 12px; padding: 12px;
-            margin-bottom: 8px; cursor: pointer;
+        .indicator-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px;
             transition: all 0.2s;
         }
         
-        .market-item:hover {
-            background: rgba(59, 130, 246, 0.1);
-            transform: translateX(4px);
+        .indicator-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
         }
         
-        .market-header {
+        .indicator-header {
             display: flex; justify-content: space-between;
-            align-items: center;
+            align-items: center; margin-bottom: 8px;
         }
         
-        .market-symbol { font-weight: 800; font-size: 14px; }
-        .market-price { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-        .market-change { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
-        
-        .loading-overlay {
-            position: fixed; inset: 0;
-            background: rgba(10, 14, 26, 0.95);
-            backdrop-filter: blur(10px);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            z-index: 10000; opacity: 0;
-            pointer-events: none; transition: opacity 0.3s;
+        .indicator-name {
+            font-size: 12px; font-weight: 700;
+            color: var(--text-primary);
         }
         
-        .loading-overlay.active { opacity: 1; pointer-events: all; }
-        
-        .spinner {
-            width: 60px; height: 60px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .indicator-value {
+            font-size: 16px; font-weight: 800;
         }
         
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .indicator-signal {
+            padding: 4px 8px; border-radius: 6px;
+            font-size: 10px; font-weight: 700;
+        }
         
-        .loading-text {
-            margin-top: 20px; color: var(--text-secondary);
-            font-size: 14px; font-weight: 600;
+        .sig-buy { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .sig-sell { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .sig-neutral { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+        
+        .update-timer {
+            position: fixed; bottom: 20px; right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px 16px;
+            font-size: 12px; font-weight: 700;
+            display: flex; align-items: center; gap: 8px;
+            z-index: 1000;
+        }
+        
+        .timer-bar {
+            width: 100px; height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px; overflow: hidden;
+        }
+        
+        .timer-fill {
+            height: 100%; background: var(--accent);
+            transition: width 1s linear;
         }
         
         .notification {
@@ -338,69 +333,18 @@
             z-index: 10001; opacity: 0;
             transform: translateX(400px);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            max-width: 90vw;
+            max-width: 400px;
         }
         
         .notification.show { opacity: 1; transform: translateX(0); }
         
+        .notification.alert {
+            border-color: var(--warning);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+        }
+        
         .notif-title { font-weight: 800; font-size: 14px; margin-bottom: 4px; }
         .notif-body { font-size: 12px; color: var(--text-secondary); }
-        
-        .prediction-box {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.05));
-            border: 2px solid rgba(139, 92, 246, 0.3);
-            border-radius: 12px; padding: 16px; margin-top: 12px;
-        }
-        
-        .prediction-row {
-            display: flex; justify-content: space-between;
-            align-items: center; padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        
-        .prediction-row:last-child { border-bottom: none; }
-        
-        .prediction-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
-        .prediction-value { font-size: 14px; font-weight: 800; }
-        
-        .pattern-badge {
-            display: inline-block; padding: 6px 12px;
-            border-radius: 8px; font-size: 11px;
-            font-weight: 700; margin: 4px;
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--accent-light);
-        }
-        
-        .pattern-bullish { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-        .pattern-bearish { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-        
-        .breakdown-section {
-            background: var(--bg-tertiary);
-            border-radius: 10px; padding: 14px;
-            margin-bottom: 12px;
-        }
-        
-        .breakdown-title {
-            font-weight: 700; font-size: 13px;
-            color: var(--accent-light);
-            margin-bottom: 10px;
-        }
-        
-        .breakdown-item {
-            display: flex; justify-content: space-between;
-            align-items: center; padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 12px;
-        }
-        
-        .breakdown-item:last-child { border-bottom: none; }
-        
-        .breakdown-weight {
-            font-weight: 800;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 11px;
-        }
         
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
@@ -408,193 +352,144 @@
         
         @media (min-width: 1024px) {
             .main-content {
-                grid-template-columns: 300px 1fr 360px;
-                grid-template-rows: auto 1fr;
+                grid-template-columns: 1fr;
             }
-            .tf-selector { grid-column: 2; }
-            .left-panel { grid-column: 1; grid-row: 1 / -1; }
-            .center-panel { grid-column: 2; grid-row: 2; }
-            .right-panel { grid-column: 3; grid-row: 1 / -1; }
-            .chart-container { height: calc(100vh - 220px); }
-        }
-        
-        @media (max-width: 767px) {
-            .logo { font-size: 14px; }
-            .price-display { display: none; }
-            .chart-container { height: 350px; }
         }
     </style>
 </head>
 <body>
-    
     <div id="notificationArea"></div>
     
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-        <div class="loading-text" id="loadingText">Initializing Neural Networks...</div>
+    <div class="update-timer">
+        <span>Next update</span>
+        <div class="timer-bar">
+            <div class="timer-fill" id="timerFill"></div>
+        </div>
+        <span id="timerText">10s</span>
     </div>
     
     <div class="app-container">
         <div class="header">
             <div class="header-content">
-                <div class="logo">⚡ QUANTUM PRO</div>
+                <div class="logo">⚡ QUANTUM V3</div>
+                <div class="live-indicator">
+                    <div class="live-dot"></div>
+                    LIVE
+                </div>
                 <div class="search-wrapper">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="searchInput" class="search-input" 
-                           placeholder="Search markets..." autocomplete="off"/>
-                    <div id="searchResults" class="search-results"></div>
+                           placeholder="Search crypto..." value="BTCUSDT"/>
                 </div>
-                <div class="price-display">
-                    <div class="price-main" id="currentPrice">--</div>
-                    <div class="price-change up" id="priceChange">+0.00%</div>
-                </div>
+                <button id="pauseBtn" class="toggle-btn" style="margin-left: auto;">
+                    ⏸️ PAUSE
+                </button>
             </div>
         </div>
         
         <div class="main-content">
-            <div class="tf-selector">
-                <button class="tf-btn" data-tf="1">1m</button>
-                <button class="tf-btn" data-tf="3">3m</button>
-                <button class="tf-btn" data-tf="5">5m</button>
-                <button class="tf-btn" data-tf="15">15m</button>
-                <button class="tf-btn" data-tf="30">30m</button>
-                <button class="tf-btn" data-tf="60">1H</button>
-                <button class="tf-btn" data-tf="240">4H</button>
-                <button class="tf-btn active" data-tf="D">1D</button>
-            </div>
-            
-            <div class="left-panel">
-                <div class="card">
-                    <div class="card-title">📊 Markets</div>
-                    <div id="marketsList"></div>
+            <div class="control-bar">
+                <div class="tf-selector">
+                    <button class="tf-btn" data-tf="1">1m</button>
+                    <button class="tf-btn" data-tf="5">5m</button>
+                    <button class="tf-btn" data-tf="15">15m</button>
+                    <button class="tf-btn" data-tf="30">30m</button>
+                    <button class="tf-btn" data-tf="60">1H</button>
+                    <button class="tf-btn" data-tf="240">4H</button>
+                    <button class="tf-btn active" data-tf="D">1D</button>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <div class="indicator-toggles">
+                    <button class="toggle-btn ma active" data-ind="ma">MA(9,20,50,200)</button>
+                    <button class="toggle-btn bb" data-ind="bb">Bollinger</button>
+                    <button class="toggle-btn ichimoku" data-ind="ichimoku">Ichimoku</button>
+                    <button class="toggle-btn volume active" data-ind="volume">Volume</button>
+                    <button class="toggle-btn patterns" data-ind="patterns">Patterns</button>
                 </div>
             </div>
             
-            <div class="center-panel">
-                <div class="signal-card">
-                    <div class="signal-badge signal-hold" id="signalBadge">
-                        <span id="signalEmoji">⏸️</span>
-                        <span id="signalText">ANALYZING</span>
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">
-                        AI Confidence: <span id="confidenceText" style="font-weight: 700;">--%</span>
-                    </div>
-                    <div class="confidence-bar">
-                        <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
-                    </div>
-                    
-                    <div class="explanation-box" id="signalExplanation">
-                        Analyzing market conditions...
+            <div class="signal-zone">
+                <div class="signal-header">
+                    <div class="signal-section">
+                        <div class="signal-title">📊 TECHNICAL ANALYSIS</div>
+                        <div class="signal-badge signal-hold" id="techSignal">
+                            <span>ANALYZING...</span>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                            Confidence: <span id="techConfidence" style="font-weight: 700;">--%</span>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="techConfFill" style="width: 0%"></div>
+                        </div>
                     </div>
                     
-                    <div class="prediction-box" id="predictionBox" style="display:none;">
-                        <div style="font-size: 13px; font-weight: 800; margin-bottom: 12px; color: var(--accent-light);">
-                            🤖 LSTM Neural Network Prediction
+                    <div class="vs-indicator">VS</div>
+                    
+                    <div class="signal-section">
+                        <div class="signal-title">🤖 NEURAL NETWORK</div>
+                        <div class="signal-badge signal-hold" id="mlSignal">
+                            <span>TRAINING...</span>
                         </div>
-                        <div class="prediction-row">
-                            <span class="prediction-label">Next Period Target:</span>
-                            <span class="prediction-value" id="mlTarget">--</span>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                            Confidence: <span id="mlConfidence" style="font-weight: 700;">--%</span>
                         </div>
-                        <div class="prediction-row">
-                            <span class="prediction-label">Expected Move:</span>
-                            <span class="prediction-value" id="mlMove">--</span>
-                        </div>
-                        <div class="prediction-row">
-                            <span class="prediction-label">Model Confidence:</span>
-                            <span class="prediction-value" id="mlAccuracy">--</span>
-                        </div>
-                        <div class="prediction-row">
-                            <span class="prediction-label">Training Loss:</span>
-                            <span class="prediction-value" id="mlLoss">--</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="mlConfFill" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="chart-container">
-                    <div id="chartElement"></div>
-                </div>
-                
-                <div class="card" style="margin-top: 16px;">
-                    <div class="card-title">📈 Advanced Metrics</div>
-                    <div class="metrics-grid" id="metricsGrid"></div>
+                <div class="reconciliation-box" id="reconciliationBox" style="display: none;">
+                    <div class="reconciliation-title">
+                        <span>⚠️</span>
+                        <span>CONFLICT DETECTED - INTELLIGENT RESOLUTION</span>
+                    </div>
+                    <div id="reconciliationContent" style="font-size: 13px; line-height: 1.6;"></div>
+                    <div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <strong style="color: var(--warning);">RECOMMENDED ACTION:</strong>
+                        <div id="recommendedAction" style="margin-top: 8px; font-weight: 700; font-size: 14px;"></div>
+                    </div>
                 </div>
             </div>
             
-            <div class="right-panel">
-                <div class="card">
-                    <div class="tabs">
-                        <button class="tab active" data-tab="breakdown">Breakdown</button>
-                        <button class="tab" data-tab="indicators">Indicators</button>
-                        <button class="tab" data-tab="ai">AI Models</button>
-                        <button class="tab" data-tab="patterns">Patterns</button>
-                    </div>
-                    
-                    <div id="breakdownTab" class="tab-panel active">
-                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-                            Signal breakdown with weighting
-                        </div>
-                        <div id="breakdownContent"></div>
-                    </div>
-                    
-                    <div id="indicatorsTab" class="tab-panel">
-                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-                            12 technical indicators analyzed
-                        </div>
-                        <div id="indicatorsList"></div>
-                    </div>
-                    
-                    <div id="aiTab" class="tab-panel">
-                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-                            5 specialized AI models
-                        </div>
-                        <div id="aiModelsList"></div>
-                    </div>
-                    
-                    <div id="patternsTab" class="tab-panel">
-                        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-                            Chart pattern detection
-                        </div>
-                        <div id="patternsList"></div>
-                    </div>
-                </div>
+            <div class="chart-container">
+                <div id="chartElement"></div>
             </div>
+            
+            <div class="indicators-grid" id="indicatorsGrid"></div>
         </div>
     </div>
 
     <script>
-        console.log('%c⚡ QUANTUM TERMINAL PRO v2.0', 'color:#3b82f6;font-size:24px;font-weight:bold;');
-        console.log('%cNeural Networks | 12 Indicators | 5 AI Models | Pattern Recognition', 'color:#8b5cf6;font-size:12px;');
+        console.log('%c⚡ QUANTUM TERMINAL V3.0', 'color:#8b5cf6;font-size:24px;font-weight:bold;');
+        console.log('%c30+ Indicators | Real-Time | Conflict Resolution | Chart Overlays', 'color:#ec4899;font-size:12px;');
         
         const APP = {
             chart: null,
             candleSeries: null,
             volumeSeries: null,
+            maSeries: {},
+            bbSeries: {},
+            ichimokuSeries: {},
+            patternMarkers: [],
             symbol: 'BTCUSDT',
             timeframe: 'D',
             data: null,
             indicators: {},
-            allSymbols: [],
-            mlModel: null,
-            mlReady: false
+            updateInterval: null,
+            isPaused: false,
+            overlays: {
+                ma: true,
+                bb: false,
+                ichimoku: false,
+                volume: true,
+                patterns: false
+            }
         };
         
-        const POPULAR_SYMBOLS = [
-            { symbol: 'BTCUSDT', base: 'BTC' }, { symbol: 'ETHUSDT', base: 'ETH' },
-            { symbol: 'BNBUSDT', base: 'BNB' }, { symbol: 'SOLUSDT', base: 'SOL' },
-            { symbol: 'XRPUSDT', base: 'XRP' }, { symbol: 'ADAUSDT', base: 'ADA' },
-            { symbol: 'DOGEUSDT', base: 'DOGE' }, { symbol: 'MATICUSDT', base: 'MATIC' },
-            { symbol: 'DOTUSDT', base: 'DOT' }, { symbol: 'AVAXUSDT', base: 'AVAX' }
-        ];
-        
         class API {
-            static async fetchSymbols() {
-                const res = await fetch('https://api.binance.com/api/v3/exchangeInfo');
-                const data = await res.json();
-                return data.symbols
-                    .filter(s => s.status === 'TRADING' && s.quoteAsset === 'USDT')
-                    .map(s => ({ symbol: s.symbol, base: s.baseAsset }));
-            }
-            
             static async fetchOHLCV(symbol, interval, limit = 500) {
                 const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
                 const res = await fetch(url);
@@ -609,18 +504,13 @@
                 }));
             }
             
-            static async fetch24h() {
-                const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
-                return await res.json();
-            }
-            
             static mapTF(tf) {
-                const map = { '1': '1m', '3': '3m', '5': '5m', '15': '15m', '30': '30m', '60': '1h', '240': '4h', 'D': '1d', 'W': '1w' };
+                const map = { '1': '1m', '5': '5m', '15': '15m', '30': '30m', '60': '1h', '240': '4h', 'D': '1d', 'W': '1w' };
                 return map[tf] || '1d';
             }
         }
         
-     class Indicators {
+        class SuperIndicators {
             static SMA(d, p) {
                 const r = [];
                 for (let i = 0; i < d.length; i++) {
@@ -660,7 +550,7 @@
                 const macd = e12.map((v, i) => v - e26[i]);
                 const sig = this.EMA(macd.filter(v => v !== null), 9);
                 const hist = macd.slice(-sig.length).map((v, i) => v - sig[i]);
-                return { macd, sig, hist };
+                return { macd, signal: sig, histogram: hist };
             }
             
             static BB(d, p = 20, m = 2) {
@@ -676,22 +566,47 @@
                         lo.push(mean - m * std);
                     }
                 }
-                return { upper: u, mid: sma, lower: lo };
+                return { upper: u, middle: sma, lower: lo };
             }
             
-            static Stochastic(data, p = 14) {
-                const r = [];
+            static Stochastic(data, p = 14, smooth = 3) {
+                const k = [];
                 for (let i = 0; i < data.length; i++) {
-                    if (i < p - 1) r.push(null);
+                    if (i < p - 1) k.push(null);
                     else {
                         const slice = data.slice(i - p + 1, i + 1);
                         const h = Math.max(...slice.map(d => d.high));
                         const l = Math.min(...slice.map(d => d.low));
                         const c = data[i].close;
-                        r.push(h === l ? 50 : ((c - l) / (h - l)) * 100);
+                        k.push(h === l ? 50 : ((c - l) / (h - l)) * 100);
                     }
                 }
-                return r;
+                const d = this.SMA(k.filter(v => v !== null), smooth);
+                return { k, d };
+            }
+            
+            static Ichimoku(data) {
+                const calc = (p) => {
+                    const r = [];
+                    for (let i = 0; i < data.length; i++) {
+                        if (i < p - 1) r.push(null);
+                        else {
+                            const slice = data.slice(i - p + 1, i + 1);
+                            const h = Math.max(...slice.map(d => d.high));
+                            const l = Math.min(...slice.map(d => d.low));
+                            r.push((h + l) / 2);
+                        }
+                    }
+                    return r;
+                };
+                
+                const tenkan = calc(9);
+                const kijun = calc(26);
+                const senkouA = tenkan.map((v, i) => v && kijun[i] ? (v + kijun[i]) / 2 : null);
+                const senkouB = calc(52);
+                const chikou = data.map(d => d.close);
+                
+                return { tenkan, kijun, senkouA, senkouB, chikou };
             }
             
             static ATR(data, p = 14) {
@@ -720,17 +635,6 @@
                 const ndi = this.EMA(ndm, p).map((v, i) => (v / atr[i]) * 100);
                 const dx = pdi.map((v, i) => Math.abs(v - ndi[i]) / (v + ndi[i]) * 100);
                 return this.EMA(dx, p);
-            }
-            
-            static OBV(data) {
-                let obv = 0;
-                const r = [0];
-                for (let i = 1; i < data.length; i++) {
-                    if (data[i].close > data[i - 1].close) obv += data[i].volume;
-                    else if (data[i].close < data[i - 1].close) obv -= data[i].volume;
-                    r.push(obv);
-                }
-                return r;
             }
             
             static CCI(data, p = 20) {
@@ -765,321 +669,230 @@
             
             static MFI(data, p = 14) {
                 const tp = data.map(d => (d.high + d.low + d.close) / 3);
-                const mf = data.map((d, i) => tp[i] * d.volume);
-                const r = [null];
-                for (let i = p; i < data.length; i++) {
-                    let posFlow = 0, negFlow = 0;
-                    for (let j = i - p + 1; j <= i; j++) {
-                        if (tp[j] > tp[j - 1]) posFlow += mf[j];
-                        else if (tp[j] < tp[j - 1]) negFlow += mf[j];
+                const mf = tp.map((v, i) => v * data[i].volume);
+                const r = [];
+                for (let i = 0; i < data.length; i++) {
+                    if (i < p) r.push(null);
+                    else {
+                        let pmf = 0, nmf = 0;
+                        for (let j = i - p + 1; j <= i; j++) {
+                            if (tp[j] > tp[j - 1]) pmf += mf[j];
+                            else nmf += mf[j];
+                        }
+                        r.push(100 - (100 / (1 + pmf / nmf)));
                     }
-                    const ratio = negFlow === 0 ? 100 : posFlow / negFlow;
-                    r.push(100 - (100 / (1 + ratio)));
                 }
-                while (r.length < data.length) r.unshift(null);
                 return r;
+            }
+            
+            static ROC(data, p = 12) {
+                return data.map((v, i) => i < p ? null : ((v - data[i - p]) / data[i - p]) * 100);
             }
             
             static VWAP(data) {
-                let cumVol = 0, cumTPV = 0;
+                let cumVol = 0, cumPV = 0;
                 return data.map(d => {
                     const tp = (d.high + d.low + d.close) / 3;
-                    cumTPV += tp * d.volume;
+                    cumPV += tp * d.volume;
                     cumVol += d.volume;
-                    return cumTPV / cumVol;
+                    return cumVol === 0 ? tp : cumPV / cumVol;
                 });
             }
             
-            static ParabolicSAR(data, accel = 0.02, maxAccel = 0.2) {
-                const r = [data[0].low];
-                let trend = 1, sar = data[0].low, ep = data[0].high, af = accel;
-                
+            static OBV(data) {
+                let obv = 0;
+                const r = [0];
                 for (let i = 1; i < data.length; i++) {
-                    const d = data[i];
-                    sar = sar + af * (ep - sar);
+                    if (data[i].close > data[i - 1].close) obv += data[i].volume;
+                    else if (data[i].close < data[i - 1].close) obv -= data[i].volume;
+                    r.push(obv);
+                }
+                return r;
+            }
+            
+            static PSAR(data, af = 0.02, maxAf = 0.2) {
+                const r = [];
+                let isUpTrend = true;
+                let ep = data[0].high;
+                let sar = data[0].low;
+                let currentAf = af;
+                
+                for (let i = 0; i < data.length; i++) {
+                    r.push(sar);
+                    const nextSar = sar + currentAf * (ep - sar);
                     
-                    if (trend === 1) {
-                        if (d.low < sar) {
-                            trend = -1;
+                    if (isUpTrend) {
+                        if (data[i].low <= nextSar) {
+                            isUpTrend = false;
                             sar = ep;
-                            ep = d.low;
-                            af = accel;
+                            ep = data[i].low;
+                            currentAf = af;
                         } else {
-                            if (d.high > ep) {
-                                ep = d.high;
-                                af = Math.min(af + accel, maxAccel);
+                            sar = nextSar;
+                            if (data[i].high > ep) {
+                                ep = data[i].high;
+                                currentAf = Math.min(currentAf + af, maxAf);
                             }
                         }
                     } else {
-                        if (d.high > sar) {
-                            trend = 1;
+                        if (data[i].high >= nextSar) {
+                            isUpTrend = true;
                             sar = ep;
-                            ep = d.high;
-                            af = accel;
+                            ep = data[i].high;
+                            currentAf = af;
                         } else {
-                            if (d.low < ep) {
-                                ep = d.low;
-                                af = Math.min(af + accel, maxAccel);
+                            sar = nextSar;
+                            if (data[i].low < ep) {
+                                ep = data[i].low;
+                                currentAf = Math.min(currentAf + af, maxAf);
                             }
                         }
                     }
-                    r.push(sar);
                 }
                 return r;
             }
             
-            static ROC(d, p = 12) {
-                const r = [];
-                for (let i = 0; i < d.length; i++) {
-                    if (i < p) r.push(null);
-                    else r.push(((d[i] - d[i - p]) / d[i - p]) * 100);
-                }
-                return r;
-            }
-            
-            static Aroon(data, p = 25) {
-                const up = [], down = [];
-                for (let i = 0; i < data.length; i++) {
-                    if (i < p) { up.push(null); down.push(null); }
-                    else {
-                        const slice = data.slice(i - p + 1, i + 1);
-                        const highIdx = slice.reduce((max, d, idx) => d.high > slice[max].high ? idx : max, 0);
-                        const lowIdx = slice.reduce((min, d, idx) => d.low < slice[min].low ? idx : min, 0);
-                        up.push(((p - (p - 1 - highIdx)) / p) * 100);
-                        down.push(((p - (p - 1 - lowIdx)) / p) * 100);
-                    }
-                }
-                return { up, down };
-            }
-            
-            static Ichimoku(data) {
-                const tenkan = [], kijun = [], senkouA = [], senkouB = [];
-                const p1 = 9, p2 = 26, p3 = 52;
-                
-                for (let i = 0; i < data.length; i++) {
-                    if (i < p1 - 1) tenkan.push(null);
-                    else {
-                        const slice = data.slice(i - p1 + 1, i + 1);
-                        tenkan.push((Math.max(...slice.map(d => d.high)) + Math.min(...slice.map(d => d.low))) / 2);
-                    }
-                    
-                    if (i < p2 - 1) kijun.push(null);
-                    else {
-                        const slice = data.slice(i - p2 + 1, i + 1);
-                        kijun.push((Math.max(...slice.map(d => d.high)) + Math.min(...slice.map(d => d.low))) / 2);
-                    }
-                    
-                    if (i < p2 - 1) senkouA.push(null);
-                    else senkouA.push((tenkan[i] + kijun[i]) / 2);
-                    
-                    if (i < p3 - 1) senkouB.push(null);
-                    else {
-                        const slice = data.slice(i - p3 + 1, i + 1);
-                        senkouB.push((Math.max(...slice.map(d => d.high)) + Math.min(...slice.map(d => d.low))) / 2);
-                    }
-                }
-                
-                return { tenkan, kijun, senkouA, senkouB };
-            }
-            
-            static calc(data) {
+            static calculateAll(data) {
                 const c = data.map(d => d.close);
-                const h = data.map(d => d.high);
-                const l = data.map(d => d.low);
-                
                 return {
+                    sma9: this.SMA(c, 9),
                     sma20: this.SMA(c, 20),
                     sma50: this.SMA(c, 50),
                     sma200: this.SMA(c, 200),
                     ema9: this.EMA(c, 9),
-                    ema12: this.EMA(c, 12),
                     ema21: this.EMA(c, 21),
-                    ema26: this.EMA(c, 26),
                     ema50: this.EMA(c, 50),
+                    ema200: this.EMA(c, 200),
                     rsi: this.RSI(c, 14),
+                    rsi7: this.RSI(c, 7),
+                    rsi21: this.RSI(c, 21),
                     macd: this.MACD(c),
                     bb: this.BB(c, 20, 2),
-                    stoch: this.Stochastic(data, 14),
+                    bbNarrow: this.BB(c, 10, 1.5),
+                    bbWide: this.BB(c, 30, 2.5),
+                    stoch: this.Stochastic(data, 14, 3),
+                    stochFast: this.Stochastic(data, 5, 3),
+                    stochSlow: this.Stochastic(data, 21, 5),
+                    ichimoku: this.Ichimoku(data),
                     atr: this.ATR(data, 14),
+                    atr7: this.ATR(data, 7),
+                    atr21: this.ATR(data, 21),
                     adx: this.ADX(data, 14),
-                    obv: this.OBV(data),
                     cci: this.CCI(data, 20),
                     willr: this.WilliamsR(data, 14),
                     mfi: this.MFI(data, 14),
-                    vwap: this.VWAP(data),
-                    psar: this.ParabolicSAR(data),
                     roc: this.ROC(c, 12),
-                    aroon: this.Aroon(data, 25),
-                    ichimoku: this.Ichimoku(data)
+                    vwap: this.VWAP(data),
+                    obv: this.OBV(data),
+                    psar: this.PSAR(data)
                 };
             }
         }
         
-        class PatternRecognition {
-            static detectCandlePatterns(data) {
-                const patterns = [];
-                const len = data.length;
-                
-                for (let i = 3; i < len; i++) {
-                    const c = data[i], p = data[i - 1], p2 = data[i - 2];
-                    const cBody = Math.abs(c.close - c.open);
-                    const pBody = Math.abs(p.close - p.open);
-                    
-                    if (c.close > c.open && (c.high - c.close) < cBody * 0.3 && (c.open - c.low) > cBody * 2) {
-                        patterns.push({ name: 'Hammer', type: 'bullish', idx: i });
-                    }
-                    
-                    if (c.close < c.open && (c.high - c.open) > cBody * 2 && (c.close - c.low) < cBody * 0.3) {
-                        patterns.push({ name: 'Shooting Star', type: 'bearish', idx: i });
-                    }
-                    
-                    if (c.close > c.open && p.close < p.open && c.close > p.open && c.open < p.close) {
-                        patterns.push({ name: 'Bullish Engulfing', type: 'bullish', idx: i });
-                    }
-                    if (c.close < c.open && p.close > p.open && c.close < p.open && c.open > p.close) {
-                        patterns.push({ name: 'Bearish Engulfing', type: 'bearish', idx: i });
-                    }
-                    
-                    if (cBody < (c.high - c.low) * 0.1) {
-                        patterns.push({ name: 'Doji', type: 'neutral', idx: i });
-                    }
-                    
-                    if (p2.close < p2.open && Math.abs(p.close - p.open) < pBody * 0.3 && 
-                        c.close > c.open && c.close > (p2.open + p2.close) / 2) {
-                        patterns.push({ name: 'Morning Star', type: 'bullish', idx: i });
-                    }
-                    
-                    if (p2.close > p2.open && Math.abs(p.close - p.open) < pBody * 0.3 && 
-                        c.close < c.open && c.close < (p2.open + p2.close) / 2) {
-                        patterns.push({ name: 'Evening Star', type: 'bearish', idx: i });
-                    }
-                }
-                
-                return patterns.slice(-5);
-            }
-            
-            static detectTrend(data, ind) {
-                const len = data.length;
-                const c = data.map(d => d.close);
-                const sma50 = ind.sma50[len - 1];
-                const sma200 = ind.sma200[len - 1];
-                const ema9 = ind.ema9[len - 1];
-                const ema26 = ind.ema26[len - 1];
-                const cur = c[len - 1];
-                
-                if (cur > ema9 && ema9 > ema26 && cur > sma50 && sma50 > sma200) {
-                    return { trend: 'Strong Uptrend', strength: 'high' };
-                } else if (cur > sma50 && sma50 > sma200) {
-                    return { trend: 'Uptrend', strength: 'medium' };
-                } else if (cur < ema9 && ema9 < ema26 && cur < sma50 && sma50 < sma200) {
-                    return { trend: 'Strong Downtrend', strength: 'high' };
-                } else if (cur < sma50 && sma50 < sma200) {
-                    return { trend: 'Downtrend', strength: 'medium' };
-                } else {
-                    return { trend: 'Sideways', strength: 'low' };
-                }
-            }
-        }
-        
-        class MLModel {
-            static async createModel() {
-                const model = tf.sequential();
-                model.add(tf.layers.lstm({ units: 50, returnSequences: true, inputShape: [60, 5] }));
-                model.add(tf.layers.dropout({ rate: 0.2 }));
-                model.add(tf.layers.lstm({ units: 50, returnSequences: false }));
-                model.add(tf.layers.dropout({ rate: 0.2 }));
-                model.add(tf.layers.dense({ units: 25 }));
-                model.add(tf.layers.dense({ units: 1 }));
-                
-                model.compile({
-                    optimizer: tf.train.adam(0.001),
-                    loss: 'meanSquaredError',
-                    metrics: ['mae']
-                });
-                
-                return model;
-            }
-            
-            static prepareData(data, lookback = 60) {
-                const features = data.map(d => [
-                    d.open, d.high, d.low, d.close, d.volume
-                ]);
-                
-                const normalized = [];
-                for (let i = 0; i < features[0].length; i++) {
-                    const col = features.map(f => f[i]);
-                    const min = Math.min(...col);
-                    const max = Math.max(...col);
-                    normalized.push({ min, max });
-                }
-                
-                const normFeatures = features.map(f => f.map((v, i) => {
-                    const { min, max } = normalized[i];
-                    return max === min ? 0 : (v - min) / (max - min);
-                }));
-                
-                const X = [], y = [];
-                for (let i = lookback; i < normFeatures.length; i++) {
-                    X.push(normFeatures.slice(i - lookback, i));
-                    y.push(normFeatures[i][3]);
-                }
-                
-                return { X, y, normalized };
-            }
-            
-            static async trainPredict(data) {
+        class MLPredictor {
+            static async trainAndPredict(data) {
                 try {
                     if (data.length < 100) return null;
                     
-                    const { X, y, normalized } = this.prepareData(data);
+                    // Prepare features
+                    const features = data.map(d => [
+                        d.open, d.high, d.low, d.close, d.volume,
+                        (d.high - d.low) / d.close, // Volatility
+                        (d.close - d.open) / d.open  // Change
+                    ]);
+                    
+                    // Normalize
+                    const normalized = [];
+                    for (let i = 0; i < features[0].length; i++) {
+                        const col = features.map(f => f[i]);
+                        const min = Math.min(...col);
+                        const max = Math.max(...col);
+                        normalized.push({ min, max });
+                    }
+                    
+                    const normFeatures = features.map(f => f.map((v, i) => {
+                        const { min, max } = normalized[i];
+                        return max === min ? 0 : (v - min) / (max - min);
+                    }));
+                    
+                    // Create sequences
+                    const lookback = 60;
+                    const X = [], y = [];
+                    for (let i = lookback; i < normFeatures.length; i++) {
+                        X.push(normFeatures.slice(i - lookback, i));
+                        y.push(normFeatures[i][3]); // Predict close
+                    }
+                    
                     if (X.length < 10) return null;
                     
-                    const splitIdx = Math.floor(X.length * 0.8);
-                    const Xtrain = X.slice(0, splitIdx);
-                    const ytrain = y.slice(0, splitIdx);
-                    const Xtest = X.slice(splitIdx);
-                    const ytest = y.slice(splitIdx);
+                    // Build model
+                    const model = tf.sequential({
+                        layers: [
+                            tf.layers.lstm({ units: 64, returnSequences: true, inputShape: [lookback, 7] }),
+                            tf.layers.dropout({ rate: 0.2 }),
+                            tf.layers.lstm({ units: 32, returnSequences: false }),
+                            tf.layers.dropout({ rate: 0.2 }),
+                            tf.layers.dense({ units: 16, activation: 'relu' }),
+                            tf.layers.dense({ units: 1 })
+                        ]
+                    });
                     
-                    const model = await this.createModel();
+                    model.compile({
+                        optimizer: tf.train.adam(0.001),
+                        loss: 'meanSquaredError',
+                        metrics: ['mae']
+                    });
                     
-                    const Xtensor = tf.tensor3d(Xtrain);
-                    const ytensor = tf.tensor2d(ytrain, [ytrain.length, 1]);
+                    // Train
+                    const Xtensor = tf.tensor3d(X);
+                    const ytensor = tf.tensor2d(y, [y.length, 1]);
                     
-                    const history = await model.fit(Xtensor, ytensor, {
+                    await model.fit(Xtensor, ytensor, {
                         epochs: 10,
                         batchSize: 32,
                         verbose: 0,
-                        validationSplit: 0.1
+                        validationSplit: 0.2
                     });
                     
+                    // Predict next
                     const lastSeq = tf.tensor3d([X[X.length - 1]]);
                     const pred = model.predict(lastSeq);
                     const predVal = (await pred.data())[0];
                     
+                    // Denormalize
                     const { min, max } = normalized[3];
                     const predPrice = predVal * (max - min) + min;
                     
+                    // Calculate confidence based on recent accuracy
+                    const testSize = Math.min(20, Math.floor(X.length * 0.2));
+                    const Xtest = X.slice(-testSize);
+                    const ytest = y.slice(-testSize);
+                    
                     const XtestTensor = tf.tensor3d(Xtest);
-                    const ytestTensor = tf.tensor2d(ytest, [ytest.length, 1]);
                     const testPred = model.predict(XtestTensor);
-                    const mae = tf.losses.absoluteDifference(ytestTensor, testPred).dataSync()[0];
-                    const accuracy = Math.max(0, Math.min(100, (1 - mae) * 100));
+                    const testPredData = await testPred.data();
                     
-                    const finalLoss = history.history.loss[history.history.loss.length - 1];
+                    let totalError = 0;
+                    for (let i = 0; i < ytest.length; i++) {
+                        totalError += Math.abs(testPredData[i] - ytest[i]);
+                    }
+                    const avgError = totalError / ytest.length;
+                    const accuracy = Math.max(0, Math.min(100, (1 - avgError) * 100));
                     
+                    // Cleanup
                     Xtensor.dispose();
                     ytensor.dispose();
                     lastSeq.dispose();
                     pred.dispose();
                     XtestTensor.dispose();
-                    ytestTensor.dispose();
                     testPred.dispose();
                     
                     return {
                         predicted: predPrice,
-                        accuracy: accuracy.toFixed(1),
-                        loss: finalLoss.toFixed(6),
-                        current: data[data.length - 1].close
+                        current: data[data.length - 1].close,
+                        confidence: accuracy.toFixed(1),
+                        direction: predPrice > data[data.length - 1].close ? 'UP' : 'DOWN',
+                        change: ((predPrice - data[data.length - 1].close) / data[data.length - 1].close) * 100
                     };
                 } catch (e) {
                     console.error('ML Error:', e);
@@ -1088,519 +901,669 @@
             }
         }
         
-        class AI {
+        class SignalEngine {
             static analyze(data, ind) {
-                const c = data.map(d => d.close);
-                const idx = c.length - 1;
-                const cur = c[idx];
-                const sigs = {};
+                const signals = {};
+                const weights = {};
+                const idx = data.length - 1;
+                const c = data[idx].close;
                 
+                // RSI (Multiple timeframes)
                 const rsi = ind.rsi[idx];
-                if (rsi < 30) sigs.rsi = { sig: 'strong-buy', val: rsi, reason: 'Oversold (<30)', w: 2 };
-                else if (rsi > 70) sigs.rsi = { sig: 'strong-sell', val: rsi, reason: 'Overbought (>70)', w: 2 };
-                else if (rsi < 45) sigs.rsi = { sig: 'buy', val: rsi, reason: 'Bullish momentum', w: 1 };
-                else if (rsi > 55) sigs.rsi = { sig: 'sell', val: rsi, reason: 'Bearish momentum', w: 1 };
-                else sigs.rsi = { sig: 'neutral', val: rsi, reason: 'Neutral zone', w: 0.5 };
+                const rsi7 = ind.rsi7[idx];
+                const rsi21 = ind.rsi21[idx];
                 
-                const macd = ind.macd.hist[ind.macd.hist.length - 1];
-                const pmacd = ind.macd.hist[ind.macd.hist.length - 2];
-                if (macd > 0 && pmacd <= 0) sigs.macd = { sig: 'strong-buy', reason: 'Bullish crossover', w: 2 };
-                else if (macd < 0 && pmacd >= 0) sigs.macd = { sig: 'strong-sell', reason: 'Bearish crossover', w: 2 };
-                else if (macd > 0) sigs.macd = { sig: 'buy', reason: 'Positive histogram', w: 1 };
-                else sigs.macd = { sig: 'sell', reason: 'Negative histogram', w: 1 };
+                if (rsi < 30 && rsi7 < 25) {
+                    signals.rsi = 'STRONG_BUY';
+                    weights.rsi = 2.5;
+                } else if (rsi < 40) {
+                    signals.rsi = 'BUY';
+                    weights.rsi = 1.5;
+                } else if (rsi > 70 && rsi7 > 75) {
+                    signals.rsi = 'STRONG_SELL';
+                    weights.rsi = 2.5;
+                } else if (rsi > 60) {
+                    signals.rsi = 'SELL';
+                    weights.rsi = 1.5;
+                } else {
+                    signals.rsi = 'NEUTRAL';
+                    weights.rsi = 0.5;
+                }
                 
+                // MACD
+                const macdHist = ind.macd.histogram[ind.macd.histogram.length - 1];
+                const prevMacdHist = ind.macd.histogram[ind.macd.histogram.length - 2];
+                
+                if (macdHist > 0 && prevMacdHist <= 0) {
+                    signals.macd = 'STRONG_BUY';
+                    weights.macd = 3;
+                } else if (macdHist > 0) {
+                    signals.macd = 'BUY';
+                    weights.macd = 2;
+                } else if (macdHist < 0 && prevMacdHist >= 0) {
+                    signals.macd = 'STRONG_SELL';
+                    weights.macd = 3;
+                } else if (macdHist < 0) {
+                    signals.macd = 'SELL';
+                    weights.macd = 2;
+                } else {
+                    signals.macd = 'NEUTRAL';
+                    weights.macd = 1;
+                }
+                
+                // Moving Averages
                 const sma50 = ind.sma50[idx];
                 const sma200 = ind.sma200[idx];
-                if (cur > sma50 && sma50 > sma200) sigs.ma = { sig: 'strong-buy', reason: 'Golden cross formation', w: 2 };
-                else if (cur < sma50 && sma50 < sma200) sigs.ma = { sig: 'strong-sell', reason: 'Death cross formation', w: 2 };
-                else sigs.ma = { sig: 'neutral', reason: 'Mixed MA signals', w: 0.5 };
+                const ema9 = ind.ema9[idx];
+                const ema21 = ind.ema21[idx];
                 
-                const bbu = ind.bb.upper[idx];
-                const bbl = ind.bb.lower[idx];
-                if (cur < bbl) sigs.bb = { sig: 'buy', reason: 'Below lower BB', w: 1.5 };
-                else if (cur > bbu) sigs.bb = { sig: 'sell', reason: 'Above upper BB', w: 1.5 };
-                else sigs.bb = { sig: 'neutral', reason: 'Within BB range', w: 0.5 };
-                
-                const stoch = ind.stoch[idx];
-                if (stoch < 20) sigs.stoch = { sig: 'strong-buy', val: stoch, reason: 'Stochastic oversold', w: 1.5 };
-                else if (stoch > 80) sigs.stoch = { sig: 'strong-sell', val: stoch, reason: 'Stochastic overbought', w: 1.5 };
-                else sigs.stoch = { sig: 'neutral', val: stoch, reason: 'Normal range', w: 0.5 };
-                
-                const adx = ind.adx[ind.adx.length - 1];
-                if (adx > 25) sigs.adx = { sig: 'neutral', val: adx, reason: 'Strong trend (ADX>25)', w: 1 };
-                else sigs.adx = { sig: 'neutral', val: adx, reason: 'Weak trend', w: 0.5 };
-                
-                const cci = ind.cci[idx];
-                if (cci < -100) sigs.cci = { sig: 'buy', val: cci, reason: 'CCI oversold', w: 1 };
-                else if (cci > 100) sigs.cci = { sig: 'sell', val: cci, reason: 'CCI overbought', w: 1 };
-                else sigs.cci = { sig: 'neutral', val: cci, reason: 'CCI normal', w: 0.5 };
-                
-                const willr = ind.willr[idx];
-                if (willr < -80) sigs.willr = { sig: 'buy', val: willr, reason: 'Williams %R oversold', w: 1 };
-                else if (willr > -20) sigs.willr = { sig: 'sell', val: willr, reason: 'Williams %R overbought', w: 1 };
-                else sigs.willr = { sig: 'neutral', val: willr, reason: 'Williams %R normal', w: 0.5 };
-                
-                const obv = ind.obv;
-                const obvTrend = obv[idx] > obv[idx - 20] ? 'buy' : 'sell';
-                sigs.obv = { sig: obvTrend, reason: obvTrend === 'buy' ? 'Volume accumulation' : 'Volume distribution', w: 1 };
-                
-                let tot = 0, totW = 0;
-                Object.values(sigs).forEach(s => {
-                    const w = s.w || 1;
-                    let sc = 0;
-                    if (s.sig === 'strong-buy') sc = 2;
-                    else if (s.sig === 'buy') sc = 1;
-                    else if (s.sig === 'sell') sc = -1;
-                    else if (s.sig === 'strong-sell') sc = -2;
-                    tot += sc * w;
-                    totW += w;
-                });
-                const score = tot / totW;
-                
-                let sig, conf;
-                if (score > 0.8) {
-                    sig = 'STRONG BUY';
-                    conf = Math.min(95, 65 + Math.abs(score) * 30);
-                } else if (score > 0.3) {
-                    sig = 'BUY';
-                    conf = Math.min(85, 55 + Math.abs(score) * 30);
-                } else if (score > -0.3) {
-                    sig = 'HOLD';
-                    conf = 60;
-                } else if (score > -0.8) {
-                    sig = 'SELL';
-                    conf = Math.min(85, 55 + Math.abs(score) * 30);
+                if (c > ema9 && ema9 > ema21 && c > sma50 && sma50 > sma200) {
+                    signals.ma = 'STRONG_BUY';
+                    weights.ma = 3;
+                } else if (c > sma50 && sma50 > sma200) {
+                    signals.ma = 'BUY';
+                    weights.ma = 2;
+                } else if (c < ema9 && ema9 < ema21 && c < sma50 && sma50 < sma200) {
+                    signals.ma = 'STRONG_SELL';
+                    weights.ma = 3;
+                } else if (c < sma50 && sma50 < sma200) {
+                    signals.ma = 'SELL';
+                    weights.ma = 2;
                 } else {
-                    sig = 'STRONG SELL';
-                    conf = Math.min(95, 65 + Math.abs(score) * 30);
+                    signals.ma = 'NEUTRAL';
+                    weights.ma = 1;
                 }
                 
-                return { sig, conf: conf.toFixed(1), sigs, score };
-            }
-            
-            static generateModels(data, ind, ana) {
-                const models = [];
+                // Bollinger Bands
+                const bbUpper = ind.bb.upper[idx];
+                const bbLower = ind.bb.lower[idx];
+                const bbMiddle = ind.bb.middle[idx];
+                const bbWidth = ((bbUpper - bbLower) / bbMiddle) * 100;
                 
-                const rsi = ind.rsi[ind.rsi.length - 1];
-                const stoch = ind.stoch[ind.stoch.length - 1];
-                const momScore = ((100 - rsi) + (100 - stoch)) / 2;
-                models.push({
-                    name: 'Momentum Model',
-                    signal: momScore > 60 ? 'BUY' : momScore < 40 ? 'SELL' : 'HOLD',
-                    confidence: Math.abs(momScore - 50) * 2,
-                    desc: 'RSI + Stochastic momentum analysis'
-                });
+                if (c < bbLower && bbWidth > 5) {
+                    signals.bb = 'STRONG_BUY';
+                    weights.bb = 2;
+                } else if (c < bbLower) {
+                    signals.bb = 'BUY';
+                    weights.bb = 1.5;
+                } else if (c > bbUpper && bbWidth > 5) {
+                    signals.bb = 'STRONG_SELL';
+                    weights.bb = 2;
+                } else if (c > bbUpper) {
+                    signals.bb = 'SELL';
+                    weights.bb = 1.5;
+                } else {
+                    signals.bb = 'NEUTRAL';
+                    weights.bb = 0.5;
+                }
                 
-                const trendInfo = PatternRecognition.detectTrend(data, ind);
-                models.push({
-                    name: 'Trend Following',
-                    signal: trendInfo.trend.includes('Up') ? 'BUY' : trendInfo.trend.includes('Down') ? 'SELL' : 'HOLD',
-                    confidence: trendInfo.strength === 'high' ? 85 : trendInfo.strength === 'medium' ? 70 : 55,
-                    desc: trendInfo.trend
-                });
+                // Stochastic
+                const stochK = ind.stoch.k[idx];
+                const stochD = ind.stoch.d[ind.stoch.d.length - 1];
                 
-                const atr = ind.atr[ind.atr.length - 1];
-                const bb = ind.bb;
-                const bbWidth = ((bb.upper[bb.upper.length - 1] - bb.lower[bb.lower.length - 1]) / bb.mid[bb.mid.length - 1]) * 100;
-                models.push({
-                    name: 'Volatility Model',
-                    signal: bbWidth > 5 ? 'HIGH VOL' : 'LOW VOL',
-                    confidence: 75,
-                    desc: `BB Width: ${bbWidth.toFixed(2)}%, ATR: ${atr.toFixed(2)}`
-                });
+                if (stochK < 20 && stochD < 20) {
+                    signals.stoch = 'STRONG_BUY';
+                    weights.stoch = 2;
+                } else if (stochK < 30) {
+                    signals.stoch = 'BUY';
+                    weights.stoch = 1.5;
+                } else if (stochK > 80 && stochD > 80) {
+                    signals.stoch = 'STRONG_SELL';
+                    weights.stoch = 2;
+                } else if (stochK > 70) {
+                    signals.stoch = 'SELL';
+                    weights.stoch = 1.5;
+                } else {
+                    signals.stoch = 'NEUTRAL';
+                    weights.stoch = 0.5;
+                }
                 
+                // CCI
+                const cci = ind.cci[idx];
+                if (cci < -200) {
+                    signals.cci = 'STRONG_BUY';
+                    weights.cci = 1.5;
+                } else if (cci < -100) {
+                    signals.cci = 'BUY';
+                    weights.cci = 1;
+                } else if (cci > 200) {
+                    signals.cci = 'STRONG_SELL';
+                    weights.cci = 1.5;
+                } else if (cci > 100) {
+                    signals.cci = 'SELL';
+                    weights.cci = 1;
+                } else {
+                    signals.cci = 'NEUTRAL';
+                    weights.cci = 0.5;
+                }
+                
+                // Williams %R
+                const willr = ind.willr[idx];
+                if (willr < -80) {
+                    signals.willr = 'BUY';
+                    weights.willr = 1;
+                } else if (willr > -20) {
+                    signals.willr = 'SELL';
+                    weights.willr = 1;
+                } else {
+                    signals.willr = 'NEUTRAL';
+                    weights.willr = 0.5;
+                }
+                
+                // MFI
+                const mfi = ind.mfi[idx];
+                if (mfi < 20) {
+                    signals.mfi = 'STRONG_BUY';
+                    weights.mfi = 2;
+                } else if (mfi < 40) {
+                    signals.mfi = 'BUY';
+                    weights.mfi = 1;
+                } else if (mfi > 80) {
+                    signals.mfi = 'STRONG_SELL';
+                    weights.mfi = 2;
+                } else if (mfi > 60) {
+                    signals.mfi = 'SELL';
+                    weights.mfi = 1;
+                } else {
+                    signals.mfi = 'NEUTRAL';
+                    weights.mfi = 0.5;
+                }
+                
+                // ADX (Trend Strength)
+                const adx = ind.adx[ind.adx.length - 1];
+                if (adx > 50) {
+                    weights.trend = 2; // Strong trend - weight trend indicators more
+                } else if (adx > 25) {
+                    weights.trend = 1.5;
+                } else {
+                    weights.trend = 0.5; // Weak trend - weight oscillators more
+                }
+                
+                // OBV
                 const obv = ind.obv;
-                const obvChange = ((obv[obv.length - 1] - obv[obv.length - 20]) / Math.abs(obv[obv.length - 20])) * 100;
-                models.push({
-                    name: 'Volume Model',
-                    signal: obvChange > 10 ? 'BUY' : obvChange < -10 ? 'SELL' : 'HOLD',
-                    confidence: Math.min(90, 50 + Math.abs(obvChange)),
-                    desc: `OBV trend: ${obvChange > 0 ? '+' : ''}${obvChange.toFixed(1)}%`
+                const obvTrend = obv[idx] > obv[Math.max(0, idx - 20)] ? 'BUY' : 'SELL';
+                signals.obv = obvTrend;
+                weights.obv = 1.5;
+                
+                // Calculate final score
+                let totalScore = 0;
+                let totalWeight = 0;
+                
+                Object.entries(signals).forEach(([key, sig]) => {
+                    const weight = weights[key] || 1;
+                    let score = 0;
+                    
+                    if (sig === 'STRONG_BUY') score = 2;
+                    else if (sig === 'BUY') score = 1;
+                    else if (sig === 'SELL') score = -1;
+                    else if (sig === 'STRONG_SELL') score = -2;
+                    
+                    totalScore += score * weight;
+                    totalWeight += weight;
                 });
                 
-                const cur = data[data.length - 1].close;
-                const sma20 = ind.sma20[ind.sma20.length - 1];
-                const dev = ((cur - sma20) / sma20) * 100;
-                models.push({
-                    name: 'Mean Reversion',
-                    signal: dev < -3 ? 'BUY' : dev > 3 ? 'SELL' : 'HOLD',
-                    confidence: Math.min(85, 50 + Math.abs(dev) * 10),
-                    desc: `Deviation from SMA20: ${dev > 0 ? '+' : ''}${dev.toFixed(2)}%`
-                });
+                const finalScore = totalScore / totalWeight;
                 
-                return models;
+                // Determine signal
+                let signal, confidence;
+                if (finalScore > 1) {
+                    signal = 'STRONG BUY';
+                    confidence = Math.min(95, 70 + Math.abs(finalScore) * 15);
+                } else if (finalScore > 0.3) {
+                    signal = 'BUY';
+                    confidence = Math.min(85, 60 + Math.abs(finalScore) * 20);
+                } else if (finalScore > -0.3) {
+                    signal = 'HOLD';
+                    confidence = 60 + Math.abs(finalScore) * 10;
+                } else if (finalScore > -1) {
+                    signal = 'SELL';
+                    confidence = Math.min(85, 60 + Math.abs(finalScore) * 20);
+                } else {
+                    signal = 'STRONG SELL';
+                    confidence = Math.min(95, 70 + Math.abs(finalScore) * 15);
+                }
+                
+                return {
+                    signal,
+                    confidence: confidence.toFixed(1),
+                    score: finalScore,
+                    details: signals,
+                    weights
+                };
             }
             
-            static explainSignal(ana, ind, data) {
-                const bullishFactors = [];
-                const bearishFactors = [];
+            static detectConflict(techSignal, mlPred) {
+                if (!mlPred) return null;
                 
-                Object.entries(ana.sigs).forEach(([name, sig]) => {
-                    if (sig.sig.includes('buy')) {
-                        bullishFactors.push(`${name.toUpperCase()}: ${sig.reason} (weight: ${sig.w}x)`);
-                    } else if (sig.sig.includes('sell')) {
-                        bearishFactors.push(`${name.toUpperCase()}: ${sig.reason} (weight: ${sig.w}x)`);
-                    }
-                });
+                const techBullish = techSignal.signal.includes('BUY');
+                const techBearish = techSignal.signal.includes('SELL');
+                const mlBullish = mlPred.change > 5;
+                const mlBearish = mlPred.change < -5;
                 
-                let explanation = `<strong>${ana.sig}</strong> signal generated based on ${Object.keys(ana.sigs).length} indicators with weighted scoring.<br><br>`;
-                
-                if (bullishFactors.length > 0) {
-                    explanation += `<strong style="color: #10b981;">Bullish Factors (${bullishFactors.length}):</strong><br>`;
-                    bullishFactors.forEach(f => explanation += `• ${f}<br>`);
+                if ((techBullish && mlBearish) || (techBearish && mlBullish)) {
+                    return {
+                        hasConflict: true,
+                        techDirection: techBullish ? 'BULLISH' : 'BEARISH',
+                        mlDirection: mlBullish ? 'BULLISH' : 'BEARISH',
+                        severity: Math.abs(mlPred.change) > 10 ? 'HIGH' : 'MEDIUM'
+                    };
                 }
                 
-                if (bearishFactors.length > 0) {
-                    explanation += `<br><strong style="color: #ef4444;">Bearish Factors (${bearishFactors.length}):</strong><br>`;
-                    bearishFactors.forEach(f => explanation += `• ${f}<br>`);
+                return { hasConflict: false };
+            }
+            
+            static resolveConflict(techSignal, mlPred, ind, data) {
+                const rsi = ind.rsi[ind.rsi.length - 1];
+                const volume = data[data.length - 1].volume;
+                const avgVolume = data.slice(-20).reduce((sum, d) => sum + d.volume, 0) / 20;
+                const volumeSurge = volume > avgVolume * 1.5;
+                
+                let resolution = {
+                    explanation: '',
+                    recommendation: '',
+                    confidence: 0
+                };
+                
+                // Check for oversold bounce scenario
+                if (techSignal.signal.includes('SELL') && mlPred.change > 10 && rsi < 35) {
+                    resolution.explanation = `Technical indicators show bearish trend (${techSignal.signal}), but ML predicts +${mlPred.change.toFixed(1)}% bounce. RSI at ${rsi.toFixed(1)} suggests oversold conditions.`;
+                    resolution.recommendation = 'SCALP LONG - Quick bounce expected, but don\'t hold long-term';
+                    resolution.confidence = 75;
+                }
+                // Check for overbought pullback scenario
+                else if (techSignal.signal.includes('BUY') && mlPred.change < -10 && rsi > 65) {
+                    resolution.explanation = `Technical indicators show bullish trend (${techSignal.signal}), but ML predicts ${mlPred.change.toFixed(1)}% pullback. RSI at ${rsi.toFixed(1)} suggests overbought conditions.`;
+                    resolution.recommendation = 'WAIT FOR DIP - Short-term pullback likely before continuation';
+                    resolution.confidence = 75;
+                }
+                // Volume confirmation
+                else if (volumeSurge) {
+                    resolution.explanation = `Conflicting signals with ${((volume/avgVolume - 1) * 100).toFixed(0)}% volume surge. High volume suggests ${mlPred.direction} move is more likely.`;
+                    resolution.recommendation = mlPred.change > 0 ? 'CAUTIOUS BUY - Volume supports upward move' : 'CAUTIOUS SELL - Volume confirms downward pressure';
+                    resolution.confidence = 70;
+                }
+                // Default conflict resolution
+                else {
+                    resolution.explanation = `Technical analysis suggests ${techSignal.signal} but ML model predicts ${mlPred.change > 0 ? '+' : ''}${mlPred.change.toFixed(1)}% move. Mixed signals indicate uncertainty.`;
+                    resolution.recommendation = 'HOLD - Wait for clearer signals';
+                    resolution.confidence = 50;
                 }
                 
-                explanation += `<br><strong>Final Score:</strong> ${(ana.score * 100).toFixed(1)}/100 (${ana.sig})`;
-                
-                return explanation;
+                return resolution;
             }
         }
         
-        class UI {
-            static initChart() {
-                const cont = document.getElementById('chartElement');
-                APP.chart = LightweightCharts.createChart(cont, {
-                    layout: { background: { color: 'transparent' }, textColor: '#94a3b8' },
-                    grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
+        class ChartManager {
+            static init() {
+                const container = document.getElementById('chartElement');
+                APP.chart = LightweightCharts.createChart(container, {
+                    layout: {
+                        background: { color: 'transparent' },
+                        textColor: '#94a3b8'
+                    },
+                    grid: {
+                        vertLines: { color: 'rgba(255,255,255,0.03)' },
+                        horzLines: { color: 'rgba(255,255,255,0.03)' }
+                    },
                     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
                     rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
-                    timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true },
-                    height: cont.offsetHeight,
-                    width: cont.offsetWidth
+                    timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true }
                 });
                 
                 APP.candleSeries = APP.chart.addCandlestickSeries({
-                    upColor: '#10b981', downColor: '#ef4444',
+                    upColor: '#10b981',
+                    downColor: '#ef4444',
                     borderVisible: false,
-                    wickUpColor: '#10b981', wickDownColor: '#ef4444'
+                    wickUpColor: '#10b981',
+                    wickDownColor: '#ef4444'
                 });
                 
                 APP.volumeSeries = APP.chart.addHistogramSeries({
-                    color: '#3b82f6', priceFormat: { type: 'volume' },
-                    priceScaleId: '', scaleMargins: { top: 0.85, bottom: 0 }
+                    color: '#3b82f6',
+                    priceFormat: { type: 'volume' },
+                    priceScaleId: '',
+                    scaleMargins: { top: 0.85, bottom: 0 }
                 });
                 
-                const resizeObs = new ResizeObserver(() => {
-                    APP.chart.applyOptions({ width: cont.offsetWidth, height: cont.offsetHeight });
-                });
-                resizeObs.observe(cont);
-            }
-            
-            static loading(show, txt = '') {
-                document.getElementById('loadingOverlay').classList.toggle('active', show);
-                if (txt) document.getElementById('loadingText').textContent = txt;
-            }
-            
-            static notify(title, msg) {
-                const n = document.createElement('div');
-                n.className = 'notification';
-                n.innerHTML = `<div class="notif-title">${title}</div><div class="notif-body">${msg}</div>`;
-                document.getElementById('notificationArea').appendChild(n);
-                setTimeout(() => n.classList.add('show'), 100);
-                setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 400); }, 4000);
-            }
-            
-            static updatePrice(data) {
-                const last = data[data.length - 1];
-                const prev = data[data.length - 2];
-                const chg = ((last.close - prev.close) / prev.close) * 100;
-                document.getElementById('currentPrice').textContent = `$${last.close.toFixed(2)}`;
-                document.getElementById('priceChange').textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`;
-                document.getElementById('priceChange').className = `price-change ${chg >= 0 ? 'up' : 'down'}`;
-            }
-            
-            static updateSignal(ana, ind, data, mlPred) {
-                const map = {
-                    'STRONG BUY': { cls: 'signal-strong-buy', em: '🚀' },
-                    'BUY': { cls: 'signal-buy', em: '📈' },
-                    'HOLD': { cls: 'signal-hold', em: '⏸️' },
-                    'SELL': { cls: 'signal-sell', em: '📉' },
-                    'STRONG SELL': { cls: 'signal-strong-sell', em: '⚠️' }
+                // Initialize overlay series
+                APP.maSeries = {
+                    sma9: APP.chart.addLineSeries({ color: '#3b82f6', lineWidth: 1, title: 'SMA9' }),
+                    sma20: APP.chart.addLineSeries({ color: '#8b5cf6', lineWidth: 1, title: 'SMA20' }),
+                    sma50: APP.chart.addLineSeries({ color: '#ec4899', lineWidth: 2, title: 'SMA50' }),
+                    sma200: APP.chart.addLineSeries({ color: '#f59e0b', lineWidth: 2, title: 'SMA200' })
                 };
-                const inf = map[ana.sig];
-                document.getElementById('signalBadge').className = `signal-badge ${inf.cls}`;
-                document.getElementById('signalEmoji').textContent = inf.em;
-                document.getElementById('signalText').textContent = ana.sig;
-                document.getElementById('confidenceText').textContent = `${ana.conf}%`;
-                document.getElementById('confidenceFill').style.width = `${ana.conf}%`;
                 
-                const explanation = AI.explainSignal(ana, ind, data);
-                document.getElementById('signalExplanation').innerHTML = explanation;
+                APP.bbSeries = {
+                    upper: APP.chart.addLineSeries({ color: 'rgba(139, 92, 246, 0.4)', lineWidth: 1, title: 'BB Upper' }),
+                    middle: APP.chart.addLineSeries({ color: 'rgba(139, 92, 246, 0.6)', lineWidth: 1, title: 'BB Mid' }),
+                    lower: APP.chart.addLineSeries({ color: 'rgba(139, 92, 246, 0.4)', lineWidth: 1, title: 'BB Lower' })
+                };
                 
-                if (mlPred) {
-                    document.getElementById('predictionBox').style.display = 'block';
-                    const move = ((mlPred.predicted - mlPred.current) / mlPred.current) * 100;
-                    document.getElementById('mlTarget').textContent = `$${mlPred.predicted.toFixed(2)}`;
-                    document.getElementById('mlMove').textContent = `${move > 0 ? '+' : ''}${move.toFixed(2)}%`;
-                    document.getElementById('mlMove').style.color = move > 0 ? '#10b981' : '#ef4444';
-                    document.getElementById('mlAccuracy').textContent = `${mlPred.accuracy}%`;
-                    document.getElementById('mlLoss').textContent = mlPred.loss;
-                } else {
-                    document.getElementById('predictionBox').style.display = 'none';
-                }
+                APP.ichimokuSeries = {
+                    tenkan: APP.chart.addLineSeries({ color: '#06b6d4', lineWidth: 1, title: 'Tenkan' }),
+                    kijun: APP.chart.addLineSeries({ color: '#ec4899', lineWidth: 1, title: 'Kijun' }),
+                    senkouA: APP.chart.addLineSeries({ color: 'rgba(16, 185, 129, 0.3)', lineWidth: 1, title: 'Senkou A' }),
+                    senkouB: APP.chart.addLineSeries({ color: 'rgba(239, 68, 68, 0.3)', lineWidth: 1, title: 'Senkou B' })
+                };
+                
+                // Set initial visibility
+                this.updateOverlays();
             }
             
-            static updateBreakdown(sigs) {
-                const html = Object.entries(sigs).map(([n, d]) => {
-                    const tc = d.sig.includes('buy') ? 'bullish' : d.sig.includes('sell') ? 'bearish' : 'neutral';
-                    const weightColor = d.w >= 2 ? '#10b981' : d.w >= 1 ? '#60a5fa' : '#94a3b8';
-                    return `
-                        <div class="breakdown-item">
-                            <div>
-                                <div style="font-weight: 700; font-size: 13px;">${n.toUpperCase()}</div>
-                                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">${d.reason}</div>
-                            </div>
-                            <div class="breakdown-weight" style="background: rgba(${weightColor === '#10b981' ? '16, 185, 129' : weightColor === '#60a5fa' ? '96, 165, 250' : '148, 163, 184'}, 0.2); color: ${weightColor};">
-                                ${d.w}x
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+            static updateOverlays() {
+                // MA Series
+                Object.values(APP.maSeries).forEach(series => {
+                    series.applyOptions({ visible: APP.overlays.ma });
+                });
                 
-                document.getElementById('breakdownContent').innerHTML = `
-                    <div class="breakdown-section">
-                        <div class="breakdown-title">Signal Components & Weighting</div>
-                        ${html}
-                    </div>
-                `;
+                // BB Series
+                Object.values(APP.bbSeries).forEach(series => {
+                    series.applyOptions({ visible: APP.overlays.bb });
+                });
+                
+                // Ichimoku Series
+                Object.values(APP.ichimokuSeries).forEach(series => {
+                    series.applyOptions({ visible: APP.overlays.ichimoku });
+                });
+                
+                // Volume
+                APP.volumeSeries.applyOptions({ visible: APP.overlays.volume });
             }
             
-            static updateIndicators(sigs) {
-                const html = Object.entries(sigs).map(([n, d]) => {
-                    const tc = d.sig.includes('buy') ? 'bullish' : d.sig.includes('sell') ? 'bearish' : 'neutral';
-                    const bc = d.sig.includes('buy') ? 'badge-buy' : d.sig.includes('sell') ? 'badge-sell' : 'badge-neutral';
-                    return `
-                        <div class="indicator-item ${tc}">
-                            <div class="indicator-header">
-                                <span class="indicator-name">${n.toUpperCase()}</span>
-                                <span class="indicator-badge ${bc}">${d.sig.toUpperCase()}</span>
-                            </div>
-                            <div class="indicator-value">${d.reason}${d.val !== undefined ? ` (${d.val.toFixed(2)})` : ''}</div>
-                        </div>
-                    `;
-                }).join('');
-                document.getElementById('indicatorsList').innerHTML = html;
-            }
-            
-            static updateAIModels(models) {
-                const html = models.map(m => {
-                    const tc = m.signal.includes('BUY') ? 'bullish' : m.signal.includes('SELL') ? 'bearish' : 'neutral';
-                    const bc = m.signal.includes('BUY') ? 'badge-buy' : m.signal.includes('SELL') ? 'badge-sell' : 'badge-neutral';
-                    return `
-                        <div class="indicator-item ${tc}">
-                            <div class="indicator-header">
-                                <span class="indicator-name">${m.name}</span>
-                                <span class="indicator-badge ${bc}">${m.signal}</span>
-                            </div>
-                            <div class="indicator-value">${m.desc} • ${m.confidence.toFixed(0)}% confidence</div>
-                        </div>
-                    `;
-                }).join('');
-                document.getElementById('aiModelsList').innerHTML = html;
-            }
-            
-            static updatePatterns(patterns, trendInfo) {
-                let html = `<div style="margin-bottom: 12px;">
-                    <strong style="color: var(--accent-light);">Market Trend:</strong> ${trendInfo.trend}
-                </div>`;
-                
-                if (patterns.length > 0) {
-                    html += '<div style="margin-top: 8px;">';
-                    patterns.forEach(p => {
-                        const cls = p.type === 'bullish' ? 'pattern-bullish' : p.type === 'bearish' ? 'pattern-bearish' : '';
-                        html += `<span class="pattern-badge ${cls}">${p.name}</span>`;
-                    });
-                    html += '</div>';
-                } else {
-                    html += '<div style="color: var(--text-secondary); font-size: 12px; margin-top: 8px;">No significant patterns detected</div>';
-                }
-                
-                document.getElementById('patternsList').innerHTML = html;
-            }
-            
-            static updateMetrics(data, ind) {
-                const c = data.map(d => d.close);
-                const chg = ((c[c.length - 1] - c[0]) / c[0]) * 100;
-                const hi = Math.max(...c);
-                const lo = Math.min(...c);
-                const volatility = ind.atr[ind.atr.length - 1];
-                const adx = ind.adx[ind.adx.length - 1];
-                const rsi = ind.rsi[ind.rsi.length - 1];
-                const volume = data[data.length - 1].volume;
-                const avgVol = data.slice(-20).reduce((sum, d) => sum + d.volume, 0) / 20;
-                
-                const html = `
-                    <div class="metric-box">
-                        <div class="metric-label">Period Return</div>
-                        <div class="metric-value" style="color:${chg >= 0 ? '#10b981' : '#ef4444'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">High</div>
-                        <div class="metric-value">$${hi.toFixed(2)}</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Low</div>
-                        <div class="metric-value">$${lo.toFixed(2)}</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">ATR (Volatility)</div>
-                        <div class="metric-value">$${volatility.toFixed(2)}</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">ADX (Trend)</div>
-                        <div class="metric-value">${adx.toFixed(1)}</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">RSI</div>
-                        <div class="metric-value" style="color:${rsi < 30 ? '#10b981' : rsi > 70 ? '#ef4444' : '#94a3b8'}">${rsi.toFixed(1)}</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Volume</div>
-                        <div class="metric-value">${(volume / 1000000).toFixed(2)}M</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Vol vs Avg</div>
-                        <div class="metric-value" style="color:${volume > avgVol ? '#10b981' : '#ef4444'}">${((volume / avgVol - 1) * 100).toFixed(0)}%</div>
-                    </div>
-                `;
-                document.getElementById('metricsGrid').innerHTML = html;
-            }
-            
-            static async loadMarkets() {
-                try {
-                    const ticks = await API.fetch24h();
-                    const top = ticks.filter(t => t.symbol.endsWith('USDT')).slice(0, 10);
-                    const html = top.map(t => {
-                        const chg = parseFloat(t.priceChangePercent);
-                        return `
-                            <div class="market-item" data-symbol="${t.symbol}">
-                                <div class="market-header">
-                                    <div>
-                                        <div class="market-symbol">${t.symbol.replace('USDT', '')}</div>
-                                        <div class="market-price">$${parseFloat(t.lastPrice).toFixed(2)}</div>
-                                    </div>
-                                    <div class="market-change" style="background:${chg >= 0 ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'};color:${chg >= 0 ? '#10b981' : '#ef4444'}">
-                                        ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                    document.getElementById('marketsList').innerHTML = html;
-                    document.querySelectorAll('.market-item').forEach(el => {
-                        el.addEventListener('click', () => {
-                            APP.symbol = el.dataset.symbol;
-                            loadData(APP.symbol, APP.timeframe);
-                        });
-                    });
-                } catch (e) {
-                    console.error('Markets error:', e);
-                }
-            }
-        }
-        
-        async function loadData(sym, tf) {
-            try {
-                UI.loading(true, 'Loading market data...');
-                const iv = API.mapTF(tf);
-                const data = await API.fetchOHLCV(sym, iv, 500);
-                APP.data = data;
-                
+            static updateData(data, indicators) {
+                // Update candlesticks
                 APP.candleSeries.setData(data);
+                
+                // Update volume
                 APP.volumeSeries.setData(data.map(d => ({
                     time: d.time,
                     value: d.volume,
                     color: d.close > d.open ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'
                 })));
                 
-                UI.updatePrice(data);
+                // Update MA
+                const maData = data.map((d, i) => ({ time: d.time, i }));
+                APP.maSeries.sma9.setData(maData.filter(d => indicators.sma9[d.i]).map(d => ({ time: d.time, value: indicators.sma9[d.i] })));
+                APP.maSeries.sma20.setData(maData.filter(d => indicators.sma20[d.i]).map(d => ({ time: d.time, value: indicators.sma20[d.i] })));
+                APP.maSeries.sma50.setData(maData.filter(d => indicators.sma50[d.i]).map(d => ({ time: d.time, value: indicators.sma50[d.i] })));
+                APP.maSeries.sma200.setData(maData.filter(d => indicators.sma200[d.i]).map(d => ({ time: d.time, value: indicators.sma200[d.i] })));
                 
-                UI.loading(true, 'Calculating 12 indicators...');
-                const ind = Indicators.calc(data);
-                APP.indicators = ind;
+                // Update BB
+                APP.bbSeries.upper.setData(maData.filter(d => indicators.bb.upper[d.i]).map(d => ({ time: d.time, value: indicators.bb.upper[d.i] })));
+                APP.bbSeries.middle.setData(maData.filter(d => indicators.bb.middle[d.i]).map(d => ({ time: d.time, value: indicators.bb.middle[d.i] })));
+                APP.bbSeries.lower.setData(maData.filter(d => indicators.bb.lower[d.i]).map(d => ({ time: d.time, value: indicators.bb.lower[d.i] })));
                 
-                UI.loading(true, 'Running AI analysis (5 models)...');
-                const ana = AI.analyze(data, ind);
-                const models = AI.generateModels(data, ind, ana);
+                // Update Ichimoku
+                APP.ichimokuSeries.tenkan.setData(maData.filter(d => indicators.ichimoku.tenkan[d.i]).map(d => ({ time: d.time, value: indicators.ichimoku.tenkan[d.i] })));
+                APP.ichimokuSeries.kijun.setData(maData.filter(d => indicators.ichimoku.kijun[d.i]).map(d => ({ time: d.time, value: indicators.ichimoku.kijun[d.i] })));
+                APP.ichimokuSeries.senkouA.setData(maData.filter(d => indicators.ichimoku.senkouA[d.i]).map(d => ({ time: d.time, value: indicators.ichimoku.senkouA[d.i] })));
+                APP.ichimokuSeries.senkouB.setData(maData.filter(d => indicators.ichimoku.senkouB[d.i]).map(d => ({ time: d.time, value: indicators.ichimoku.senkouB[d.i] })));
                 
-                UI.loading(true, 'Training LSTM Neural Network...');
-                const mlPred = await MLModel.trainPredict(data);
+                this.updateOverlays();
+            }
+            
+            static addPatternMarkers(patterns) {
+                // Clear existing markers
+                APP.candleSeries.setMarkers([]);
                 
-                UI.loading(true, 'Detecting chart patterns...');
-                const patterns = PatternRecognition.detectCandlePatterns(data);
-                const trendInfo = PatternRecognition.detectTrend(data, ind);
+                if (!APP.overlays.patterns) return;
                 
-                UI.updateSignal(ana, ind, data, mlPred);
-                UI.updateBreakdown(ana.sigs);
-                UI.updateIndicators(ana.sigs);
-                UI.updateAIModels(models);
-                UI.updatePatterns(patterns, trendInfo);
-                UI.updateMetrics(data, ind);
+                const markers = patterns.map(p => ({
+                    time: APP.data[p.index].time,
+                    position: p.type === 'bullish' ? 'belowBar' : 'aboveBar',
+                    color: p.type === 'bullish' ? '#10b981' : '#ef4444',
+                    shape: p.type === 'bullish' ? 'arrowUp' : 'arrowDown',
+                    text: p.name
+                }));
                 
-                UI.loading(false);
-                UI.notify('✅ Analysis Complete', `${sym} analyzed with 12 indicators, 5 AI models, and LSTM neural network`);
-            } catch (e) {
-                console.error(e);
-                UI.loading(false);
-                UI.notify('❌ Error', e.message);
+                APP.candleSeries.setMarkers(markers);
             }
         }
         
-        let searchTO;
-        document.getElementById('searchInput').addEventListener('input', async (e) => {
-            clearTimeout(searchTO);
-            const q = e.target.value.toUpperCase();
-            if (q.length < 1) {
-                document.getElementById('searchResults').classList.remove('active');
-                return;
+        class UI {
+            static notify(title, message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type === 'alert' ? 'alert' : ''} show`;
+                notification.innerHTML = `
+                    <div class="notif-title">${title}</div>
+                    <div class="notif-body">${message}</div>
+                `;
+                document.getElementById('notificationArea').appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 500);
+                }, 4000);
             }
-            document.getElementById('searchResults').innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">Searching...</div>';
-            document.getElementById('searchResults').classList.add('active');
-            searchTO = setTimeout(async () => {
-                try {
-                    if (APP.allSymbols.length === 0) {
-                        try {
-                            APP.allSymbols = await API.fetchSymbols();
-                        } catch {
-                            APP.allSymbols = POPULAR_SYMBOLS;
-                        }
-                    }
-                    const res = APP.allSymbols.filter(s => s.base.includes(q) || s.symbol.includes(q)).slice(0, 20);
-                    if (res.length === 0) {
-                        document.getElementById('searchResults').innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">No results</div>';
-                        return;
-                    }
-                    const html = res.map(s => `
-                        <div class="search-item" data-symbol="${s.symbol}">
-                            <strong style="font-size:14px;">${s.base}</strong><span style="color:#6B7280;">/USDT</span>
-                        </div>
-                    `).join('');
-                    document.getElementById('searchResults').innerHTML = html;
-                    document.querySelectorAll('.search-item').forEach(el => {
-                        el.addEventListener('click', () => {
-                            APP.symbol = el.dataset.symbol;
-                            document.getElementById('searchInput').value = el.dataset.symbol;
-                            document.getElementById('searchResults').classList.remove('active');
-                            loadData(APP.symbol, APP.timeframe);
-                        });
-                    });
-                } catch (e) {
-                    document.getElementById('searchResults').innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;">Error</div>';
+            
+            static updateSignals(techSignal, mlPred) {
+                // Update Technical Signal
+                const techMap = {
+                    'STRONG BUY': { class: 'signal-strong-buy', text: '🚀 STRONG BUY' },
+                    'BUY': { class: 'signal-buy', text: '📈 BUY' },
+                    'HOLD': { class: 'signal-hold', text: '⏸️ HOLD' },
+                    'SELL': { class: 'signal-sell', text: '📉 SELL' },
+                    'STRONG SELL': { class: 'signal-strong-sell', text: '⚠️ STRONG SELL' }
+                };
+                
+                const techInfo = techMap[techSignal.signal];
+                const techBadge = document.getElementById('techSignal');
+                techBadge.className = `signal-badge ${techInfo.class}`;
+                techBadge.innerHTML = `<span>${techInfo.text}</span>`;
+                document.getElementById('techConfidence').textContent = `${techSignal.confidence}%`;
+                document.getElementById('techConfFill').style.width = `${techSignal.confidence}%`;
+                
+                // Update ML Signal
+                if (mlPred) {
+                    const mlMap = {
+                        'UP': mlPred.change > 10 ? 'signal-strong-buy' : 'signal-buy',
+                        'DOWN': mlPred.change < -10 ? 'signal-strong-sell' : 'signal-sell'
+                    };
+                    
+                    const mlClass = mlMap[mlPred.direction];
+                    const mlText = mlPred.direction === 'UP' 
+                        ? `🤖 ${mlPred.change > 10 ? 'STRONG' : ''} BUY (+${mlPred.change.toFixed(1)}%)`
+                        : `🤖 ${mlPred.change < -10 ? 'STRONG' : ''} SELL (${mlPred.change.toFixed(1)}%)`;
+                    
+                    const mlBadge = document.getElementById('mlSignal');
+                    mlBadge.className = `signal-badge ${mlClass}`;
+                    mlBadge.innerHTML = `<span>${mlText}</span>`;
+                    document.getElementById('mlConfidence').textContent = `${mlPred.confidence}%`;
+                    document.getElementById('mlConfFill').style.width = `${mlPred.confidence}%`;
                 }
-            }, 300);
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.search-wrapper')) {
-                document.getElementById('searchResults').classList.remove('active');
+                
+                // Check for conflicts
+                const conflict = SignalEngine.detectConflict(techSignal, mlPred);
+                const reconcileBox = document.getElementById('reconciliationBox');
+                
+                if (conflict && conflict.hasConflict) {
+                    const resolution = SignalEngine.resolveConflict(techSignal, mlPred, APP.indicators, APP.data);
+                    
+                    reconcileBox.style.display = 'block';
+                    document.getElementById('reconciliationContent').innerHTML = resolution.explanation;
+                    document.getElementById('recommendedAction').textContent = resolution.recommendation;
+                    
+                    // Add conflict animation to badges
+                    document.getElementById('techSignal').classList.add('signal-conflict');
+                    document.getElementById('mlSignal').classList.add('signal-conflict');
+                    
+                    // Notify about conflict
+                    this.notify('⚠️ Signal Conflict Detected', resolution.recommendation, 'alert');
+                } else {
+                    reconcileBox.style.display = 'none';
+                    document.getElementById('techSignal').classList.remove('signal-conflict');
+                    document.getElementById('mlSignal').classList.remove('signal-conflict');
+                }
             }
-        });
+            
+            static updateIndicators(indicators) {
+                const idx = APP.data.length - 1;
+                const current = APP.data[idx].close;
+                
+                const cards = [
+                    {
+                        name: 'RSI (14)',
+                        value: indicators.rsi[idx]?.toFixed(1) || '--',
+                        signal: indicators.rsi[idx] < 30 ? 'BUY' : indicators.rsi[idx] > 70 ? 'SELL' : 'NEUTRAL'
+                    },
+                    {
+                        name: 'MACD',
+                        value: indicators.macd.histogram[indicators.macd.histogram.length - 1]?.toFixed(2) || '--',
+                        signal: indicators.macd.histogram[indicators.macd.histogram.length - 1] > 0 ? 'BUY' : 'SELL'
+                    },
+                    {
+                        name: 'Stochastic %K',
+                        value: indicators.stoch.k[idx]?.toFixed(1) || '--',
+                        signal: indicators.stoch.k[idx] < 20 ? 'BUY' : indicators.stoch.k[idx] > 80 ? 'SELL' : 'NEUTRAL'
+                    },
+                    {
+                        name: 'CCI (20)',
+                        value: indicators.cci[idx]?.toFixed(1) || '--',
+                        signal: indicators.cci[idx] < -100 ? 'BUY' : indicators.cci[idx] > 100 ? 'SELL' : 'NEUTRAL'
+                    },
+                    {
+                        name: 'Williams %R',
+                        value: indicators.willr[idx]?.toFixed(1) || '--',
+                        signal: indicators.willr[idx] < -80 ? 'BUY' : indicators.willr[idx] > -20 ? 'SELL' : 'NEUTRAL'
+                    },
+                    {
+                        name: 'MFI (14)',
+                        value: indicators.mfi[idx]?.toFixed(1) || '--',
+                        signal: indicators.mfi[idx] < 20 ? 'BUY' : indicators.mfi[idx] > 80 ? 'SELL' : 'NEUTRAL'
+                    },
+                    {
+                        name: 'ATR (14)',
+                        value: indicators.atr[indicators.atr.length - 1]?.toFixed(2) || '--',
+                        signal: 'VOLATILITY'
+                    },
+                    {
+                        name: 'ADX (14)',
+                        value: indicators.adx[indicators.adx.length - 1]?.toFixed(1) || '--',
+                        signal: indicators.adx[indicators.adx.length - 1] > 25 ? 'TRENDING' : 'RANGING'
+                    },
+                    {
+                        name: 'BB Position',
+                        value: ((current - indicators.bb.lower[idx]) / (indicators.bb.upper[idx] - indicators.bb.lower[idx]) * 100).toFixed(0) + '%',
+                        signal: current < indicators.bb.lower[idx] ? 'BUY' : current > indicators.bb.upper[idx] ? 'SELL' : 'NEUTRAL'
+                    },
+                    {
+                        name: 'SMA50/200',
+                        value: indicators.sma50[idx] > indicators.sma200[idx] ? 'GOLDEN' : 'DEATH',
+                        signal: indicators.sma50[idx] > indicators.sma200[idx] ? 'BUY' : 'SELL'
+                    },
+                    {
+                        name: 'ROC (12)',
+                        value: indicators.roc[idx]?.toFixed(2) + '%' || '--',
+                        signal: indicators.roc[idx] > 0 ? 'BUY' : 'SELL'
+                    },
+                    {
+                        name: 'OBV Trend',
+                        value: 'VOLUME',
+                        signal: indicators.obv[idx] > indicators.obv[Math.max(0, idx - 20)] ? 'BUY' : 'SELL'
+                    }
+                ];
+                
+                const html = cards.map(card => `
+                    <div class="indicator-card">
+                        <div class="indicator-header">
+                            <span class="indicator-name">${card.name}</span>
+                            <span class="indicator-signal ${card.signal === 'BUY' ? 'sig-buy' : card.signal === 'SELL' ? 'sig-sell' : 'sig-neutral'}">
+                                ${card.signal}
+                            </span>
+                        </div>
+                        <div class="indicator-value">${card.value}</div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('indicatorsGrid').innerHTML = html;
+            }
+            
+            static startTimer() {
+                let seconds = 10;
+                const updateTimer = () => {
+                    seconds--;
+                    if (seconds < 0) seconds = 10;
+                    
+                    document.getElementById('timerText').textContent = `${seconds}s`;
+                    document.getElementById('timerFill').style.width = `${(seconds / 10) * 100}%`;
+                    
+                    if (seconds === 0 && !APP.isPaused) {
+                        loadData(APP.symbol, APP.timeframe);
+                    }
+                };
+                
+                if (APP.updateInterval) clearInterval(APP.updateInterval);
+                APP.updateInterval = setInterval(updateTimer, 1000);
+            }
+        }
         
+        async function loadData(symbol, timeframe) {
+            try {
+                const interval = API.mapTF(timeframe);
+                const data = await API.fetchOHLCV(symbol, interval, 500);
+                APP.data = data;
+                
+                // Calculate all indicators
+                const indicators = SuperIndicators.calculateAll(data);
+                APP.indicators = indicators;
+                
+                // Update chart with indicators
+                ChartManager.updateData(data, indicators);
+                
+                // Get technical signal
+                const techSignal = SignalEngine.analyze(data, indicators);
+                
+                // Get ML prediction
+                const mlPred = await MLPredictor.trainAndPredict(data);
+                
+                // Update UI
+                UI.updateSignals(techSignal, mlPred);
+                UI.updateIndicators(indicators);
+                
+                // Detect patterns
+                const patterns = [];
+                for (let i = Math.max(0, data.length - 50); i < data.length; i++) {
+                    if (i < 3) continue;
+                    
+                    const curr = data[i];
+                    const prev1 = data[i-1];
+                    const prev2 = data[i-2];
+                    
+                    // Hammer
+                    const body = Math.abs(curr.close - curr.open);
+                    const lowerWick = Math.min(curr.open, curr.close) - curr.low;
+                    if (lowerWick > body * 2 && (curr.high - Math.max(curr.open, curr.close)) < body * 0.3) {
+                        patterns.push({ name: 'Hammer', type: 'bullish', index: i });
+                    }
+                    
+                    // Engulfing patterns
+                    if (prev1.close < prev1.open && curr.close > curr.open &&
+                        curr.close > prev1.open && curr.open < prev1.close) {
+                        patterns.push({ name: 'Bullish Engulfing', type: 'bullish', index: i });
+                    }
+                    
+                    if (prev1.close > prev1.open && curr.close < curr.open &&
+                        curr.close < prev1.open && curr.open > prev1.close) {
+                        patterns.push({ name: 'Bearish Engulfing', type: 'bearish', index: i });
+                    }
+                }
+                
+                ChartManager.addPatternMarkers(patterns.slice(-10));
+                
+                // Notify if strong signal
+                if (techSignal.signal === 'STRONG BUY' || techSignal.signal === 'STRONG SELL') {
+                    UI.notify('🚨 Strong Signal', `${techSignal.signal} detected with ${techSignal.confidence}% confidence`, 'alert');
+                }
+                
+                UI.startTimer();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                UI.notify('❌ Error', error.message);
+            }
+        }
+        
+        // Event Listeners
         document.querySelectorAll('.tf-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
@@ -1610,26 +1573,32 @@
             });
         });
         
-        document.querySelectorAll('.tab').forEach(btn => {
+        document.querySelectorAll('.indicator-toggles .toggle-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const tab = btn.dataset.tab;
-                const parent = btn.closest('.card');
-                parent.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-                parent.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById(`${tab}Tab`).classList.add('active');
+                const ind = btn.dataset.ind;
+                APP.overlays[ind] = !APP.overlays[ind];
+                btn.classList.toggle('active');
+                ChartManager.updateOverlays();
             });
         });
         
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            APP.isPaused = !APP.isPaused;
+            const btn = document.getElementById('pauseBtn');
+            btn.textContent = APP.isPaused ? '▶️ RESUME' : '⏸️ PAUSE';
+            btn.classList.toggle('active');
+        });
+        
+        document.getElementById('searchInput').addEventListener('change', (e) => {
+            APP.symbol = e.target.value.toUpperCase();
+            loadData(APP.symbol, APP.timeframe);
+        });
+        
+        // Initialize
         window.addEventListener('DOMContentLoaded', () => {
-            UI.initChart();
-            UI.loadMarkets();
-            
-            API.fetchSymbols()
-                .then(s => { APP.allSymbols = s; })
-                .catch(() => { APP.allSymbols = POPULAR_SYMBOLS; });
-            
-            setTimeout(() => loadData(APP.symbol, APP.timeframe), 500);
+            ChartManager.init();
+            loadData(APP.symbol, APP.timeframe);
+            UI.startTimer();
         });
     </script>
 </body>
