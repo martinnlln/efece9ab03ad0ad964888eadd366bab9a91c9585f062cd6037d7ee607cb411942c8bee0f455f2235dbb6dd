@@ -620,7 +620,7 @@
             }
         }
         
-        class Indicators {
+     class Indicators {
             static SMA(d, p) {
                 const r = [];
                 for (let i = 0; i < d.length; i++) {
@@ -763,14 +763,137 @@
                 return r;
             }
             
+            static MFI(data, p = 14) {
+                const tp = data.map(d => (d.high + d.low + d.close) / 3);
+                const mf = data.map((d, i) => tp[i] * d.volume);
+                const r = [null];
+                for (let i = p; i < data.length; i++) {
+                    let posFlow = 0, negFlow = 0;
+                    for (let j = i - p + 1; j <= i; j++) {
+                        if (tp[j] > tp[j - 1]) posFlow += mf[j];
+                        else if (tp[j] < tp[j - 1]) negFlow += mf[j];
+                    }
+                    const ratio = negFlow === 0 ? 100 : posFlow / negFlow;
+                    r.push(100 - (100 / (1 + ratio)));
+                }
+                while (r.length < data.length) r.unshift(null);
+                return r;
+            }
+            
+            static VWAP(data) {
+                let cumVol = 0, cumTPV = 0;
+                return data.map(d => {
+                    const tp = (d.high + d.low + d.close) / 3;
+                    cumTPV += tp * d.volume;
+                    cumVol += d.volume;
+                    return cumTPV / cumVol;
+                });
+            }
+            
+            static ParabolicSAR(data, accel = 0.02, maxAccel = 0.2) {
+                const r = [data[0].low];
+                let trend = 1, sar = data[0].low, ep = data[0].high, af = accel;
+                
+                for (let i = 1; i < data.length; i++) {
+                    const d = data[i];
+                    sar = sar + af * (ep - sar);
+                    
+                    if (trend === 1) {
+                        if (d.low < sar) {
+                            trend = -1;
+                            sar = ep;
+                            ep = d.low;
+                            af = accel;
+                        } else {
+                            if (d.high > ep) {
+                                ep = d.high;
+                                af = Math.min(af + accel, maxAccel);
+                            }
+                        }
+                    } else {
+                        if (d.high > sar) {
+                            trend = 1;
+                            sar = ep;
+                            ep = d.high;
+                            af = accel;
+                        } else {
+                            if (d.low < ep) {
+                                ep = d.low;
+                                af = Math.min(af + accel, maxAccel);
+                            }
+                        }
+                    }
+                    r.push(sar);
+                }
+                return r;
+            }
+            
+            static ROC(d, p = 12) {
+                const r = [];
+                for (let i = 0; i < d.length; i++) {
+                    if (i < p) r.push(null);
+                    else r.push(((d[i] - d[i - p]) / d[i - p]) * 100);
+                }
+                return r;
+            }
+            
+            static Aroon(data, p = 25) {
+                const up = [], down = [];
+                for (let i = 0; i < data.length; i++) {
+                    if (i < p) { up.push(null); down.push(null); }
+                    else {
+                        const slice = data.slice(i - p + 1, i + 1);
+                        const highIdx = slice.reduce((max, d, idx) => d.high > slice[max].high ? idx : max, 0);
+                        const lowIdx = slice.reduce((min, d, idx) => d.low < slice[min].low ? idx : min, 0);
+                        up.push(((p - (p - 1 - highIdx)) / p) * 100);
+                        down.push(((p - (p - 1 - lowIdx)) / p) * 100);
+                    }
+                }
+                return { up, down };
+            }
+            
+            static Ichimoku(data) {
+                const tenkan = [], kijun = [], senkouA = [], senkouB = [];
+                const p1 = 9, p2 = 26, p3 = 52;
+                
+                for (let i = 0; i < data.length; i++) {
+                    if (i < p1 - 1) tenkan.push(null);
+                    else {
+                        const slice = data.slice(i - p1 + 1, i + 1);
+                        tenkan.push((Math.max(...slice.map(d => d.high)) + Math.min(...slice.map(d => d.low))) / 2);
+                    }
+                    
+                    if (i < p2 - 1) kijun.push(null);
+                    else {
+                        const slice = data.slice(i - p2 + 1, i + 1);
+                        kijun.push((Math.max(...slice.map(d => d.high)) + Math.min(...slice.map(d => d.low))) / 2);
+                    }
+                    
+                    if (i < p2 - 1) senkouA.push(null);
+                    else senkouA.push((tenkan[i] + kijun[i]) / 2);
+                    
+                    if (i < p3 - 1) senkouB.push(null);
+                    else {
+                        const slice = data.slice(i - p3 + 1, i + 1);
+                        senkouB.push((Math.max(...slice.map(d => d.high)) + Math.min(...slice.map(d => d.low))) / 2);
+                    }
+                }
+                
+                return { tenkan, kijun, senkouA, senkouB };
+            }
+            
             static calc(data) {
                 const c = data.map(d => d.close);
+                const h = data.map(d => d.high);
+                const l = data.map(d => d.low);
+                
                 return {
                     sma20: this.SMA(c, 20),
                     sma50: this.SMA(c, 50),
                     sma200: this.SMA(c, 200),
                     ema9: this.EMA(c, 9),
                     ema12: this.EMA(c, 12),
+                    ema21: this.EMA(c, 21),
                     ema26: this.EMA(c, 26),
                     ema50: this.EMA(c, 50),
                     rsi: this.RSI(c, 14),
@@ -781,7 +904,13 @@
                     adx: this.ADX(data, 14),
                     obv: this.OBV(data),
                     cci: this.CCI(data, 20),
-                    willr: this.WilliamsR(data, 14)
+                    willr: this.WilliamsR(data, 14),
+                    mfi: this.MFI(data, 14),
+                    vwap: this.VWAP(data),
+                    psar: this.ParabolicSAR(data),
+                    roc: this.ROC(c, 12),
+                    aroon: this.Aroon(data, 25),
+                    ichimoku: this.Ichimoku(data)
                 };
             }
         }
