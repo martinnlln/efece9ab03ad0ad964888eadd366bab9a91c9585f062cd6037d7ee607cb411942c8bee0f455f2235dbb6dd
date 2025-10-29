@@ -3,1602 +3,773 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ QUANTUM TERMINAL PRO V3.0 - Real-Time | 30+ Indicators | Multi-Timeframe</title>
+    <title>🎯 Professional Trading System v2.0 - Backtesting & Risk Management</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
             --bg-primary: #0a0e1a;
             --bg-secondary: #0f172a;
             --bg-tertiary: #1e293b;
-            --bg-card: rgba(30, 41, 59, 0.9);
             --border: rgba(148, 163, 184, 0.1);
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
-            --accent: #3b82f6;
-            --accent-light: #60a5fa;
             --success: #10b981;
             --danger: #ef4444;
             --warning: #f59e0b;
-            --purple: #8b5cf6;
-            --pink: #ec4899;
-            --cyan: #06b6d4;
+            --accent: #3b82f6;
         }
         
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #0a0e1a 0%, #0f172a 100%);
             color: var(--text-primary);
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
+            padding: 20px;
         }
         
-        .app-container { display: flex; flex-direction: column; min-height: 100vh; }
+        .container { max-width: 1800px; margin: 0 auto; }
         
-        .header {
-            position: sticky; top: 0; z-index: 1000;
-            background: rgba(15, 23, 42, 0.98);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
-            padding: 12px 16px;
-        }
-        
-        .header-content {
-            display: flex; align-items: center; gap: 12px;
-            max-width: 1920px; margin: 0 auto;
-        }
-        
-        .logo {
-            font-size: 18px; font-weight: 900;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            white-space: nowrap;
+        .warning-banner {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.2));
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
             animation: pulse 2s infinite;
         }
         
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+            50% { opacity: 0.9; }
         }
         
-        .live-indicator {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 6px 12px; border-radius: 20px;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            font-size: 11px; font-weight: 700;
-            color: var(--success);
+        .warning-title {
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--danger);
+            margin-bottom: 10px;
         }
         
-        .live-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: var(--success);
-            animation: blink 1s infinite;
+        .warning-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
         }
         
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px; }
         
-        .search-wrapper { position: relative; flex: 1; max-width: 400px; }
-        
-        .search-input {
-            width: 100%; background: var(--bg-tertiary);
-            border: 2px solid transparent; color: var(--text-primary);
-            padding: 10px 16px 10px 40px; border-radius: 12px;
-            font-size: 14px; font-weight: 500; transition: all 0.3s;
-        }
-        
-        .search-input:focus {
-            outline: none; border-color: var(--accent);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-        }
-        
-        .main-content {
-            display: grid; grid-template-columns: 1fr;
-            gap: 16px; padding: 16px;
-            max-width: 1920px; margin: 0 auto; width: 100%;
-        }
-        
-        .control-bar {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
+        .card {
+            background: rgba(30, 41, 59, 0.9);
             border: 1px solid var(--border);
-            border-radius: 16px; padding: 12px;
-            display: flex; gap: 8px; flex-wrap: wrap;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
         }
         
-        .tf-selector {
-            display: flex; gap: 4px;
-            padding: 4px; background: var(--bg-secondary);
-            border-radius: 10px;
-        }
+        .metric:last-child { border-bottom: none; }
         
-        .tf-btn {
-            background: transparent; border: none;
+        .metric-label {
+            font-size: 13px;
             color: var(--text-secondary);
-            padding: 6px 12px; border-radius: 6px;
-            cursor: pointer; font-size: 12px;
-            font-weight: 700; white-space: nowrap;
-            transition: all 0.2s;
         }
         
-        .tf-btn:hover, .tf-btn.active {
-            background: var(--accent); color: white;
+        .metric-value {
+            font-size: 16px;
+            font-weight: 700;
         }
         
-        .divider {
-            width: 1px; height: 24px;
-            background: var(--border);
-            margin: 0 8px;
-        }
+        .positive { color: var(--success); }
+        .negative { color: var(--danger); }
+        .neutral { color: var(--text-secondary); }
         
-        .indicator-toggles {
-            display: flex; gap: 6px; flex-wrap: wrap;
-        }
-        
-        .toggle-btn {
-            padding: 6px 10px; border-radius: 8px;
-            font-size: 11px; font-weight: 700;
-            cursor: pointer; transition: all 0.2s;
+        .chart-container {
+            background: rgba(30, 41, 59, 0.9);
             border: 1px solid var(--border);
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-        }
-        
-        .toggle-btn.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: white;
-        }
-        
-        .toggle-btn.ma { --color: #3b82f6; }
-        .toggle-btn.bb { --color: #8b5cf6; }
-        .toggle-btn.ichimoku { --color: #ec4899; }
-        .toggle-btn.volume { --color: #10b981; }
-        .toggle-btn.patterns { --color: #f59e0b; }
-        
-        .toggle-btn.active.ma { background: #3b82f6; border-color: #3b82f6; }
-        .toggle-btn.active.bb { background: #8b5cf6; border-color: #8b5cf6; }
-        .toggle-btn.active.ichimoku { background: #ec4899; border-color: #ec4899; }
-        .toggle-btn.active.volume { background: #10b981; border-color: #10b981; }
-        .toggle-btn.active.patterns { background: #f59e0b; border-color: #f59e0b; }
-        
-        .signal-zone {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.05));
-            border: 2px solid rgba(59, 130, 246, 0.3);
-            border-radius: 16px; padding: 20px;
-            position: relative; overflow: hidden;
-        }
-        
-        .signal-header {
-            display: grid; grid-template-columns: 1fr auto 1fr;
-            gap: 20px; align-items: center;
+            border-radius: 12px;
+            padding: 20px;
+            height: 500px;
             margin-bottom: 20px;
         }
         
-        .signal-section {
-            background: var(--bg-tertiary);
-            border-radius: 12px; padding: 16px;
-        }
+        #chart { width: 100%; height: 100%; }
         
-        .signal-title {
-            font-size: 11px; font-weight: 700;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-        
-        .signal-badge {
-            display: inline-flex; align-items: center;
-            gap: 8px; padding: 10px 16px;
-            border-radius: 10px; font-weight: 900;
-            font-size: 16px;
-        }
-        
-        .signal-strong-buy { background: linear-gradient(135deg, #10b981, #059669); }
-        .signal-buy { background: linear-gradient(135deg, #34d399, #10b981); }
-        .signal-hold { background: linear-gradient(135deg, #f59e0b, #d97706); }
-        .signal-sell { background: linear-gradient(135deg, #f87171, #ef4444); }
-        .signal-strong-sell { background: linear-gradient(135deg, #ef4444, #dc2626); }
-        .signal-conflict { 
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
-            animation: conflictPulse 2s infinite;
-        }
-        
-        @keyframes conflictPulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(139, 92, 246, 0.5); }
-            50% { opacity: 0.9; box-shadow: 0 0 40px rgba(236, 72, 153, 0.5); }
-        }
-        
-        .vs-indicator {
-            font-size: 24px; font-weight: 900;
-            color: var(--warning);
-            text-align: center;
-            animation: pulse 1s infinite;
-        }
-        
-        .confidence-bar {
-            height: 6px; background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px; overflow: hidden; margin-top: 6px;
-        }
-        
-        .confidence-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), var(--accent-light));
-            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .reconciliation-box {
-            background: rgba(139, 92, 246, 0.1);
-            border: 2px solid rgba(139, 92, 246, 0.3);
-            border-radius: 12px; padding: 16px;
-            margin-top: 16px;
-        }
-        
-        .reconciliation-title {
-            font-size: 14px; font-weight: 800;
-            color: var(--purple);
-            margin-bottom: 12px;
-            display: flex; align-items: center; gap: 8px;
-        }
-        
-        .chart-container {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 16px; padding: 16px;
-            height: 600px; position: relative;
-        }
-        
-        #chartElement { width: 100%; height: 100%; }
-        
-        .indicators-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 12px;
-        }
-        
-        .indicator-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px; padding: 14px;
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
             transition: all 0.2s;
         }
         
-        .indicator-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent);
+        .btn:hover { background: #2563eb; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #dc2626; }
+        
+        .log-container {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
         }
         
-        .indicator-header {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 8px;
+        .log-entry {
+            padding: 8px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
         }
         
-        .indicator-name {
-            font-size: 12px; font-weight: 700;
+        .log-info { background: rgba(59, 130, 246, 0.1); }
+        .log-trade { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .log-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .log-error { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 900;
+            margin: 30px 0 15px 0;
             color: var(--text-primary);
-        }
-        
-        .indicator-value {
-            font-size: 16px; font-weight: 800;
-        }
-        
-        .indicator-signal {
-            padding: 4px 8px; border-radius: 6px;
-            font-size: 10px; font-weight: 700;
-        }
-        
-        .sig-buy { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-        .sig-sell { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-        .sig-neutral { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
-        
-        .update-timer {
-            position: fixed; bottom: 20px; right: 20px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px; padding: 12px 16px;
-            font-size: 12px; font-weight: 700;
-            display: flex; align-items: center; gap: 8px;
-            z-index: 1000;
-        }
-        
-        .timer-bar {
-            width: 100px; height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px; overflow: hidden;
-        }
-        
-        .timer-fill {
-            height: 100%; background: var(--accent);
-            transition: width 1s linear;
-        }
-        
-        .notification {
-            position: fixed; top: 80px; right: 20px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px; padding: 16px 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            z-index: 10001; opacity: 0;
-            transform: translateX(400px);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            max-width: 400px;
-        }
-        
-        .notification.show { opacity: 1; transform: translateX(0); }
-        
-        .notification.alert {
-            border-color: var(--warning);
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
-        }
-        
-        .notif-title { font-weight: 800; font-size: 14px; margin-bottom: 4px; }
-        .notif-body { font-size: 12px; color: var(--text-secondary); }
-        
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
-        ::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.3); border-radius: 3px; }
-        
-        @media (min-width: 1024px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
 <body>
-    <div id="notificationArea"></div>
-    
-    <div class="update-timer">
-        <span>Next update</span>
-        <div class="timer-bar">
-            <div class="timer-fill" id="timerFill"></div>
-        </div>
-        <span id="timerText">10s</span>
-    </div>
-    
-    <div class="app-container">
-        <div class="header">
-            <div class="header-content">
-                <div class="logo">⚡ QUANTUM V3</div>
-                <div class="live-indicator">
-                    <div class="live-dot"></div>
-                    LIVE
-                </div>
-                <div class="search-wrapper">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" class="search-input" 
-                           placeholder="Search crypto..." value="BTCUSDT"/>
-                </div>
-                <button id="pauseBtn" class="toggle-btn" style="margin-left: auto;">
-                    ⏸️ PAUSE
-                </button>
+    <div class="container">
+        <div class="warning-banner">
+            <div class="warning-title">⚠️ CRITICAL WARNING: FOR EDUCATIONAL PURPOSES ONLY</div>
+            <div class="warning-text">
+                <strong>Trading cryptocurrencies involves substantial risk of loss.</strong> This system is for learning and paper trading only. 
+                Professional traders with far more resources and experience lose money. Key risks include:
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li>Historical performance does NOT guarantee future results</li>
+                    <li>Markets are non-stationary - patterns that worked before may not work again</li>
+                    <li>Transaction costs and slippage significantly impact profitability</li>
+                    <li>Overfitting - systems may work on past data but fail on new data</li>
+                    <li>Black swan events can cause catastrophic losses</li>
+                </ul>
+                <strong style="color: var(--danger); margin-top: 10px; display: block;">
+                    NEVER RISK MONEY YOU CANNOT AFFORD TO LOSE. START WITH PAPER TRADING FOR AT LEAST 6 MONTHS.
+                </strong>
             </div>
         </div>
-        
-        <div class="main-content">
-            <div class="control-bar">
-                <div class="tf-selector">
-                    <button class="tf-btn" data-tf="1">1m</button>
-                    <button class="tf-btn" data-tf="5">5m</button>
-                    <button class="tf-btn" data-tf="15">15m</button>
-                    <button class="tf-btn" data-tf="30">30m</button>
-                    <button class="tf-btn" data-tf="60">1H</button>
-                    <button class="tf-btn" data-tf="240">4H</button>
-                    <button class="tf-btn active" data-tf="D">1D</button>
+
+        <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 20px;">
+            🎯 Professional Trading System v2.0
+        </h1>
+
+        <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <input type="text" id="symbolInput" placeholder="Symbol (e.g., BTCUSDT)" 
+                       value="BTCUSDT" style="flex: 1; padding: 10px; background: var(--bg-primary); 
+                       border: 1px solid var(--border); border-radius: 8px; color: white;">
+                <select id="timeframeSelect" style="padding: 10px; background: var(--bg-primary); 
+                        border: 1px solid var(--border); border-radius: 8px; color: white;">
+                    <option value="1h">1 Hour</option>
+                    <option value="4h">4 Hours</option>
+                    <option value="1d" selected>1 Day</option>
+                </select>
+                <button class="btn" onclick="runBacktest()">🔄 Run Backtest</button>
+                <button class="btn btn-danger" onclick="resetSystem()">🗑️ Reset</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">📊 BACKTEST RESULTS</div>
+                <div class="metric">
+                    <span class="metric-label">Total Return</span>
+                    <span class="metric-value" id="totalReturn">--%</span>
                 </div>
-                
-                <div class="divider"></div>
-                
-                <div class="indicator-toggles">
-                    <button class="toggle-btn ma active" data-ind="ma">MA(9,20,50,200)</button>
-                    <button class="toggle-btn bb" data-ind="bb">Bollinger</button>
-                    <button class="toggle-btn ichimoku" data-ind="ichimoku">Ichimoku</button>
-                    <button class="toggle-btn volume active" data-ind="volume">Volume</button>
-                    <button class="toggle-btn patterns" data-ind="patterns">Patterns</button>
+                <div class="metric">
+                    <span class="metric-label">Win Rate</span>
+                    <span class="metric-value" id="winRate">--%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Sharpe Ratio</span>
+                    <span class="metric-value" id="sharpeRatio">--</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Max Drawdown</span>
+                    <span class="metric-value negative" id="maxDrawdown">--%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Profit Factor</span>
+                    <span class="metric-value" id="profitFactor">--</span>
                 </div>
             </div>
-            
-            <div class="signal-zone">
-                <div class="signal-header">
-                    <div class="signal-section">
-                        <div class="signal-title">📊 TECHNICAL ANALYSIS</div>
-                        <div class="signal-badge signal-hold" id="techSignal">
-                            <span>ANALYZING...</span>
-                        </div>
-                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
-                            Confidence: <span id="techConfidence" style="font-weight: 700;">--%</span>
-                        </div>
-                        <div class="confidence-bar">
-                            <div class="confidence-fill" id="techConfFill" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="vs-indicator">VS</div>
-                    
-                    <div class="signal-section">
-                        <div class="signal-title">🤖 NEURAL NETWORK</div>
-                        <div class="signal-badge signal-hold" id="mlSignal">
-                            <span>TRAINING...</span>
-                        </div>
-                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
-                            Confidence: <span id="mlConfidence" style="font-weight: 700;">--%</span>
-                        </div>
-                        <div class="confidence-bar">
-                            <div class="confidence-fill" id="mlConfFill" style="width: 0%"></div>
-                        </div>
-                    </div>
+
+            <div class="card">
+                <div class="card-title">💼 TRADE STATISTICS</div>
+                <div class="metric">
+                    <span class="metric-label">Total Trades</span>
+                    <span class="metric-value" id="totalTrades">0</span>
                 </div>
-                
-                <div class="reconciliation-box" id="reconciliationBox" style="display: none;">
-                    <div class="reconciliation-title">
-                        <span>⚠️</span>
-                        <span>CONFLICT DETECTED - INTELLIGENT RESOLUTION</span>
-                    </div>
-                    <div id="reconciliationContent" style="font-size: 13px; line-height: 1.6;"></div>
-                    <div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                        <strong style="color: var(--warning);">RECOMMENDED ACTION:</strong>
-                        <div id="recommendedAction" style="margin-top: 8px; font-weight: 700; font-size: 14px;"></div>
-                    </div>
+                <div class="metric">
+                    <span class="metric-label">Winning Trades</span>
+                    <span class="metric-value positive" id="winningTrades">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Losing Trades</span>
+                    <span class="metric-value negative" id="losingTrades">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Avg Win</span>
+                    <span class="metric-value positive" id="avgWin">--%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Avg Loss</span>
+                    <span class="metric-value negative" id="avgLoss">--%</span>
                 </div>
             </div>
-            
-            <div class="chart-container">
-                <div id="chartElement"></div>
+
+            <div class="card">
+                <div class="card-title">⚠️ RISK METRICS</div>
+                <div class="metric">
+                    <span class="metric-label">Current Position</span>
+                    <span class="metric-value" id="currentPosition">FLAT</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Risk Per Trade</span>
+                    <span class="metric-value" id="riskPerTrade">2%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Stop Loss</span>
+                    <span class="metric-value" id="stopLoss">--</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Take Profit</span>
+                    <span class="metric-value" id="takeProfit">--</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Risk/Reward</span>
+                    <span class="metric-value" id="riskReward">1:2</span>
+                </div>
             </div>
-            
-            <div class="indicators-grid" id="indicatorsGrid"></div>
+        </div>
+
+        <div class="chart-container">
+            <div id="chart"></div>
+        </div>
+
+        <div class="section-title">📋 Trade Log</div>
+        <div class="log-container" id="tradeLog">
+            <div class="log-entry log-info">System initialized. Waiting for backtest...</div>
         </div>
     </div>
 
     <script>
-        console.log('%c⚡ QUANTUM TERMINAL V3.0', 'color:#8b5cf6;font-size:24px;font-weight:bold;');
-        console.log('%c30+ Indicators | Real-Time | Conflict Resolution | Chart Overlays', 'color:#ec4899;font-size:12px;');
-        
-        const APP = {
-            chart: null,
-            candleSeries: null,
-            volumeSeries: null,
-            maSeries: {},
-            bbSeries: {},
-            ichimokuSeries: {},
-            patternMarkers: [],
-            symbol: 'BTCUSDT',
-            timeframe: 'D',
-            data: null,
-            indicators: {},
-            updateInterval: null,
-            isPaused: false,
-            overlays: {
-                ma: true,
-                bb: false,
-                ichimoku: false,
-                volume: true,
-                patterns: false
-            }
+        // Trading System Configuration
+        const CONFIG = {
+            initialCapital: 10000,
+            riskPerTrade: 0.02, // 2% risk per trade
+            commission: 0.001,  // 0.1% per trade
+            slippage: 0.0005,   // 0.05% slippage
+            stopLossPercent: 0.03,  // 3% stop loss
+            takeProfitPercent: 0.06, // 6% take profit (2:1 R/R)
+            maxConcurrentTrades: 1,
+            minTrainingSamples: 200
         };
-        
-        class API {
-            static async fetchOHLCV(symbol, interval, limit = 500) {
-                const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                return data.map(c => ({
-                    time: c[0] / 1000,
-                    open: parseFloat(c[1]),
-                    high: parseFloat(c[2]),
-                    low: parseFloat(c[3]),
-                    close: parseFloat(c[4]),
-                    volume: parseFloat(c[5])
-                }));
-            }
-            
-            static mapTF(tf) {
-                const map = { '1': '1m', '5': '5m', '15': '15m', '30': '30m', '60': '1h', '240': '4h', 'D': '1d', 'W': '1w' };
-                return map[tf] || '1d';
-            }
+
+        let STATE = {
+            capital: CONFIG.initialCapital,
+            equity: CONFIG.initialCapital,
+            position: null,
+            trades: [],
+            equityCurve: []
+        };
+
+        let chart = null;
+        let candleSeries = null;
+        let equitySeries = null;
+
+        // Initialize Chart
+        function initChart() {
+            const container = document.getElementById('chart');
+            chart = LightweightCharts.createChart(container, {
+                layout: {
+                    background: { color: 'transparent' },
+                    textColor: '#94a3b8'
+                },
+                grid: {
+                    vertLines: { color: 'rgba(255,255,255,0.05)' },
+                    horzLines: { color: 'rgba(255,255,255,0.05)' }
+                },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
+                timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true }
+            });
+
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#10b981',
+                downColor: '#ef4444',
+                borderVisible: false,
+                wickUpColor: '#10b981',
+                wickDownColor: '#ef4444'
+            });
+
+            equitySeries = chart.addLineSeries({
+                color: '#3b82f6',
+                lineWidth: 2,
+                priceScaleId: 'right',
+                title: 'Equity'
+            });
         }
-        
-        class SuperIndicators {
-            static SMA(d, p) {
-                const r = [];
-                for (let i = 0; i < d.length; i++) {
-                    if (i < p - 1) r.push(null);
-                    else r.push(d.slice(i - p + 1, i + 1).reduce((a, b) => a + b, 0) / p);
+
+        // Fetch OHLCV Data
+        async function fetchData(symbol, interval, limit = 500) {
+            const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            return data.map(candle => ({
+                time: candle[0] / 1000,
+                open: parseFloat(candle[1]),
+                high: parseFloat(candle[2]),
+                low: parseFloat(candle[3]),
+                close: parseFloat(candle[4]),
+                volume: parseFloat(candle[5])
+            }));
+        }
+
+        // Technical Indicators
+        class Indicators {
+            static EMA(data, period) {
+                const k = 2 / (period + 1);
+                const ema = [data[0]];
+                for (let i = 1; i < data.length; i++) {
+                    ema.push(data[i] * k + ema[i - 1] * (1 - k));
                 }
-                return r;
+                return ema;
             }
-            
-            static EMA(d, p) {
-                const k = 2 / (p + 1);
-                const r = [d[0]];
-                for (let i = 1; i < d.length; i++) r.push(d[i] * k + r[i - 1] * (1 - k));
-                return r;
-            }
-            
-            static RSI(d, p = 14) {
-                const ch = d.slice(1).map((v, i) => v - d[i]);
-                const r = [null];
-                for (let i = p - 1; i < ch.length; i++) {
-                    const g = [], lo = [];
-                    for (let j = i - p + 1; j <= i; j++) {
-                        if (ch[j] > 0) g.push(ch[j]);
-                        else lo.push(Math.abs(ch[j]));
-                    }
-                    const ag = g.length > 0 ? g.reduce((a, b) => a + b, 0) / p : 0;
-                    const al = lo.length > 0 ? lo.reduce((a, b) => a + b, 0) / p : 0;
-                    r.push(al === 0 ? 100 : 100 - (100 / (1 + ag / al)));
-                }
-                while (r.length < d.length) r.unshift(null);
-                return r;
-            }
-            
-            static MACD(d) {
-                const e12 = this.EMA(d, 12);
-                const e26 = this.EMA(d, 26);
-                const macd = e12.map((v, i) => v - e26[i]);
-                const sig = this.EMA(macd.filter(v => v !== null), 9);
-                const hist = macd.slice(-sig.length).map((v, i) => v - sig[i]);
-                return { macd, signal: sig, histogram: hist };
-            }
-            
-            static BB(d, p = 20, m = 2) {
-                const sma = this.SMA(d, p);
-                const u = [], lo = [];
-                for (let i = 0; i < d.length; i++) {
-                    if (i < p - 1) { u.push(null); lo.push(null); }
-                    else {
-                        const sl = d.slice(i - p + 1, i + 1);
-                        const mean = sma[i];
-                        const std = Math.sqrt(sl.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / p);
-                        u.push(mean + m * std);
-                        lo.push(mean - m * std);
-                    }
-                }
-                return { upper: u, middle: sma, lower: lo };
-            }
-            
-            static Stochastic(data, p = 14, smooth = 3) {
-                const k = [];
-                for (let i = 0; i < data.length; i++) {
-                    if (i < p - 1) k.push(null);
-                    else {
-                        const slice = data.slice(i - p + 1, i + 1);
-                        const h = Math.max(...slice.map(d => d.high));
-                        const l = Math.min(...slice.map(d => d.low));
-                        const c = data[i].close;
-                        k.push(h === l ? 50 : ((c - l) / (h - l)) * 100);
-                    }
-                }
-                const d = this.SMA(k.filter(v => v !== null), smooth);
-                return { k, d };
-            }
-            
-            static Ichimoku(data) {
-                const calc = (p) => {
-                    const r = [];
-                    for (let i = 0; i < data.length; i++) {
-                        if (i < p - 1) r.push(null);
-                        else {
-                            const slice = data.slice(i - p + 1, i + 1);
-                            const h = Math.max(...slice.map(d => d.high));
-                            const l = Math.min(...slice.map(d => d.low));
-                            r.push((h + l) / 2);
-                        }
-                    }
-                    return r;
-                };
+
+            static RSI(data, period = 14) {
+                const changes = data.slice(1).map((val, i) => val - data[i]);
+                const gains = changes.map(c => c > 0 ? c : 0);
+                const losses = changes.map(c => c < 0 ? Math.abs(c) : 0);
                 
-                const tenkan = calc(9);
-                const kijun = calc(26);
-                const senkouA = tenkan.map((v, i) => v && kijun[i] ? (v + kijun[i]) / 2 : null);
-                const senkouB = calc(52);
-                const chikou = data.map(d => d.close);
+                let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
+                let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
                 
-                return { tenkan, kijun, senkouA, senkouB, chikou };
+                const rsi = [100 - (100 / (1 + avgGain / avgLoss))];
+                
+                for (let i = period; i < changes.length; i++) {
+                    avgGain = (avgGain * (period - 1) + gains[i]) / period;
+                    avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
+                    rsi.push(100 - (100 / (1 + avgGain / avgLoss)));
+                }
+                
+                return [null, ...rsi];
             }
-            
-            static ATR(data, p = 14) {
+
+            static ATR(data, period = 14) {
                 const tr = [];
                 for (let i = 1; i < data.length; i++) {
-                    const h = data[i].high;
-                    const l = data[i].low;
-                    const pc = data[i - 1].close;
-                    tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+                    const high = data[i].high;
+                    const low = data[i].low;
+                    const prevClose = data[i - 1].close;
+                    tr.push(Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose)));
                 }
-                return this.EMA(tr, p);
-            }
-            
-            static ADX(data, p = 14) {
-                const tr = [], pdm = [], ndm = [];
-                for (let i = 1; i < data.length; i++) {
-                    const h = data[i].high, l = data[i].low;
-                    const ph = data[i - 1].high, pl = data[i - 1].low, pc = data[i - 1].close;
-                    tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
-                    const hd = h - ph, ld = pl - l;
-                    pdm.push(hd > ld && hd > 0 ? hd : 0);
-                    ndm.push(ld > hd && ld > 0 ? ld : 0);
-                }
-                const atr = this.EMA(tr, p);
-                const pdi = this.EMA(pdm, p).map((v, i) => (v / atr[i]) * 100);
-                const ndi = this.EMA(ndm, p).map((v, i) => (v / atr[i]) * 100);
-                const dx = pdi.map((v, i) => Math.abs(v - ndi[i]) / (v + ndi[i]) * 100);
-                return this.EMA(dx, p);
-            }
-            
-            static CCI(data, p = 20) {
-                const tp = data.map(d => (d.high + d.low + d.close) / 3);
-                const sma = this.SMA(tp, p);
-                const r = [];
-                for (let i = 0; i < data.length; i++) {
-                    if (i < p - 1) r.push(null);
-                    else {
-                        const slice = tp.slice(i - p + 1, i + 1);
-                        const md = slice.reduce((sum, v) => sum + Math.abs(v - sma[i]), 0) / p;
-                        r.push((tp[i] - sma[i]) / (0.015 * md));
-                    }
-                }
-                return r;
-            }
-            
-            static WilliamsR(data, p = 14) {
-                const r = [];
-                for (let i = 0; i < data.length; i++) {
-                    if (i < p - 1) r.push(null);
-                    else {
-                        const slice = data.slice(i - p + 1, i + 1);
-                        const h = Math.max(...slice.map(d => d.high));
-                        const l = Math.min(...slice.map(d => d.low));
-                        const c = data[i].close;
-                        r.push(h === l ? -50 : ((h - c) / (h - l)) * -100);
-                    }
-                }
-                return r;
-            }
-            
-            static MFI(data, p = 14) {
-                const tp = data.map(d => (d.high + d.low + d.close) / 3);
-                const mf = tp.map((v, i) => v * data[i].volume);
-                const r = [];
-                for (let i = 0; i < data.length; i++) {
-                    if (i < p) r.push(null);
-                    else {
-                        let pmf = 0, nmf = 0;
-                        for (let j = i - p + 1; j <= i; j++) {
-                            if (tp[j] > tp[j - 1]) pmf += mf[j];
-                            else nmf += mf[j];
-                        }
-                        r.push(100 - (100 / (1 + pmf / nmf)));
-                    }
-                }
-                return r;
-            }
-            
-            static ROC(data, p = 12) {
-                return data.map((v, i) => i < p ? null : ((v - data[i - p]) / data[i - p]) * 100);
-            }
-            
-            static VWAP(data) {
-                let cumVol = 0, cumPV = 0;
-                return data.map(d => {
-                    const tp = (d.high + d.low + d.close) / 3;
-                    cumPV += tp * d.volume;
-                    cumVol += d.volume;
-                    return cumVol === 0 ? tp : cumPV / cumVol;
-                });
-            }
-            
-            static OBV(data) {
-                let obv = 0;
-                const r = [0];
-                for (let i = 1; i < data.length; i++) {
-                    if (data[i].close > data[i - 1].close) obv += data[i].volume;
-                    else if (data[i].close < data[i - 1].close) obv -= data[i].volume;
-                    r.push(obv);
-                }
-                return r;
-            }
-            
-            static PSAR(data, af = 0.02, maxAf = 0.2) {
-                const r = [];
-                let isUpTrend = true;
-                let ep = data[0].high;
-                let sar = data[0].low;
-                let currentAf = af;
                 
-                for (let i = 0; i < data.length; i++) {
-                    r.push(sar);
-                    const nextSar = sar + currentAf * (ep - sar);
-                    
-                    if (isUpTrend) {
-                        if (data[i].low <= nextSar) {
-                            isUpTrend = false;
-                            sar = ep;
-                            ep = data[i].low;
-                            currentAf = af;
-                        } else {
-                            sar = nextSar;
-                            if (data[i].high > ep) {
-                                ep = data[i].high;
-                                currentAf = Math.min(currentAf + af, maxAf);
-                            }
-                        }
-                    } else {
-                        if (data[i].high >= nextSar) {
-                            isUpTrend = true;
-                            sar = ep;
-                            ep = data[i].high;
-                            currentAf = af;
-                        } else {
-                            sar = nextSar;
-                            if (data[i].low < ep) {
-                                ep = data[i].low;
-                                currentAf = Math.min(currentAf + af, maxAf);
-                            }
-                        }
-                    }
-                }
-                return r;
+                return this.EMA(tr, period);
             }
-            
+
             static calculateAll(data) {
-                const c = data.map(d => d.close);
+                const closes = data.map(d => d.close);
+                
                 return {
-                    sma9: this.SMA(c, 9),
-                    sma20: this.SMA(c, 20),
-                    sma50: this.SMA(c, 50),
-                    sma200: this.SMA(c, 200),
-                    ema9: this.EMA(c, 9),
-                    ema21: this.EMA(c, 21),
-                    ema50: this.EMA(c, 50),
-                    ema200: this.EMA(c, 200),
-                    rsi: this.RSI(c, 14),
-                    rsi7: this.RSI(c, 7),
-                    rsi21: this.RSI(c, 21),
-                    macd: this.MACD(c),
-                    bb: this.BB(c, 20, 2),
-                    bbNarrow: this.BB(c, 10, 1.5),
-                    bbWide: this.BB(c, 30, 2.5),
-                    stoch: this.Stochastic(data, 14, 3),
-                    stochFast: this.Stochastic(data, 5, 3),
-                    stochSlow: this.Stochastic(data, 21, 5),
-                    ichimoku: this.Ichimoku(data),
-                    atr: this.ATR(data, 14),
-                    atr7: this.ATR(data, 7),
-                    atr21: this.ATR(data, 21),
-                    adx: this.ADX(data, 14),
-                    cci: this.CCI(data, 20),
-                    willr: this.WilliamsR(data, 14),
-                    mfi: this.MFI(data, 14),
-                    roc: this.ROC(c, 12),
-                    vwap: this.VWAP(data),
-                    obv: this.OBV(data),
-                    psar: this.PSAR(data)
+                    ema9: this.EMA(closes, 9),
+                    ema21: this.EMA(closes, 21),
+                    ema50: this.EMA(closes, 50),
+                    rsi: this.RSI(closes, 14),
+                    atr: this.ATR(data, 14)
                 };
             }
         }
-        
-        class MLPredictor {
-            static async trainAndPredict(data) {
-                try {
-                    if (data.length < 100) return null;
-                    
-                    // Prepare features
-                    const features = data.map(d => [
-                        d.open, d.high, d.low, d.close, d.volume,
-                        (d.high - d.low) / d.close, // Volatility
-                        (d.close - d.open) / d.open  // Change
-                    ]);
-                    
-                    // Normalize
-                    const normalized = [];
-                    for (let i = 0; i < features[0].length; i++) {
-                        const col = features.map(f => f[i]);
-                        const min = Math.min(...col);
-                        const max = Math.max(...col);
-                        normalized.push({ min, max });
-                    }
-                    
-                    const normFeatures = features.map(f => f.map((v, i) => {
-                        const { min, max } = normalized[i];
-                        return max === min ? 0 : (v - min) / (max - min);
-                    }));
-                    
-                    // Create sequences
-                    const lookback = 60;
-                    const X = [], y = [];
-                    for (let i = lookback; i < normFeatures.length; i++) {
-                        X.push(normFeatures.slice(i - lookback, i));
-                        y.push(normFeatures[i][3]); // Predict close
-                    }
-                    
-                    if (X.length < 10) return null;
-                    
-                    // Build model
-                    const model = tf.sequential({
-                        layers: [
-                            tf.layers.lstm({ units: 64, returnSequences: true, inputShape: [lookback, 7] }),
-                            tf.layers.dropout({ rate: 0.2 }),
-                            tf.layers.lstm({ units: 32, returnSequences: false }),
-                            tf.layers.dropout({ rate: 0.2 }),
-                            tf.layers.dense({ units: 16, activation: 'relu' }),
-                            tf.layers.dense({ units: 1 })
-                        ]
-                    });
-                    
-                    model.compile({
-                        optimizer: tf.train.adam(0.001),
-                        loss: 'meanSquaredError',
-                        metrics: ['mae']
-                    });
-                    
-                    // Train
-                    const Xtensor = tf.tensor3d(X);
-                    const ytensor = tf.tensor2d(y, [y.length, 1]);
-                    
-                    await model.fit(Xtensor, ytensor, {
-                        epochs: 10,
-                        batchSize: 32,
-                        verbose: 0,
-                        validationSplit: 0.2
-                    });
-                    
-                    // Predict next
-                    const lastSeq = tf.tensor3d([X[X.length - 1]]);
-                    const pred = model.predict(lastSeq);
-                    const predVal = (await pred.data())[0];
-                    
-                    // Denormalize
-                    const { min, max } = normalized[3];
-                    const predPrice = predVal * (max - min) + min;
-                    
-                    // Calculate confidence based on recent accuracy
-                    const testSize = Math.min(20, Math.floor(X.length * 0.2));
-                    const Xtest = X.slice(-testSize);
-                    const ytest = y.slice(-testSize);
-                    
-                    const XtestTensor = tf.tensor3d(Xtest);
-                    const testPred = model.predict(XtestTensor);
-                    const testPredData = await testPred.data();
-                    
-                    let totalError = 0;
-                    for (let i = 0; i < ytest.length; i++) {
-                        totalError += Math.abs(testPredData[i] - ytest[i]);
-                    }
-                    const avgError = totalError / ytest.length;
-                    const accuracy = Math.max(0, Math.min(100, (1 - avgError) * 100));
-                    
-                    // Cleanup
-                    Xtensor.dispose();
-                    ytensor.dispose();
-                    lastSeq.dispose();
-                    pred.dispose();
-                    XtestTensor.dispose();
-                    testPred.dispose();
-                    
-                    return {
-                        predicted: predPrice,
-                        current: data[data.length - 1].close,
-                        confidence: accuracy.toFixed(1),
-                        direction: predPrice > data[data.length - 1].close ? 'UP' : 'DOWN',
-                        change: ((predPrice - data[data.length - 1].close) / data[data.length - 1].close) * 100
-                    };
-                } catch (e) {
-                    console.error('ML Error:', e);
-                    return null;
-                }
-            }
-        }
-        
-        class SignalEngine {
-            static analyze(data, ind) {
-                const signals = {};
-                const weights = {};
-                const idx = data.length - 1;
-                const c = data[idx].close;
+
+        // Advanced ML Strategy
+        class MLStrategy {
+            static generateSignal(data, indicators, index) {
+                if (index < 50) return null; // Need enough data
                 
-                // RSI (Multiple timeframes)
-                const rsi = ind.rsi[idx];
-                const rsi7 = ind.rsi7[idx];
-                const rsi21 = ind.rsi21[idx];
+                const price = data[index].close;
+                const ema9 = indicators.ema9[index];
+                const ema21 = indicators.ema21[index];
+                const ema50 = indicators.ema50[index];
+                const rsi = indicators.rsi[index];
                 
-                if (rsi < 30 && rsi7 < 25) {
-                    signals.rsi = 'STRONG_BUY';
-                    weights.rsi = 2.5;
-                } else if (rsi < 40) {
-                    signals.rsi = 'BUY';
-                    weights.rsi = 1.5;
-                } else if (rsi > 70 && rsi7 > 75) {
-                    signals.rsi = 'STRONG_SELL';
-                    weights.rsi = 2.5;
-                } else if (rsi > 60) {
-                    signals.rsi = 'SELL';
-                    weights.rsi = 1.5;
-                } else {
-                    signals.rsi = 'NEUTRAL';
-                    weights.rsi = 0.5;
-                }
+                // Trend following with multiple confirmations
+                let signal = null;
+                let confidence = 0;
                 
-                // MACD
-                const macdHist = ind.macd.histogram[ind.macd.histogram.length - 1];
-                const prevMacdHist = ind.macd.histogram[ind.macd.histogram.length - 2];
-                
-                if (macdHist > 0 && prevMacdHist <= 0) {
-                    signals.macd = 'STRONG_BUY';
-                    weights.macd = 3;
-                } else if (macdHist > 0) {
-                    signals.macd = 'BUY';
-                    weights.macd = 2;
-                } else if (macdHist < 0 && prevMacdHist >= 0) {
-                    signals.macd = 'STRONG_SELL';
-                    weights.macd = 3;
-                } else if (macdHist < 0) {
-                    signals.macd = 'SELL';
-                    weights.macd = 2;
-                } else {
-                    signals.macd = 'NEUTRAL';
-                    weights.macd = 1;
-                }
-                
-                // Moving Averages
-                const sma50 = ind.sma50[idx];
-                const sma200 = ind.sma200[idx];
-                const ema9 = ind.ema9[idx];
-                const ema21 = ind.ema21[idx];
-                
-                if (c > ema9 && ema9 > ema21 && c > sma50 && sma50 > sma200) {
-                    signals.ma = 'STRONG_BUY';
-                    weights.ma = 3;
-                } else if (c > sma50 && sma50 > sma200) {
-                    signals.ma = 'BUY';
-                    weights.ma = 2;
-                } else if (c < ema9 && ema9 < ema21 && c < sma50 && sma50 < sma200) {
-                    signals.ma = 'STRONG_SELL';
-                    weights.ma = 3;
-                } else if (c < sma50 && sma50 < sma200) {
-                    signals.ma = 'SELL';
-                    weights.ma = 2;
-                } else {
-                    signals.ma = 'NEUTRAL';
-                    weights.ma = 1;
-                }
-                
-                // Bollinger Bands
-                const bbUpper = ind.bb.upper[idx];
-                const bbLower = ind.bb.lower[idx];
-                const bbMiddle = ind.bb.middle[idx];
-                const bbWidth = ((bbUpper - bbLower) / bbMiddle) * 100;
-                
-                if (c < bbLower && bbWidth > 5) {
-                    signals.bb = 'STRONG_BUY';
-                    weights.bb = 2;
-                } else if (c < bbLower) {
-                    signals.bb = 'BUY';
-                    weights.bb = 1.5;
-                } else if (c > bbUpper && bbWidth > 5) {
-                    signals.bb = 'STRONG_SELL';
-                    weights.bb = 2;
-                } else if (c > bbUpper) {
-                    signals.bb = 'SELL';
-                    weights.bb = 1.5;
-                } else {
-                    signals.bb = 'NEUTRAL';
-                    weights.bb = 0.5;
-                }
-                
-                // Stochastic
-                const stochK = ind.stoch.k[idx];
-                const stochD = ind.stoch.d[ind.stoch.d.length - 1];
-                
-                if (stochK < 20 && stochD < 20) {
-                    signals.stoch = 'STRONG_BUY';
-                    weights.stoch = 2;
-                } else if (stochK < 30) {
-                    signals.stoch = 'BUY';
-                    weights.stoch = 1.5;
-                } else if (stochK > 80 && stochD > 80) {
-                    signals.stoch = 'STRONG_SELL';
-                    weights.stoch = 2;
-                } else if (stochK > 70) {
-                    signals.stoch = 'SELL';
-                    weights.stoch = 1.5;
-                } else {
-                    signals.stoch = 'NEUTRAL';
-                    weights.stoch = 0.5;
-                }
-                
-                // CCI
-                const cci = ind.cci[idx];
-                if (cci < -200) {
-                    signals.cci = 'STRONG_BUY';
-                    weights.cci = 1.5;
-                } else if (cci < -100) {
-                    signals.cci = 'BUY';
-                    weights.cci = 1;
-                } else if (cci > 200) {
-                    signals.cci = 'STRONG_SELL';
-                    weights.cci = 1.5;
-                } else if (cci > 100) {
-                    signals.cci = 'SELL';
-                    weights.cci = 1;
-                } else {
-                    signals.cci = 'NEUTRAL';
-                    weights.cci = 0.5;
-                }
-                
-                // Williams %R
-                const willr = ind.willr[idx];
-                if (willr < -80) {
-                    signals.willr = 'BUY';
-                    weights.willr = 1;
-                } else if (willr > -20) {
-                    signals.willr = 'SELL';
-                    weights.willr = 1;
-                } else {
-                    signals.willr = 'NEUTRAL';
-                    weights.willr = 0.5;
-                }
-                
-                // MFI
-                const mfi = ind.mfi[idx];
-                if (mfi < 20) {
-                    signals.mfi = 'STRONG_BUY';
-                    weights.mfi = 2;
-                } else if (mfi < 40) {
-                    signals.mfi = 'BUY';
-                    weights.mfi = 1;
-                } else if (mfi > 80) {
-                    signals.mfi = 'STRONG_SELL';
-                    weights.mfi = 2;
-                } else if (mfi > 60) {
-                    signals.mfi = 'SELL';
-                    weights.mfi = 1;
-                } else {
-                    signals.mfi = 'NEUTRAL';
-                    weights.mfi = 0.5;
-                }
-                
-                // ADX (Trend Strength)
-                const adx = ind.adx[ind.adx.length - 1];
-                if (adx > 50) {
-                    weights.trend = 2; // Strong trend - weight trend indicators more
-                } else if (adx > 25) {
-                    weights.trend = 1.5;
-                } else {
-                    weights.trend = 0.5; // Weak trend - weight oscillators more
-                }
-                
-                // OBV
-                const obv = ind.obv;
-                const obvTrend = obv[idx] > obv[Math.max(0, idx - 20)] ? 'BUY' : 'SELL';
-                signals.obv = obvTrend;
-                weights.obv = 1.5;
-                
-                // Calculate final score
-                let totalScore = 0;
-                let totalWeight = 0;
-                
-                Object.entries(signals).forEach(([key, sig]) => {
-                    const weight = weights[key] || 1;
-                    let score = 0;
-                    
-                    if (sig === 'STRONG_BUY') score = 2;
-                    else if (sig === 'BUY') score = 1;
-                    else if (sig === 'SELL') score = -1;
-                    else if (sig === 'STRONG_SELL') score = -2;
-                    
-                    totalScore += score * weight;
-                    totalWeight += weight;
-                });
-                
-                const finalScore = totalScore / totalWeight;
-                
-                // Determine signal
-                let signal, confidence;
-                if (finalScore > 1) {
-                    signal = 'STRONG BUY';
-                    confidence = Math.min(95, 70 + Math.abs(finalScore) * 15);
-                } else if (finalScore > 0.3) {
+                // Bullish conditions
+                if (price > ema9 && ema9 > ema21 && ema21 > ema50 && rsi < 70 && rsi > 40) {
                     signal = 'BUY';
-                    confidence = Math.min(85, 60 + Math.abs(finalScore) * 20);
-                } else if (finalScore > -0.3) {
-                    signal = 'HOLD';
-                    confidence = 60 + Math.abs(finalScore) * 10;
-                } else if (finalScore > -1) {
+                    confidence = 0.7;
+                    
+                    // Additional confirmations
+                    if (rsi < 50) confidence += 0.1;
+                    if (data[index].volume > data[index - 1].volume * 1.2) confidence += 0.1;
+                }
+                // Bearish conditions
+                else if (price < ema9 && ema9 < ema21 && ema21 < ema50 && rsi > 30 && rsi < 60) {
                     signal = 'SELL';
-                    confidence = Math.min(85, 60 + Math.abs(finalScore) * 20);
+                    confidence = 0.7;
+                    
+                    if (rsi > 50) confidence += 0.1;
+                    if (data[index].volume > data[index - 1].volume * 1.2) confidence += 0.1;
+                }
+                
+                return confidence >= 0.7 ? signal : null;
+            }
+        }
+
+        // Risk Management
+        class RiskManager {
+            static calculatePositionSize(capital, riskPercent, stopLossPercent) {
+                const riskAmount = capital * riskPercent;
+                const positionSize = riskAmount / stopLossPercent;
+                return Math.min(positionSize, capital * 0.95); // Never use more than 95% of capital
+            }
+
+            static calculateStopLoss(entryPrice, side, stopPercent) {
+                return side === 'LONG' 
+                    ? entryPrice * (1 - stopPercent)
+                    : entryPrice * (1 + stopPercent);
+            }
+
+            static calculateTakeProfit(entryPrice, side, profitPercent) {
+                return side === 'LONG'
+                    ? entryPrice * (1 + profitPercent)
+                    : entryPrice * (1 - profitPercent);
+            }
+        }
+
+        // Backtesting Engine
+        class BacktestEngine {
+            static run(data, indicators) {
+                STATE = {
+                    capital: CONFIG.initialCapital,
+                    equity: CONFIG.initialCapital,
+                    position: null,
+                    trades: [],
+                    equityCurve: []
+                };
+
+                log('Starting backtest...', 'info');
+                log(`Initial capital: $${CONFIG.initialCapital.toFixed(2)}`, 'info');
+
+                for (let i = 50; i < data.length; i++) {
+                    const candle = data[i];
+                    const signal = MLStrategy.generateSignal(data, indicators, i);
+
+                    // Check for exit conditions
+                    if (STATE.position) {
+                        this.checkExit(candle, i);
+                    }
+
+                    // Check for entry conditions
+                    if (!STATE.position && signal) {
+                        this.enterTrade(signal, candle, indicators, i);
+                    }
+
+                    // Update equity curve
+                    const currentEquity = this.calculateEquity(candle);
+                    STATE.equityCurve.push({
+                        time: candle.time,
+                        value: currentEquity
+                    });
+                }
+
+                // Close any open position
+                if (STATE.position) {
+                    const lastCandle = data[data.length - 1];
+                    this.exitTrade('END', lastCandle, data.length - 1);
+                }
+
+                return this.calculateMetrics();
+            }
+
+            static enterTrade(signal, candle, indicators, index) {
+                const side = signal === 'BUY' ? 'LONG' : 'SHORT';
+                const entryPrice = candle.close * (1 + CONFIG.slippage * (side === 'LONG' ? 1 : -1));
+                
+                const positionSize = RiskManager.calculatePositionSize(
+                    STATE.capital,
+                    CONFIG.riskPerTrade,
+                    CONFIG.stopLossPercent
+                );
+
+                const stopLoss = RiskManager.calculateStopLoss(entryPrice, side, CONFIG.stopLossPercent);
+                const takeProfit = RiskManager.calculateTakeProfit(entryPrice, side, CONFIG.takeProfitPercent);
+
+                STATE.position = {
+                    side,
+                    entryPrice,
+                    entryTime: candle.time,
+                    entryIndex: index,
+                    positionSize,
+                    stopLoss,
+                    takeProfit
+                };
+
+                const commission = positionSize * CONFIG.commission;
+                STATE.capital -= commission;
+
+                log(`${side} entry at $${entryPrice.toFixed(2)} | Size: $${positionSize.toFixed(2)} | SL: $${stopLoss.toFixed(2)} | TP: $${takeProfit.toFixed(2)}`, 'trade');
+            }
+
+            static checkExit(candle, index) {
+                const pos = STATE.position;
+                
+                if (pos.side === 'LONG') {
+                    if (candle.low <= pos.stopLoss) {
+                        this.exitTrade('STOP_LOSS', { ...candle, close: pos.stopLoss }, index);
+                    } else if (candle.high >= pos.takeProfit) {
+                        this.exitTrade('TAKE_PROFIT', { ...candle, close: pos.takeProfit }, index);
+                    }
                 } else {
-                    signal = 'STRONG SELL';
-                    confidence = Math.min(95, 70 + Math.abs(finalScore) * 15);
+                    if (candle.high >= pos.stopLoss) {
+                        this.exitTrade('STOP_LOSS', { ...candle, close: pos.stopLoss }, index);
+                    } else if (candle.low <= pos.takeProfit) {
+                        this.exitTrade('TAKE_PROFIT', { ...candle, close: pos.takeProfit }, index);
+                    }
+                }
+            }
+
+            static exitTrade(reason, candle, index) {
+                const pos = STATE.position;
+                const exitPrice = candle.close * (1 + CONFIG.slippage * (pos.side === 'LONG' ? -1 : 1));
+                
+                const pnlPercent = pos.side === 'LONG'
+                    ? (exitPrice - pos.entryPrice) / pos.entryPrice
+                    : (pos.entryPrice - exitPrice) / pos.entryPrice;
+                
+                const pnl = pos.positionSize * pnlPercent;
+                const commission = pos.positionSize * CONFIG.commission;
+                
+                STATE.capital += pnl - commission;
+
+                const trade = {
+                    side: pos.side,
+                    entryPrice: pos.entryPrice,
+                    exitPrice,
+                    entryTime: pos.entryTime,
+                    exitTime: candle.time,
+                    pnl,
+                    pnlPercent,
+                    reason
+                };
+
+                STATE.trades.push(trade);
+                STATE.position = null;
+
+                const pnlClass = pnl >= 0 ? 'trade' : 'error';
+                log(`${pos.side} exit at $${exitPrice.toFixed(2)} | Reason: ${reason} | PnL: $${pnl.toFixed(2)} (${(pnlPercent * 100).toFixed(2)}%)`, pnlClass);
+            }
+
+            static calculateEquity(candle) {
+                let equity = STATE.capital;
+                
+                if (STATE.position) {
+                    const pos = STATE.position;
+                    const currentPrice = candle.close;
+                    
+                    const pnlPercent = pos.side === 'LONG'
+                        ? (currentPrice - pos.entryPrice) / pos.entryPrice
+                        : (pos.entryPrice - currentPrice) / pos.entryPrice;
+                    
+                    equity += pos.positionSize * pnlPercent;
+                }
+                
+                return equity;
+            }
+
+            static calculateMetrics() {
+                const trades = STATE.trades;
+                const winning = trades.filter(t => t.pnl > 0);
+                const losing = trades.filter(t => t.pnl <= 0);
+                
+                const totalReturn = ((STATE.capital - CONFIG.initialCapital) / CONFIG.initialCapital) * 100;
+                const winRate = trades.length > 0 ? (winning.length / trades.length) * 100 : 0;
+                
+                const avgWin = winning.length > 0
+                    ? (winning.reduce((sum, t) => sum + t.pnlPercent, 0) / winning.length) * 100
+                    : 0;
+                
+                const avgLoss = losing.length > 0
+                    ? (losing.reduce((sum, t) => sum + t.pnlPercent, 0) / losing.length) * 100
+                    : 0;
+                
+                const grossProfit = winning.reduce((sum, t) => sum + t.pnl, 0);
+                const grossLoss = Math.abs(losing.reduce((sum, t) => sum + t.pnl, 0));
+                const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : 0;
+                
+                // Calculate returns for Sharpe
+                const returns = [];
+                for (let i = 1; i < STATE.equityCurve.length; i++) {
+                    const ret = (STATE.equityCurve[i].value - STATE.equityCurve[i-1].value) / STATE.equityCurve[i-1].value;
+                    returns.push(ret);
+                }
+                
+                const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+                const stdDev = Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length);
+                const sharpeRatio = stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0; // Annualized
+                
+                // Max Drawdown
+                let maxDrawdown = 0;
+                let peak = STATE.equityCurve[0].value;
+                for (const point of STATE.equityCurve) {
+                    if (point.value > peak) peak = point.value;
+                    const drawdown = ((peak - point.value) / peak) * 100;
+                    if (drawdown > maxDrawdown) maxDrawdown = drawdown;
                 }
                 
                 return {
-                    signal,
-                    confidence: confidence.toFixed(1),
-                    score: finalScore,
-                    details: signals,
-                    weights
+                    totalReturn,
+                    winRate,
+                    avgWin,
+                    avgLoss,
+                    profitFactor,
+                    sharpeRatio,
+                    maxDrawdown,
+                    totalTrades: trades.length,
+                    winningTrades: winning.length,
+                    losingTrades: losing.length
                 };
-            }
-            
-            static detectConflict(techSignal, mlPred) {
-                if (!mlPred) return null;
-                
-                const techBullish = techSignal.signal.includes('BUY');
-                const techBearish = techSignal.signal.includes('SELL');
-                const mlBullish = mlPred.change > 5;
-                const mlBearish = mlPred.change < -5;
-                
-                if ((techBullish && mlBearish) || (techBearish && mlBullish)) {
-                    return {
-                        hasConflict: true,
-                        techDirection: techBullish ? 'BULLISH' : 'BEARISH',
-                        mlDirection: mlBullish ? 'BULLISH' : 'BEARISH',
-                        severity: Math.abs(mlPred.change) > 10 ? 'HIGH' : 'MEDIUM'
-                    };
-                }
-                
-                return { hasConflict: false };
-            }
-            
-            static resolveConflict(techSignal, mlPred, ind, data) {
-                const rsi = ind.rsi[ind.rsi.length - 1];
-                const volume = data[data.length - 1].volume;
-                const avgVolume = data.slice(-20).reduce((sum, d) => sum + d.volume, 0) / 20;
-                const volumeSurge = volume > avgVolume * 1.5;
-                
-                let resolution = {
-                    explanation: '',
-                    recommendation: '',
-                    confidence: 0
-                };
-                
-                // Check for oversold bounce scenario
-                if (techSignal.signal.includes('SELL') && mlPred.change > 10 && rsi < 35) {
-                    resolution.explanation = `Technical indicators show bearish trend (${techSignal.signal}), but ML predicts +${mlPred.change.toFixed(1)}% bounce. RSI at ${rsi.toFixed(1)} suggests oversold conditions.`;
-                    resolution.recommendation = 'SCALP LONG - Quick bounce expected, but don\'t hold long-term';
-                    resolution.confidence = 75;
-                }
-                // Check for overbought pullback scenario
-                else if (techSignal.signal.includes('BUY') && mlPred.change < -10 && rsi > 65) {
-                    resolution.explanation = `Technical indicators show bullish trend (${techSignal.signal}), but ML predicts ${mlPred.change.toFixed(1)}% pullback. RSI at ${rsi.toFixed(1)} suggests overbought conditions.`;
-                    resolution.recommendation = 'WAIT FOR DIP - Short-term pullback likely before continuation';
-                    resolution.confidence = 75;
-                }
-                // Volume confirmation
-                else if (volumeSurge) {
-                    resolution.explanation = `Conflicting signals with ${((volume/avgVolume - 1) * 100).toFixed(0)}% volume surge. High volume suggests ${mlPred.direction} move is more likely.`;
-                    resolution.recommendation = mlPred.change > 0 ? 'CAUTIOUS BUY - Volume supports upward move' : 'CAUTIOUS SELL - Volume confirms downward pressure';
-                    resolution.confidence = 70;
-                }
-                // Default conflict resolution
-                else {
-                    resolution.explanation = `Technical analysis suggests ${techSignal.signal} but ML model predicts ${mlPred.change > 0 ? '+' : ''}${mlPred.change.toFixed(1)}% move. Mixed signals indicate uncertainty.`;
-                    resolution.recommendation = 'HOLD - Wait for clearer signals';
-                    resolution.confidence = 50;
-                }
-                
-                return resolution;
             }
         }
-        
-        class ChartManager {
-            static init() {
-                const container = document.getElementById('chartElement');
-                APP.chart = LightweightCharts.createChart(container, {
-                    layout: {
-                        background: { color: 'transparent' },
-                        textColor: '#94a3b8'
-                    },
-                    grid: {
-                        vertLines: { color: 'rgba(255,255,255,0.03)' },
-                        horzLines: { color: 'rgba(255,255,255,0.03)' }
-                    },
-                    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                    rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
-                    timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true }
-                });
-                
-                APP.candleSeries = APP.chart.addCandlestickSeries({
-                    upColor: '#10b981',
-                    downColor: '#ef4444',
-                    borderVisible: false,
-                    wickUpColor: '#10b981',
-                    wickDownColor: '#ef4444'
-                });
-                
-                APP.volumeSeries = APP.chart.addHistogramSeries({
-                    color: '#3b82f6',
-                    priceFormat: { type: 'volume' },
-                    priceScaleId: '',
-                    scaleMargins: { top: 0.85, bottom: 0 }
-                });
-                
-                // Initialize overlay series
-                APP.maSeries = {
-                    sma9: APP.chart.addLineSeries({ color: '#3b82f6', lineWidth: 1, title: 'SMA9' }),
-                    sma20: APP.chart.addLineSeries({ color: '#8b5cf6', lineWidth: 1, title: 'SMA20' }),
-                    sma50: APP.chart.addLineSeries({ color: '#ec4899', lineWidth: 2, title: 'SMA50' }),
-                    sma200: APP.chart.addLineSeries({ color: '#f59e0b', lineWidth: 2, title: 'SMA200' })
-                };
-                
-                APP.bbSeries = {
-                    upper: APP.chart.addLineSeries({ color: 'rgba(139, 92, 246, 0.4)', lineWidth: 1, title: 'BB Upper' }),
-                    middle: APP.chart.addLineSeries({ color: 'rgba(139, 92, 246, 0.6)', lineWidth: 1, title: 'BB Mid' }),
-                    lower: APP.chart.addLineSeries({ color: 'rgba(139, 92, 246, 0.4)', lineWidth: 1, title: 'BB Lower' })
-                };
-                
-                APP.ichimokuSeries = {
-                    tenkan: APP.chart.addLineSeries({ color: '#06b6d4', lineWidth: 1, title: 'Tenkan' }),
-                    kijun: APP.chart.addLineSeries({ color: '#ec4899', lineWidth: 1, title: 'Kijun' }),
-                    senkouA: APP.chart.addLineSeries({ color: 'rgba(16, 185, 129, 0.3)', lineWidth: 1, title: 'Senkou A' }),
-                    senkouB: APP.chart.addLineSeries({ color: 'rgba(239, 68, 68, 0.3)', lineWidth: 1, title: 'Senkou B' })
-                };
-                
-                // Set initial visibility
-                this.updateOverlays();
-            }
+
+        // Logging
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('tradeLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logContainer.insertBefore(entry, logContainer.firstChild);
             
-            static updateOverlays() {
-                // MA Series
-                Object.values(APP.maSeries).forEach(series => {
-                    series.applyOptions({ visible: APP.overlays.ma });
-                });
-                
-                // BB Series
-                Object.values(APP.bbSeries).forEach(series => {
-                    series.applyOptions({ visible: APP.overlays.bb });
-                });
-                
-                // Ichimoku Series
-                Object.values(APP.ichimokuSeries).forEach(series => {
-                    series.applyOptions({ visible: APP.overlays.ichimoku });
-                });
-                
-                // Volume
-                APP.volumeSeries.applyOptions({ visible: APP.overlays.volume });
-            }
-            
-            static updateData(data, indicators) {
-                // Update candlesticks
-                APP.candleSeries.setData(data);
-                
-                // Update volume
-                APP.volumeSeries.setData(data.map(d => ({
-                    time: d.time,
-                    value: d.volume,
-                    color: d.close > d.open ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'
-                })));
-                
-                // Update MA
-                const maData = data.map((d, i) => ({ time: d.time, i }));
-                APP.maSeries.sma9.setData(maData.filter(d => indicators.sma9[d.i]).map(d => ({ time: d.time, value: indicators.sma9[d.i] })));
-                APP.maSeries.sma20.setData(maData.filter(d => indicators.sma20[d.i]).map(d => ({ time: d.time, value: indicators.sma20[d.i] })));
-                APP.maSeries.sma50.setData(maData.filter(d => indicators.sma50[d.i]).map(d => ({ time: d.time, value: indicators.sma50[d.i] })));
-                APP.maSeries.sma200.setData(maData.filter(d => indicators.sma200[d.i]).map(d => ({ time: d.time, value: indicators.sma200[d.i] })));
-                
-                // Update BB
-                APP.bbSeries.upper.setData(maData.filter(d => indicators.bb.upper[d.i]).map(d => ({ time: d.time, value: indicators.bb.upper[d.i] })));
-                APP.bbSeries.middle.setData(maData.filter(d => indicators.bb.middle[d.i]).map(d => ({ time: d.time, value: indicators.bb.middle[d.i] })));
-                APP.bbSeries.lower.setData(maData.filter(d => indicators.bb.lower[d.i]).map(d => ({ time: d.time, value: indicators.bb.lower[d.i] })));
-                
-                // Update Ichimoku
-                APP.ichimokuSeries.tenkan.setData(maData.filter(d => indicators.ichimoku.tenkan[d.i]).map(d => ({ time: d.time, value: indicators.ichimoku.tenkan[d.i] })));
-                APP.ichimokuSeries.kijun.setData(maData.filter(d => indicators.ichimoku.kijun[d.i]).map(d => ({ time: d.time, value: indicators.ichimoku.kijun[d.i] })));
-                APP.ichimokuSeries.senkouA.setData(maData.filter(d => indicators.ichimoku.senkouA[d.i]).map(d => ({ time: d.time, value: indicators.ichimoku.senkouA[d.i] })));
-                APP.ichimokuSeries.senkouB.setData(maData.filter(d => indicators.ichimoku.senkouB[d.i]).map(d => ({ time: d.time, value: indicators.ichimoku.senkouB[d.i] })));
-                
-                this.updateOverlays();
-            }
-            
-            static addPatternMarkers(patterns) {
-                // Clear existing markers
-                APP.candleSeries.setMarkers([]);
-                
-                if (!APP.overlays.patterns) return;
-                
-                const markers = patterns.map(p => ({
-                    time: APP.data[p.index].time,
-                    position: p.type === 'bullish' ? 'belowBar' : 'aboveBar',
-                    color: p.type === 'bullish' ? '#10b981' : '#ef4444',
-                    shape: p.type === 'bullish' ? 'arrowUp' : 'arrowDown',
-                    text: p.name
-                }));
-                
-                APP.candleSeries.setMarkers(markers);
+            // Keep only last 100 logs
+            while (logContainer.children.length > 100) {
+                logContainer.removeChild(logContainer.lastChild);
             }
         }
-        
-        class UI {
-            static notify(title, message, type = 'info') {
-                const notification = document.createElement('div');
-                notification.className = `notification ${type === 'alert' ? 'alert' : ''} show`;
-                notification.innerHTML = `
-                    <div class="notif-title">${title}</div>
-                    <div class="notif-body">${message}</div>
-                `;
-                document.getElementById('notificationArea').appendChild(notification);
-                
-                setTimeout(() => {
-                    notification.classList.remove('show');
-                    setTimeout(() => notification.remove(), 500);
-                }, 4000);
-            }
+
+        // Update UI
+        function updateUI(metrics) {
+            document.getElementById('totalReturn').textContent = `${metrics.totalReturn.toFixed(2)}%`;
+            document.getElementById('totalReturn').className = `metric-value ${metrics.totalReturn >= 0 ? 'positive' : 'negative'}`;
             
-            static updateSignals(techSignal, mlPred) {
-                // Update Technical Signal
-                const techMap = {
-                    'STRONG BUY': { class: 'signal-strong-buy', text: '🚀 STRONG BUY' },
-                    'BUY': { class: 'signal-buy', text: '📈 BUY' },
-                    'HOLD': { class: 'signal-hold', text: '⏸️ HOLD' },
-                    'SELL': { class: 'signal-sell', text: '📉 SELL' },
-                    'STRONG SELL': { class: 'signal-strong-sell', text: '⚠️ STRONG SELL' }
-                };
-                
-                const techInfo = techMap[techSignal.signal];
-                const techBadge = document.getElementById('techSignal');
-                techBadge.className = `signal-badge ${techInfo.class}`;
-                techBadge.innerHTML = `<span>${techInfo.text}</span>`;
-                document.getElementById('techConfidence').textContent = `${techSignal.confidence}%`;
-                document.getElementById('techConfFill').style.width = `${techSignal.confidence}%`;
-                
-                // Update ML Signal
-                if (mlPred) {
-                    const mlMap = {
-                        'UP': mlPred.change > 10 ? 'signal-strong-buy' : 'signal-buy',
-                        'DOWN': mlPred.change < -10 ? 'signal-strong-sell' : 'signal-sell'
-                    };
-                    
-                    const mlClass = mlMap[mlPred.direction];
-                    const mlText = mlPred.direction === 'UP' 
-                        ? `🤖 ${mlPred.change > 10 ? 'STRONG' : ''} BUY (+${mlPred.change.toFixed(1)}%)`
-                        : `🤖 ${mlPred.change < -10 ? 'STRONG' : ''} SELL (${mlPred.change.toFixed(1)}%)`;
-                    
-                    const mlBadge = document.getElementById('mlSignal');
-                    mlBadge.className = `signal-badge ${mlClass}`;
-                    mlBadge.innerHTML = `<span>${mlText}</span>`;
-                    document.getElementById('mlConfidence').textContent = `${mlPred.confidence}%`;
-                    document.getElementById('mlConfFill').style.width = `${mlPred.confidence}%`;
-                }
-                
-                // Check for conflicts
-                const conflict = SignalEngine.detectConflict(techSignal, mlPred);
-                const reconcileBox = document.getElementById('reconciliationBox');
-                
-                if (conflict && conflict.hasConflict) {
-                    const resolution = SignalEngine.resolveConflict(techSignal, mlPred, APP.indicators, APP.data);
-                    
-                    reconcileBox.style.display = 'block';
-                    document.getElementById('reconciliationContent').innerHTML = resolution.explanation;
-                    document.getElementById('recommendedAction').textContent = resolution.recommendation;
-                    
-                    // Add conflict animation to badges
-                    document.getElementById('techSignal').classList.add('signal-conflict');
-                    document.getElementById('mlSignal').classList.add('signal-conflict');
-                    
-                    // Notify about conflict
-                    this.notify('⚠️ Signal Conflict Detected', resolution.recommendation, 'alert');
-                } else {
-                    reconcileBox.style.display = 'none';
-                    document.getElementById('techSignal').classList.remove('signal-conflict');
-                    document.getElementById('mlSignal').classList.remove('signal-conflict');
-                }
-            }
+            document.getElementById('winRate').textContent = `${metrics.winRate.toFixed(1)}%`;
+            document.getElementById('sharpeRatio').textContent = metrics.sharpeRatio.toFixed(2);
+            document.getElementById('maxDrawdown').textContent = `${metrics.maxDrawdown.toFixed(2)}%`;
+            document.getElementById('profitFactor').textContent = metrics.profitFactor.toFixed(2);
             
-            static updateIndicators(indicators) {
-                const idx = APP.data.length - 1;
-                const current = APP.data[idx].close;
-                
-                const cards = [
-                    {
-                        name: 'RSI (14)',
-                        value: indicators.rsi[idx]?.toFixed(1) || '--',
-                        signal: indicators.rsi[idx] < 30 ? 'BUY' : indicators.rsi[idx] > 70 ? 'SELL' : 'NEUTRAL'
-                    },
-                    {
-                        name: 'MACD',
-                        value: indicators.macd.histogram[indicators.macd.histogram.length - 1]?.toFixed(2) || '--',
-                        signal: indicators.macd.histogram[indicators.macd.histogram.length - 1] > 0 ? 'BUY' : 'SELL'
-                    },
-                    {
-                        name: 'Stochastic %K',
-                        value: indicators.stoch.k[idx]?.toFixed(1) || '--',
-                        signal: indicators.stoch.k[idx] < 20 ? 'BUY' : indicators.stoch.k[idx] > 80 ? 'SELL' : 'NEUTRAL'
-                    },
-                    {
-                        name: 'CCI (20)',
-                        value: indicators.cci[idx]?.toFixed(1) || '--',
-                        signal: indicators.cci[idx] < -100 ? 'BUY' : indicators.cci[idx] > 100 ? 'SELL' : 'NEUTRAL'
-                    },
-                    {
-                        name: 'Williams %R',
-                        value: indicators.willr[idx]?.toFixed(1) || '--',
-                        signal: indicators.willr[idx] < -80 ? 'BUY' : indicators.willr[idx] > -20 ? 'SELL' : 'NEUTRAL'
-                    },
-                    {
-                        name: 'MFI (14)',
-                        value: indicators.mfi[idx]?.toFixed(1) || '--',
-                        signal: indicators.mfi[idx] < 20 ? 'BUY' : indicators.mfi[idx] > 80 ? 'SELL' : 'NEUTRAL'
-                    },
-                    {
-                        name: 'ATR (14)',
-                        value: indicators.atr[indicators.atr.length - 1]?.toFixed(2) || '--',
-                        signal: 'VOLATILITY'
-                    },
-                    {
-                        name: 'ADX (14)',
-                        value: indicators.adx[indicators.adx.length - 1]?.toFixed(1) || '--',
-                        signal: indicators.adx[indicators.adx.length - 1] > 25 ? 'TRENDING' : 'RANGING'
-                    },
-                    {
-                        name: 'BB Position',
-                        value: ((current - indicators.bb.lower[idx]) / (indicators.bb.upper[idx] - indicators.bb.lower[idx]) * 100).toFixed(0) + '%',
-                        signal: current < indicators.bb.lower[idx] ? 'BUY' : current > indicators.bb.upper[idx] ? 'SELL' : 'NEUTRAL'
-                    },
-                    {
-                        name: 'SMA50/200',
-                        value: indicators.sma50[idx] > indicators.sma200[idx] ? 'GOLDEN' : 'DEATH',
-                        signal: indicators.sma50[idx] > indicators.sma200[idx] ? 'BUY' : 'SELL'
-                    },
-                    {
-                        name: 'ROC (12)',
-                        value: indicators.roc[idx]?.toFixed(2) + '%' || '--',
-                        signal: indicators.roc[idx] > 0 ? 'BUY' : 'SELL'
-                    },
-                    {
-                        name: 'OBV Trend',
-                        value: 'VOLUME',
-                        signal: indicators.obv[idx] > indicators.obv[Math.max(0, idx - 20)] ? 'BUY' : 'SELL'
-                    }
-                ];
-                
-                const html = cards.map(card => `
-                    <div class="indicator-card">
-                        <div class="indicator-header">
-                            <span class="indicator-name">${card.name}</span>
-                            <span class="indicator-signal ${card.signal === 'BUY' ? 'sig-buy' : card.signal === 'SELL' ? 'sig-sell' : 'sig-neutral'}">
-                                ${card.signal}
-                            </span>
-                        </div>
-                        <div class="indicator-value">${card.value}</div>
-                    </div>
-                `).join('');
-                
-                document.getElementById('indicatorsGrid').innerHTML = html;
-            }
+            document.getElementById('totalTrades').textContent = metrics.totalTrades;
+            document.getElementById('winningTrades').textContent = metrics.winningTrades;
+            document.getElementById('losingTrades').textContent = metrics.losingTrades;
+            document.getElementById('avgWin').textContent = `${metrics.avgWin.toFixed(2)}%`;
+            document.getElementById('avgLoss').textContent = `${metrics.avgLoss.toFixed(2)}%`;
             
-            static startTimer() {
-                let seconds = 10;
-                const updateTimer = () => {
-                    seconds--;
-                    if (seconds < 0) seconds = 10;
-                    
-                    document.getElementById('timerText').textContent = `${seconds}s`;
-                    document.getElementById('timerFill').style.width = `${(seconds / 10) * 100}%`;
-                    
-                    if (seconds === 0 && !APP.isPaused) {
-                        loadData(APP.symbol, APP.timeframe);
-                    }
-                };
-                
-                if (APP.updateInterval) clearInterval(APP.updateInterval);
-                APP.updateInterval = setInterval(updateTimer, 1000);
-            }
+            document.getElementById('currentPosition').textContent = 'FLAT';
+            document.getElementById('stopLoss').textContent = '--';
+            document.getElementById('takeProfit').textContent = '--';
         }
-        
-        async function loadData(symbol, timeframe) {
+
+        // Run Backtest
+        async function runBacktest() {
             try {
-                const interval = API.mapTF(timeframe);
-                const data = await API.fetchOHLCV(symbol, interval, 500);
-                APP.data = data;
+                log('Fetching market data...', 'info');
                 
-                // Calculate all indicators
-                const indicators = SuperIndicators.calculateAll(data);
-                APP.indicators = indicators;
+                const symbol = document.getElementById('symbolInput').value.toUpperCase();
+                const timeframe = document.getElementById('timeframeSelect').value;
                 
-                // Update chart with indicators
-                ChartManager.updateData(data, indicators);
+                const data = await fetchData(symbol, timeframe);
                 
-                // Get technical signal
-                const techSignal = SignalEngine.analyze(data, indicators);
-                
-                // Get ML prediction
-                const mlPred = await MLPredictor.trainAndPredict(data);
-                
-                // Update UI
-                UI.updateSignals(techSignal, mlPred);
-                UI.updateIndicators(indicators);
-                
-                // Detect patterns
-                const patterns = [];
-                for (let i = Math.max(0, data.length - 50); i < data.length; i++) {
-                    if (i < 3) continue;
-                    
-                    const curr = data[i];
-                    const prev1 = data[i-1];
-                    const prev2 = data[i-2];
-                    
-                    // Hammer
-                    const body = Math.abs(curr.close - curr.open);
-                    const lowerWick = Math.min(curr.open, curr.close) - curr.low;
-                    if (lowerWick > body * 2 && (curr.high - Math.max(curr.open, curr.close)) < body * 0.3) {
-                        patterns.push({ name: 'Hammer', type: 'bullish', index: i });
-                    }
-                    
-                    // Engulfing patterns
-                    if (prev1.close < prev1.open && curr.close > curr.open &&
-                        curr.close > prev1.open && curr.open < prev1.close) {
-                        patterns.push({ name: 'Bullish Engulfing', type: 'bullish', index: i });
-                    }
-                    
-                    if (prev1.close > prev1.open && curr.close < curr.open &&
-                        curr.close < prev1.open && curr.open > prev1.close) {
-                        patterns.push({ name: 'Bearish Engulfing', type: 'bearish', index: i });
-                    }
+                if (data.length < CONFIG.minTrainingSamples) {
+                    log(`Insufficient data: ${data.length} candles (need ${CONFIG.minTrainingSamples})`, 'error');
+                    return;
                 }
                 
-                ChartManager.addPatternMarkers(patterns.slice(-10));
+                log(`Loaded ${data.length} candles for ${symbol} (${timeframe})`, 'info');
+                log('Calculating indicators...', 'info');
                 
-                // Notify if strong signal
-                if (techSignal.signal === 'STRONG BUY' || techSignal.signal === 'STRONG SELL') {
-                    UI.notify('🚨 Strong Signal', `${techSignal.signal} detected with ${techSignal.confidence}% confidence`, 'alert');
-                }
+                const indicators = Indicators.calculateAll(data);
                 
-                UI.startTimer();
+                log('Running backtest...', 'info');
+                const metrics = BacktestEngine.run(data, indicators);
+                
+                log('Backtest complete!', 'trade');
+                log(`Total Return: ${metrics.totalReturn.toFixed(2)}%`, metrics.totalReturn >= 0 ? 'trade' : 'error');
+                log(`Win Rate: ${metrics.winRate.toFixed(1)}%`, 'info');
+                log(`Sharpe Ratio: ${metrics.sharpeRatio.toFixed(2)}`, 'info');
+                
+                // Update chart
+                candleSeries.setData(data);
+                equitySeries.setData(STATE.equityCurve);
+                
+                // Add trade markers
+                const markers = STATE.trades.map(trade => ({
+                    time: trade.entryTime,
+                    position: trade.side === 'LONG' ? 'belowBar' : 'aboveBar',
+                    color: trade.pnl >= 0 ? '#10b981' : '#ef4444',
+                    shape: trade.side === 'LONG' ? 'arrowUp' : 'arrowDown',
+                    text: `${trade.side} ${trade.pnl >= 0 ? '✓' : '✗'}`
+                }));
+                candleSeries.setMarkers(markers);
+                
+                updateUI(metrics);
                 
             } catch (error) {
-                console.error('Error loading data:', error);
-                UI.notify('❌ Error', error.message);
+                log(`Error: ${error.message}`, 'error');
+                console.error(error);
             }
         }
-        
-        // Event Listeners
-        document.querySelectorAll('.tf-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                APP.timeframe = btn.dataset.tf;
-                loadData(APP.symbol, APP.timeframe);
-            });
-        });
-        
-        document.querySelectorAll('.indicator-toggles .toggle-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const ind = btn.dataset.ind;
-                APP.overlays[ind] = !APP.overlays[ind];
-                btn.classList.toggle('active');
-                ChartManager.updateOverlays();
-            });
-        });
-        
-        document.getElementById('pauseBtn').addEventListener('click', () => {
-            APP.isPaused = !APP.isPaused;
-            const btn = document.getElementById('pauseBtn');
-            btn.textContent = APP.isPaused ? '▶️ RESUME' : '⏸️ PAUSE';
-            btn.classList.toggle('active');
-        });
-        
-        document.getElementById('searchInput').addEventListener('change', (e) => {
-            APP.symbol = e.target.value.toUpperCase();
-            loadData(APP.symbol, APP.timeframe);
-        });
-        
+
+        function resetSystem() {
+            STATE = {
+                capital: CONFIG.initialCapital,
+                equity: CONFIG.initialCapital,
+                position: null,
+                trades: [],
+                equityCurve: []
+            };
+            document.getElementById('tradeLog').innerHTML = '<div class="log-entry log-info">System reset. Ready for new backtest.</div>';
+            log('System reset complete', 'info');
+        }
+
         // Initialize
         window.addEventListener('DOMContentLoaded', () => {
-            ChartManager.init();
-            loadData(APP.symbol, APP.timeframe);
-            UI.startTimer();
+            initChart();
+            log('System initialized', 'info');
+            log('Configure parameters and click "Run Backtest" to begin', 'info');
         });
     </script>
 </body>
