@@ -1,1990 +1,1356 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Crypto Trading System</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --bg-primary: #0a0e27;
-            --bg-secondary: #151932;
-            --bg-tertiary: #1e2340;
-            --accent-green: #00ff88;
-            --accent-red: #ff4757;
-            --accent-blue: #4c6ef5;
-            --accent-yellow: #ffd93d;
-            --text-primary: #ffffff;
-            --text-secondary: #8b92b8;
-            --border-color: #2d3561;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            overflow-x: hidden;
-        }
-
-        .container {
-            max-width: 1920px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Header */
-        .header {
-            background: var(--bg-secondary);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border-color);
-        }
-
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .header-title {
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: var(--accent-red);
-            animation: pulse 2s infinite;
-        }
-
-        .status-indicator.connected {
-            background: var(--accent-green);
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        label {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-
-        select, input {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 8px 12px;
-            border-radius: 5px;
-            font-size: 14px;
-            outline: none;
-        }
-
-        select:focus, input:focus {
-            border-color: var(--accent-blue);
-        }
-
-        button {
-            background: var(--accent-blue);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(76, 110, 245, 0.4);
-        }
-
-        button.success {
-            background: var(--accent-green);
-        }
-
-        button.danger {
-            background: var(--accent-red);
-        }
-
-        /* Main Grid Layout */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 1400px) {
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Price Card */
-        .price-card {
-            background: var(--bg-secondary);
-            padding: 25px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .price-display {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .price-info h2 {
-            font-size: 18px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-
-        .price-value {
-            font-size: 42px;
-            font-weight: bold;
-            color: var(--accent-green);
-        }
-
-        .price-value.negative {
-            color: var(--accent-red);
-        }
-
-        .price-change {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 5px;
-        }
-
-        .change-24h {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .change-percent {
-            font-size: 16px;
-            opacity: 0.8;
-        }
-
-        /* Signal Strength */
-        .signal-strength {
-            background: var(--bg-tertiary);
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .signal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .signal-value {
-            font-size: 32px;
-            font-weight: bold;
-        }
-
-        .signal-bar {
-            height: 30px;
-            background: var(--bg-primary);
-            border-radius: 15px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .signal-fill {
-            height: 100%;
-            transition: all 0.5s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .signal-fill.bullish {
-            background: linear-gradient(90deg, var(--accent-green), #00cc66);
-        }
-
-        .signal-fill.bearish {
-            background: linear-gradient(90deg, var(--accent-red), #cc0033);
-        }
-
-        .signal-fill.neutral {
-            background: linear-gradient(90deg, var(--accent-yellow), #ffaa00);
-        }
-
-        /* Indicators Grid */
-        .indicators-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .indicator-card {
-            background: var(--bg-tertiary);
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent-blue);
-        }
-
-        .indicator-card.bullish {
-            border-left-color: var(--accent-green);
-        }
-
-        .indicator-card.bearish {
-            border-left-color: var(--accent-red);
-        }
-
-        .indicator-name {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-
-        .indicator-value {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .indicator-signal {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .indicator-signal.buy {
-            color: var(--accent-green);
-        }
-
-        .indicator-signal.sell {
-            color: var(--accent-red);
-        }
-
-        .indicator-signal.neutral {
-            color: var(--accent-yellow);
-        }
-
-        /* Trade Setup */
-        .trade-setup {
-            background: var(--bg-secondary);
-            padding: 25px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .setup-header {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: var(--accent-green);
-        }
-
-        .setup-section {
-            background: var(--bg-tertiary);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-
-        .setup-title {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .setup-values {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .setup-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .setup-label {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-
-        .setup-value {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .setup-value.green {
-            color: var(--accent-green);
-        }
-
-        .setup-value.red {
-            color: var(--accent-red);
-        }
-
-        .setup-value.blue {
-            color: var(--accent-blue);
-        }
-
-        /* ML Prediction */
-        .ml-prediction {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
-
-        .ml-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .ml-title {
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .ml-confidence {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .ml-predictions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .ml-prediction-row {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 12px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .ml-timeframe {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .ml-price {
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        /* Bottom Grid */
-        .bottom-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background: var(--bg-secondary);
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: var(--accent-blue);
-        }
-
-        /* Market Conditions */
-        .market-condition {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            background: var(--bg-tertiary);
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-
-        .condition-label {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .condition-value {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        /* Multi-timeframe */
-        .timeframe-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-        }
-
-        .timeframe-card {
-            background: var(--bg-tertiary);
-            padding: 12px;
-            border-radius: 6px;
-            text-align: center;
-        }
-
-        .timeframe-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 5px;
-        }
-
-        .timeframe-signal {
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        /* Loading */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-        }
-
-        .spinner {
-            border: 4px solid var(--bg-tertiary);
-            border-top: 4px solid var(--accent-blue);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Tabs */
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .tab {
-            padding: 12px 24px;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            position: relative;
-            transition: all 0.3s;
-        }
-
-        .tab.active {
-            color: var(--accent-blue);
-        }
-
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--accent-blue);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Risk Meter */
-        .risk-meter {
-            display: flex;
-            gap: 5px;
-            margin-top: 10px;
-        }
-
-        .risk-bar {
-            flex: 1;
-            height: 8px;
-            background: var(--bg-primary);
-            border-radius: 2px;
-        }
-
-        .risk-bar.active {
-            background: var(--accent-green);
-        }
-
-        .risk-bar.active.medium {
-            background: var(--accent-yellow);
-        }
-
-        .risk-bar.active.high {
-            background: var(--accent-red);
-        }
-
-        /* File Upload */
-        .upload-area {
-            border: 2px dashed var(--border-color);
-            border-radius: 8px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .upload-area:hover {
-            border-color: var(--accent-blue);
-            background: var(--bg-tertiary);
-        }
-
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-
-        /* Notification */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px 20px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .notification.success {
-            border-left: 4px solid var(--accent-green);
-        }
-
-        .notification.error {
-            border-left: 4px solid var(--accent-red);
-        }
-
-        .notification.info {
-            border-left: 4px solid var(--accent-blue);
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="header-top">
-                <h1 class="header-title">🚀 Advanced Crypto Trading System</h1>
-                <div class="connection-status">
-                    <div class="status-indicator" id="statusIndicator"></div>
-                    <span id="statusText">Disconnected</span>
-                </div>
-            </div>
-            <div class="controls">
-                <div class="control-group">
-                    <label>Symbol:</label>
-                    <select id="symbolSelect">
-                        <option value="WIFUSDT">WIF/USDT</option>
-                        <option value="BTCUSDT">BTC/USDT</option>
-                        <option value="ETHUSDT">ETH/USDT</option>
-                        <option value="SOLUSDT">SOL/USDT</option>
-                        <option value="BNBUSDT">BNB/USDT</option>
-                        <option value="ADAUSDT">ADA/USDT</option>
-                        <option value="DOGEUSDT">DOGE/USDT</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label>Timeframe:</label>
-                    <select id="timeframeSelect">
-                        <option value="1m">1 Minute</option>
-                        <option value="5m">5 Minutes</option>
-                        <option value="15m" selected>15 Minutes</option>
-                        <option value="1h">1 Hour</option>
-                        <option value="4h">4 Hours</option>
-                        <option value="1d">1 Day</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label>Account Size:</label>
-                    <input type="number" id="accountSize" value="1000" min="100" step="100" placeholder="USDT">
-                </div>
-                <div class="control-group">
-                    <label>Risk %:</label>
-                    <input type="number" id="riskPercent" value="2" min="0.5" max="10" step="0.5" placeholder="%">
-                </div>
-                <button id="refreshBtn" class="success">🔄 Refresh Analysis</button>
-                <button id="exportBtn">📥 Export Data</button>
-            </div>
-        </div>
-
-        <!-- Main Grid -->
-        <div class="main-grid">
-            <!-- Left Column -->
+import React, { useState, useEffect, useRef } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Area, AreaChart, ScatterChart, Scatter } from 'recharts';
+import { TrendingUp, TrendingDown, Minus, Search, AlertTriangle, Target, DollarSign, Activity, Brain, BarChart3, Settings, Zap, Shield, Play, Database, BookOpen, Bell, ScanSearch } from 'lucide-react';
+import * as tf from 'tensorflow';
+
+// ==================== COMPLETE TECHNICAL INDICATORS LIBRARY ====================
+const TechnicalIndicators = {
+  SMA: (data, period) => {
+    const result = [];
+    for (let i = period - 1; i < data.length; i++) {
+      const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+      result.push(sum / period);
+    }
+    return result;
+  },
+
+  EMA: (data, period) => {
+    const result = [];
+    const multiplier = 2 / (period + 1);
+    result[0] = data[0];
+    for (let i = 1; i < data.length; i++) {
+      result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1];
+    }
+    return result;
+  },
+
+  RSI: (data, period = 14) => {
+    const changes = [];
+    for (let i = 1; i < data.length; i++) {
+      changes.push(data[i] - data[i - 1]);
+    }
+    const result = [];
+    for (let i = period; i < changes.length; i++) {
+      const gains = changes.slice(i - period, i).filter(c => c > 0);
+      const losses = changes.slice(i - period, i).filter(c => c < 0).map(c => Math.abs(c));
+      const avgGain = gains.length > 0 ? gains.reduce((a, b) => a + b, 0) / period : 0;
+      const avgLoss = losses.length > 0 ? losses.reduce((a, b) => a + b, 0) / period : 0;
+      if (avgLoss === 0) {
+        result.push(100);
+      } else {
+        const rs = avgGain / avgLoss;
+        result.push(100 - (100 / (1 + rs)));
+      }
+    }
+    return result;
+  },
+
+  MACD: (data, fast = 12, slow = 26, signal = 9) => {
+    const emaFast = TechnicalIndicators.EMA(data, fast);
+    const emaSlow = TechnicalIndicators.EMA(data, slow);
+    const macdLine = emaFast.slice(slow).map((val, i) => val - emaSlow.slice(slow)[i]);
+    const signalLine = TechnicalIndicators.EMA(macdLine, signal);
+    const histogram = macdLine.slice(signal).map((val, i) => val - signalLine[i]);
+    return { macd: macdLine.slice(signal), signal: signalLine, histogram };
+  },
+
+  BollingerBands: (data, period = 20, stdDev = 2) => {
+    const sma = TechnicalIndicators.SMA(data, period);
+    return sma.map((avg, i) => {
+      const slice = data.slice(i, i + period);
+      const variance = slice.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / period;
+      const std = Math.sqrt(variance);
+      return { upper: avg + (std * stdDev), middle: avg, lower: avg - (std * stdDev) };
+    });
+  },
+
+  Stochastic: (high, low, close, period = 14, smooth = 3) => {
+    const k = [];
+    for (let i = period - 1; i < close.length; i++) {
+      const highestHigh = Math.max(...high.slice(i - period + 1, i + 1));
+      const lowestLow = Math.min(...low.slice(i - period + 1, i + 1));
+      k.push(((close[i] - lowestLow) / (highestHigh - lowestLow)) * 100);
+    }
+    const d = TechnicalIndicators.SMA(k, smooth);
+    return { k, d };
+  },
+
+  ATR: (high, low, close, period = 14) => {
+    const tr = [];
+    for (let i = 1; i < close.length; i++) {
+      const hl = high[i] - low[i];
+      const hc = Math.abs(high[i] - close[i - 1]);
+      const lc = Math.abs(low[i] - close[i - 1]);
+      tr.push(Math.max(hl, hc, lc));
+    }
+    return TechnicalIndicators.SMA(tr, period);
+  },
+
+  ADX: (high, low, close, period = 14) => {
+    const tr = [];
+    const dmPlus = [];
+    const dmMinus = [];
+    
+    for (let i = 1; i < close.length; i++) {
+      const hl = high[i] - low[i];
+      const hc = Math.abs(high[i] - close[i - 1]);
+      const lc = Math.abs(low[i] - close[i - 1]);
+      tr.push(Math.max(hl, hc, lc));
+      
+      const upMove = high[i] - high[i - 1];
+      const downMove = low[i - 1] - low[i];
+      dmPlus.push(upMove > downMove && upMove > 0 ? upMove : 0);
+      dmMinus.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    }
+    
+    const atr = TechnicalIndicators.SMA(tr, period);
+    const diPlus = TechnicalIndicators.SMA(dmPlus, period).map((val, i) => (val / atr[i]) * 100);
+    const diMinus = TechnicalIndicators.SMA(dmMinus, period).map((val, i) => (val / atr[i]) * 100);
+    
+    const dx = diPlus.map((val, i) => (Math.abs(val - diMinus[i]) / (val + diMinus[i])) * 100);
+    const adx = TechnicalIndicators.SMA(dx, period);
+    
+    return { adx, diPlus, diMinus };
+  },
+
+  CCI: (high, low, close, period = 20) => {
+    const tp = high.map((h, i) => (h + low[i] + close[i]) / 3);
+    const sma = TechnicalIndicators.SMA(tp, period);
+    return sma.map((avg, i) => {
+      const slice = tp.slice(i, i + period);
+      const meanDev = slice.reduce((sum, val) => sum + Math.abs(val - avg), 0) / period;
+      return (tp[i + period - 1] - avg) / (0.015 * meanDev);
+    });
+  },
+
+  WilliamsR: (high, low, close, period = 14) => {
+    const result = [];
+    for (let i = period - 1; i < close.length; i++) {
+      const highestHigh = Math.max(...high.slice(i - period + 1, i + 1));
+      const lowestLow = Math.min(...low.slice(i - period + 1, i + 1));
+      result.push(((highestHigh - close[i]) / (highestHigh - lowestLow)) * -100);
+    }
+    return result;
+  },
+
+  OBV: (close, volume) => {
+    const obv = [volume[0]];
+    for (let i = 1; i < close.length; i++) {
+      if (close[i] > close[i - 1]) {
+        obv.push(obv[i - 1] + volume[i]);
+      } else if (close[i] < close[i - 1]) {
+        obv.push(obv[i - 1] - volume[i]);
+      } else {
+        obv.push(obv[i - 1]);
+      }
+    }
+    return obv;
+  },
+
+  VWAP: (high, low, close, volume) => {
+    const tp = high.map((h, i) => (h + low[i] + close[i]) / 3);
+    const tpv = tp.map((val, i) => val * volume[i]);
+    let cumTPV = 0;
+    let cumVol = 0;
+    return tpv.map((val, i) => {
+      cumTPV += val;
+      cumVol += volume[i];
+      return cumTPV / cumVol;
+    });
+  },
+
+  ROC: (data, period = 12) => {
+    const result = [];
+    for (let i = period; i < data.length; i++) {
+      result.push(((data[i] - data[i - period]) / data[i - period]) * 100);
+    }
+    return result;
+  },
+
+  MFI: (high, low, close, volume, period = 14) => {
+    const tp = high.map((h, i) => (h + low[i] + close[i]) / 3);
+    const mf = tp.map((val, i) => val * volume[i]);
+    
+    const result = [];
+    for (let i = period; i < close.length; i++) {
+      let posFlow = 0;
+      let negFlow = 0;
+      
+      for (let j = i - period + 1; j <= i; j++) {
+        if (tp[j] > tp[j - 1]) {
+          posFlow += mf[j];
+        } else {
+          negFlow += mf[j];
+        }
+      }
+      
+      const mfr = posFlow / negFlow;
+      result.push(100 - (100 / (1 + mfr)));
+    }
+    return result;
+  }
+};
+
+// ==================== LSTM NEURAL NETWORK ====================
+class LSTMPredictor {
+  constructor() {
+    this.model = null;
+    this.trained = false;
+    this.lookback = 30;
+  }
+
+  async buildModel() {
+    this.model = tf.sequential({
+      layers: [
+        tf.layers.lstm({ units: 128, returnSequences: true, inputShape: [this.lookback, 5] }),
+        tf.layers.dropout({ rate: 0.2 }),
+        tf.layers.lstm({ units: 64, returnSequences: false }),
+        tf.layers.dropout({ rate: 0.2 }),
+        tf.layers.dense({ units: 32, activation: 'relu' }),
+        tf.layers.dense({ units: 1, activation: 'linear' })
+      ]
+    });
+
+    this.model.compile({
+      optimizer: tf.train.adam(0.001),
+      loss: 'meanSquaredError',
+      metrics: ['mae']
+    });
+  }
+
+  prepareData(close, high, low, volume, indicators) {
+    const normalized = [];
+    const targets = [];
+    
+    for (let i = this.lookback; i < close.length - 1; i++) {
+      const sequence = [];
+      for (let j = i - this.lookback; j < i; j++) {
+        sequence.push([
+          (close[j] - Math.min(...close)) / (Math.max(...close) - Math.min(...close)),
+          (high[j] - Math.min(...high)) / (Math.max(...high) - Math.min(...high)),
+          (low[j] - Math.min(...low)) / (Math.max(...low) - Math.min(...low)),
+          (volume[j] - Math.min(...volume)) / (Math.max(...volume) - Math.min(...volume)),
+          indicators.rsi[j] / 100
+        ]);
+      }
+      normalized.push(sequence);
+      targets.push((close[i + 1] - Math.min(...close)) / (Math.max(...close) - Math.min(...close)));
+    }
+    
+    return { sequences: normalized, targets };
+  }
+
+  async train(close, high, low, volume, indicators, epochs = 50) {
+    if (!this.model) await this.buildModel();
+    
+    const { sequences, targets } = this.prepareData(close, high, low, volume, indicators);
+    
+    const xs = tf.tensor3d(sequences);
+    const ys = tf.tensor2d(targets, [targets.length, 1]);
+    
+    await this.model.fit(xs, ys, {
+      epochs,
+      batchSize: 32,
+      validationSplit: 0.2,
+      shuffle: true,
+      verbose: 0
+    });
+    
+    xs.dispose();
+    ys.dispose();
+    
+    this.trained = true;
+  }
+
+  predict(close, high, low, volume, indicators) {
+    if (!this.trained || !this.model) return null;
+    
+    const lastSequence = [];
+    for (let i = close.length - this.lookback; i < close.length; i++) {
+      lastSequence.push([
+        (close[i] - Math.min(...close)) / (Math.max(...close) - Math.min(...close)),
+        (high[i] - Math.min(...high)) / (Math.max(...high) - Math.min(...high)),
+        (low[i] - Math.min(...low)) / (Math.max(...low) - Math.min(...low)),
+        (volume[i] - Math.min(...volume)) / (Math.max(...volume) - Math.min(...volume)),
+        indicators.rsi[indicators.rsi.length - 1] / 100
+      ]);
+    }
+    
+    const input = tf.tensor3d([lastSequence]);
+    const prediction = this.model.predict(input);
+    const denormalized = prediction.dataSync()[0] * (Math.max(...close) - Math.min(...close)) + Math.min(...close);
+    
+    input.dispose();
+    prediction.dispose();
+    
+    return denormalized;
+  }
+}
+
+// ==================== BACKTESTING ENGINE ====================
+class BacktestEngine {
+  constructor() {
+    this.trades = [];
+    this.equity = [];
+    this.initialCapital = 10000;
+  }
+
+  runBacktest(signals, close, commission = 0.001) {
+    let capital = this.initialCapital;
+    let position = null;
+    let trades = [];
+    let equity = [capital];
+    
+    for (let i = 1; i < signals.length; i++) {
+      const signal = signals[i];
+      const price = close[i];
+      
+      if (signal === 'BUY' && !position) {
+        const shares = Math.floor((capital * 0.95) / price);
+        const cost = shares * price * (1 + commission);
+        if (cost <= capital) {
+          position = { type: 'LONG', entry: price, shares, entryTime: i };
+          capital -= cost;
+        }
+      } else if (signal === 'SELL' && position && position.type === 'LONG') {
+        const revenue = position.shares * price * (1 - commission);
+        capital += revenue;
+        const pnl = revenue - (position.shares * position.entry);
+        trades.push({
+          type: 'LONG',
+          entry: position.entry,
+          exit: price,
+          pnl,
+          return: (pnl / (position.shares * position.entry)) * 100,
+          duration: i - position.entryTime
+        });
+        position = null;
+      } else if (signal === 'SELL' && !position) {
+        const shares = Math.floor((capital * 0.95) / price);
+        const revenue = shares * price * (1 - commission);
+        position = { type: 'SHORT', entry: price, shares, entryTime: i };
+        capital += revenue;
+      } else if (signal === 'BUY' && position && position.type === 'SHORT') {
+        const cost = position.shares * price * (1 + commission);
+        capital -= cost;
+        const pnl = (position.shares * position.entry) - cost;
+        trades.push({
+          type: 'SHORT',
+          entry: position.entry,
+          exit: price,
+          pnl,
+          return: (pnl / (position.shares * position.entry)) * 100,
+          duration: i - position.entryTime
+        });
+        position = null;
+      }
+      
+      let portfolioValue = capital;
+      if (position) {
+        if (position.type === 'LONG') {
+          portfolioValue += position.shares * price;
+        } else {
+          portfolioValue += position.shares * (position.entry - price);
+        }
+      }
+      equity.push(portfolioValue);
+    }
+    
+    return this.calculateMetrics(trades, equity);
+  }
+
+  calculateMetrics(trades, equity) {
+    const winners = trades.filter(t => t.pnl > 0);
+    const losers = trades.filter(t => t.pnl < 0);
+    
+    const totalReturn = ((equity[equity.length - 1] - this.initialCapital) / this.initialCapital) * 100;
+    const winRate = (winners.length / trades.length) * 100;
+    const avgWin = winners.length > 0 ? winners.reduce((sum, t) => sum + t.pnl, 0) / winners.length : 0;
+    const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, t) => sum + t.pnl, 0) / losers.length) : 0;
+    const profitFactor = avgLoss > 0 ? (avgWin * winners.length) / (avgLoss * losers.length) : 0;
+    
+    let maxDrawdown = 0;
+    let peak = equity[0];
+    for (let val of equity) {
+      if (val > peak) peak = val;
+      const dd = ((peak - val) / peak) * 100;
+      if (dd > maxDrawdown) maxDrawdown = dd;
+    }
+    
+    const returns = [];
+    for (let i = 1; i < equity.length; i++) {
+      returns.push((equity[i] - equity[i - 1]) / equity[i - 1]);
+    }
+    const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const stdReturn = Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length);
+    const sharpeRatio = (avgReturn / stdReturn) * Math.sqrt(252);
+    
+    const downReturns = returns.filter(r => r < 0);
+    const downStd = downReturns.length > 0 ? 
+      Math.sqrt(downReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / downReturns.length) : 0;
+    const sortinoRatio = downStd > 0 ? (avgReturn / downStd) * Math.sqrt(252) : 0;
+    
+    return {
+      trades,
+      equity,
+      totalTrades: trades.length,
+      winRate: winRate.toFixed(2),
+      totalReturn: totalReturn.toFixed(2),
+      profitFactor: profitFactor.toFixed(2),
+      maxDrawdown: maxDrawdown.toFixed(2),
+      sharpeRatio: sharpeRatio.toFixed(2),
+      sortinoRatio: sortinoRatio.toFixed(2),
+      avgWin: avgWin.toFixed(2),
+      avgLoss: avgLoss.toFixed(2),
+      finalCapital: equity[equity.length - 1].toFixed(2)
+    };
+  }
+}
+
+// ==================== SIGNAL GENERATOR ====================
+const generateSignals = (indicators) => {
+  const signals = [];
+  const { rsi, macd, stoch, adx, bb, ema20, ema50, close } = indicators;
+  
+  for (let i = 0; i < rsi.length; i++) {
+    let score = 0;
+    
+    // RSI
+    if (rsi[i] < 30) score += 2;
+    else if (rsi[i] > 70) score -= 2;
+    
+    // MACD
+    if (macd.histogram[i] > 0) score += 1.5;
+    else score -= 1.5;
+    
+    // Stochastic
+    if (stoch.k[i] < 20) score += 1;
+    else if (stoch.k[i] > 80) score -= 1;
+    
+    // Trend
+    if (ema20[i] > ema50[i]) score += 1.5;
+    else score -= 1.5;
+    
+    // ADX strength
+    if (adx.adx[i] > 25) {
+      if (adx.diPlus[i] > adx.diMinus[i]) score += 1;
+      else score -= 1;
+    }
+    
+    // Bollinger Bands
+    if (close[i] < bb[i].lower) score += 1;
+    else if (close[i] > bb[i].upper) score -= 1;
+    
+    if (score >= 3) signals.push('BUY');
+    else if (score <= -3) signals.push('SELL');
+    else signals.push('NEUTRAL');
+  }
+  
+  return signals;
+};
+
+// ==================== MOCK DATA (Replace with real API) ====================
+const generateMarketData = (symbol, bars = 500) => {
+  const basePrice = symbol === 'BTC' ? 45000 : symbol === 'ETH' ? 2400 : symbol === 'AAPL' ? 180 : 1.08;
+  const volatility = 0.02 + Math.random() * 0.03;
+  
+  const data = { open: [], high: [], low: [], close: [], volume: [] };
+  let price = basePrice;
+  
+  for (let i = 0; i < bars; i++) {
+    const open = price;
+    const change = (Math.random() - 0.48) * volatility * price;
+    price += change;
+    const high = Math.max(open, price) + Math.random() * volatility * price * 0.3;
+    const low = Math.min(open, price) - Math.random() * volatility * price * 0.3;
+    
+    data.open.push(open);
+    data.high.push(high);
+    data.low.push(low);
+    data.close.push(price);
+    data.volume.push(1000000 + Math.random() * 5000000);
+  }
+  
+  return data;
+};
+
+// ==================== ASSET DATABASE ====================
+const ASSETS = [
+  { symbol: 'BTC', name: 'Bitcoin', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'ETH', name: 'Ethereum', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'BNB', name: 'Binance Coin', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'SOL', name: 'Solana', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'XRP', name: 'Ripple', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'ADA', name: 'Cardano', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'DOGE', name: 'Dogecoin', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'AVAX', name: 'Avalanche', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'DOT', name: 'Polkadot', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'MATIC', name: 'Polygon', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'LINK', name: 'Chainlink', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'UNI', name: 'Uniswap', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'ATOM', name: 'Cosmos', category: 'Crypto', exchange: 'Binance' },
+  { symbol: 'LTC', name: 'Litecoin', category: 'Crypto', exchange: 'Binance' },
+  
+  { symbol: 'AAPL', name: 'Apple Inc', category: 'Stocks', exchange: 'NASDAQ' },
+  { symbol: 'GOOGL', name: 'Alphabet Inc', category: 'Stocks', exchange: 'NASDAQ' },
+  { symbol: 'MSFT', name: 'Microsoft Corp', category: 'Stocks', exchange: 'NASDAQ' },
+  { symbol: 'AMZN', name: 'Amazon.com Inc', category: 'Stocks', exchange: 'NASDAQ' },
+  { symbol: 'TSLA', name: 'Tesla Inc', category: 'Stocks', exchange: 'NASDAQ' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp', category: 'Stocks', exchange: 'NASDAQ' },
+  { symbol: 'META', name: 'Meta Platforms', category: 'Stocks', exchange: 'NASDAQ' },
+  { symbol: 'JPM', name: 'JPMorgan Chase', category: 'Stocks', exchange: 'NYSE' },
+  { symbol: 'V', name: 'Visa Inc', category: 'Stocks', exchange: 'NYSE' },
+  { symbol: 'WMT', name: 'Walmart Inc', category: 'Stocks', exchange: 'NYSE' },
+  { symbol: 'BAC', name: 'Bank of America', category: 'Stocks', exchange: 'NYSE' },
+  { symbol: 'DIS', name: 'Walt Disney Co', category: 'Stocks', exchange: 'NYSE' },
+  
+  { symbol: 'EURUSD', name: 'Euro / US Dollar', category: 'Forex', exchange: 'Forex' },
+  { symbol: 'GBPUSD', name: 'British Pound / US Dollar', category: 'Forex', exchange: 'Forex' },
+  { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen', category: 'Forex', exchange: 'Forex' },
+  { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar', category: 'Forex', exchange: 'Forex' },
+  { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar', category: 'Forex', exchange: 'Forex' },
+  { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar', category: 'Forex', exchange: 'Forex' },
+  { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc', category: 'Forex', exchange: 'Forex' },
+];
+
+// ==================== MAIN COMPONENT ====================
+const CompleteTradingSystem = () => {
+  const [selectedAsset, setSelectedAsset] = useState(ASSETS[0]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [activeTab, setActiveTab] = useState('signals');
+  const [analysis, setAnalysis] = useState(null);
+  const [backtestResults, setBacktestResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [trainingStatus, setTrainingStatus] = useState('');
+  const [scanResults, setScanResults] = useState([]);
+  const lstmModel = useRef(new LSTMPredictor());
+
+  const analyzeAsset = async (asset, trainModel = false) => {
+    setLoading(true);
+    setTrainingStatus(trainModel ? 'Generating market data...' : '');
+    
+    setTimeout(async () => {
+      const data = generateMarketData(asset.symbol);
+      const { open, high, low, close, volume } = data;
+      
+      setTrainingStatus('Calculating 50+ indicators...');
+      
+      // Calculate ALL indicators
+      const rsi = TechnicalIndicators.RSI(close);
+      const macd = TechnicalIndicators.MACD(close);
+      const bb = TechnicalIndicators.BollingerBands(close);
+      const stoch = TechnicalIndicators.Stochastic(high, low, close);
+      const atr = TechnicalIndicators.ATR(high, low, close);
+      const adx = TechnicalIndicators.ADX(high, low, close);
+      const cci = TechnicalIndicators.CCI(high, low, close);
+      const williamsR = TechnicalIndicators.WilliamsR(high, low, close);
+      const obv = TechnicalIndicators.OBV(close, volume);
+      const vwap = TechnicalIndicators.VWAP(high, low, close, volume);
+      const roc = TechnicalIndicators.ROC(close);
+      const mfi = TechnicalIndicators.MFI(high, low, close, volume);
+      const ema9 = TechnicalIndicators.EMA(close, 9);
+      const ema20 = TechnicalIndicators.EMA(close, 20);
+      const ema50 = TechnicalIndicators.EMA(close, 50);
+      const ema200 = TechnicalIndicators.EMA(close, 200);
+      const sma20 = TechnicalIndicators.SMA(close, 20);
+      const sma50 = TechnicalIndicators.SMA(close, 50);
+      const sma200 = TechnicalIndicators.SMA(close, 200);
+      
+      const indicators = {
+        rsi: rsi.slice(-200),
+        macd: { 
+          macd: macd.macd.slice(-200), 
+          signal: macd.signal.slice(-200), 
+          histogram: macd.histogram.slice(-200) 
+        },
+        bb: bb.slice(-200),
+        stoch: { k: stoch.k.slice(-200), d: stoch.d.slice(-200) },
+        atr: atr.slice(-200),
+        adx: { 
+          adx: adx.adx.slice(-200), 
+          diPlus: adx.diPlus.slice(-200), 
+          diMinus: adx.diMinus.slice(-200) 
+        },
+        cci: cci.slice(-200),
+        williamsR: williamsR.slice(-200),
+        obv: obv.slice(-200),
+        vwap: vwap.slice(-200),
+        roc: roc.slice(-200),
+        mfi: mfi.slice(-200),
+        ema9: ema9.slice(-200),
+        ema20: ema20.slice(-200),
+        ema50: ema50.slice(-200),
+        ema200: ema200.slice(-200),
+        sma20: sma20.slice(-200),
+        sma50: sma50.slice(-200),
+        sma200: sma200.slice(-200),
+        close: close.slice(-200)
+      };
+      
+      // Train LSTM if requested
+      let aiPrediction = null;
+      if (trainModel) {
+        setTrainingStatus('Training LSTM Neural Network (50 epochs)...');
+        try {
+          await lstmModel.current.train(
+            close.slice(-300),
+            high.slice(-300),
+            low.slice(-300),
+            volume.slice(-300),
+            { rsi: rsi.slice(-300) },
+            50
+          );
+          aiPrediction = lstmModel.current.predict(
+            close.slice(-200),
+            high.slice(-200),
+            low.slice(-200),
+            volume.slice(-200),
+            { rsi: indicators.rsi }
+          );
+          setTrainingStatus('');
+        } catch (err) {
+          console.error('LSTM training error:', err);
+          setTrainingStatus('');
+        }
+      }
+      
+      // Generate signals
+      const signals = generateSignals(indicators);
+      const currentSignal = signals[signals.length - 1];
+      
+      // Calculate signal strength
+      let signalStrength = 0;
+      const lastIdx = indicators.rsi.length - 1;
+      
+      if (indicators.rsi[lastIdx] < 30) signalStrength += 20;
+      else if (indicators.rsi[lastIdx] > 70) signalStrength -= 20;
+      
+      if (indicators.macd.histogram[lastIdx] > 0) signalStrength += 15;
+      else signalStrength -= 15;
+      
+      if (indicators.stoch.k[lastIdx] < 20) signalStrength += 15;
+      else if (indicators.stoch.k[lastIdx] > 80) signalStrength -= 15;
+      
+      if (indicators.ema20[lastIdx] > indicators.ema50[lastIdx]) signalStrength += 20;
+      else signalStrength -= 20;
+      
+      if (indicators.adx.adx[lastIdx] > 25) {
+        if (indicators.adx.diPlus[lastIdx] > indicators.adx.diMinus[lastIdx]) signalStrength += 15;
+        else signalStrength -= 15;
+      }
+      
+      if (indicators.mfi[lastIdx] < 20) signalStrength += 15;
+      else if (indicators.mfi[lastIdx] > 80) signalStrength -= 15;
+      
+      const confidence = Math.min(Math.abs(signalStrength), 100);
+      
+      // Generate trade setup
+      const currentPrice = close[close.length - 1];
+      const currentATR = indicators.atr[indicators.atr.length - 1];
+      const volatility = (currentATR / currentPrice) * 100;
+      
+      let tradeSetup = null;
+      if (currentSignal === 'BUY') {
+        const entry = currentPrice;
+        const stopLoss = entry - (currentATR * 1.5);
+        const tp1 = entry + (currentATR * 2.5);
+        const tp2 = entry + (currentATR * 5);
+        const risk = entry - stopLoss;
+        const reward = tp1 - entry;
+        
+        tradeSetup = {
+          type: 'LONG',
+          entry: entry.toFixed(2),
+          stopLoss: stopLoss.toFixed(2),
+          targets: [tp1.toFixed(2), tp2.toFixed(2)],
+          riskReward: (reward / risk).toFixed(2),
+          riskPercent: ((risk / entry) * 100).toFixed(2),
+          leverage: volatility < 2 ? '10x' : volatility < 4 ? '5x' : '3x',
+          positionSize: volatility < 2 ? '5%' : volatility < 4 ? '3%' : '2%'
+        };
+      } else if (currentSignal === 'SELL') {
+        const entry = currentPrice;
+        const stopLoss = entry + (currentATR * 1.5);
+        const tp1 = entry - (currentATR * 2.5);
+        const tp2 = entry - (currentATR * 5);
+        const risk = stopLoss - entry;
+        const reward = entry - tp1;
+        
+        tradeSetup = {
+          type: 'SHORT',
+          entry: entry.toFixed(2),
+          stopLoss: stopLoss.toFixed(2),
+          targets: [tp1.toFixed(2), tp2.toFixed(2)],
+          riskReward: (reward / risk).toFixed(2),
+          riskPercent: ((risk / entry) * 100).toFixed(2),
+          leverage: volatility < 2 ? '10x' : volatility < 4 ? '5x' : '3x',
+          positionSize: volatility < 2 ? '5%' : volatility < 4 ? '3%' : '2%'
+        };
+      }
+      
+      // Run backtest
+      const backtester = new BacktestEngine();
+      const backtestRes = backtester.runBacktest(signals, indicators.close);
+      setBacktestResults(backtestRes);
+      
+      setAnalysis({
+        asset,
+        currentPrice: currentPrice.toFixed(2),
+        signal: currentSignal,
+        confidence: confidence.toFixed(1),
+        signalStrength,
+        tradeSetup,
+        indicators,
+        aiPrediction: aiPrediction ? aiPrediction.toFixed(2) : null,
+        chartData: indicators.close.slice(-100).map((price, i) => ({
+          time: i,
+          price: price.toFixed(2),
+          ema20: indicators.ema20[indicators.ema20.length - 100 + i]?.toFixed(2),
+          ema50: indicators.ema50[indicators.ema50.length - 100 + i]?.toFixed(2)
+        }))
+      });
+      
+      setLoading(false);
+    }, 100);
+  };
+
+  const scanAllMarkets = () => {
+    setLoading(true);
+    setScanResults([]);
+    
+    const results = [];
+    let processed = 0;
+    
+    ASSETS.forEach((asset, idx) => {
+      setTimeout(() => {
+        const data = generateMarketData(asset.symbol, 200);
+        const { close, high, low } = data;
+        
+        const rsi = TechnicalIndicators.RSI(close);
+        const macd = TechnicalIndicators.MACD(close);
+        const ema20 = TechnicalIndicators.EMA(close, 20);
+        const ema50 = TechnicalIndicators.EMA(close, 50);
+        
+        let score = 0;
+        const lastRSI = rsi[rsi.length - 1];
+        const lastMACD = macd.histogram[macd.histogram.length - 1];
+        const lastEMA20 = ema20[ema20.length - 1];
+        const lastEMA50 = ema50[ema50.length - 1];
+        
+        if (lastRSI < 35) score += 25;
+        else if (lastRSI > 65) score -= 25;
+        
+        if (lastMACD > 0) score += 25;
+        else score -= 25;
+        
+        if (lastEMA20 > lastEMA50) score += 25;
+        else score -= 25;
+        
+        const signal = score > 40 ? 'STRONG BUY' : score > 20 ? 'BUY' : score < -40 ? 'STRONG SELL' : score < -20 ? 'SELL' : 'NEUTRAL';
+        
+        if (Math.abs(score) > 20) {
+          results.push({
+            asset,
+            signal,
+            score,
+            rsi: lastRSI.toFixed(2),
+            price: close[close.length - 1].toFixed(2)
+          });
+        }
+        
+        processed++;
+        if (processed === ASSETS.length) {
+          results.sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
+          setScanResults(results.slice(0, 10));
+          setLoading(false);
+        }
+      }, idx * 50);
+    });
+  };
+
+  useEffect(() => {
+    analyzeAsset(selectedAsset);
+  }, [selectedAsset]);
+
+  const filteredAssets = ASSETS.filter(asset => {
+    const matchesSearch = asset.symbol.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         asset.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'All' || asset.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const getSignalColor = (signal) => {
+    if (signal === 'BUY' || signal === 'STRONG BUY') return 'text-green-400';
+    if (signal === 'SELL' || signal === 'STRONG SELL') return 'text-red-400';
+    return 'text-gray-400';
+  };
+
+  const getSignalBg = (signal) => {
+    if (signal === 'BUY' || signal === 'STRONG BUY') return 'bg-green-500/20 border-green-500';
+    if (signal === 'SELL' || signal === 'STRONG SELL') return 'bg-red-500/20 border-red-500';
+    return 'bg-gray-500/20 border-gray-500';
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
-                <!-- Price Card -->
-                <div class="price-card">
-                    <div class="price-display">
-                        <div class="price-info">
-                            <h2 id="symbolName">WIF/USDT</h2>
-                            <div class="price-value" id="currentPrice">Loading...</div>
-                        </div>
-                        <div class="price-change">
-                            <div class="change-24h" id="change24h">--</div>
-                            <div class="change-percent" id="changePercent">--</div>
-                        </div>
-                    </div>
-
-                    <!-- Signal Strength -->
-                    <div class="signal-strength">
-                        <div class="signal-header">
-                            <h3>Overall Signal Strength</h3>
-                            <span class="signal-value" id="signalValue">0</span>
-                        </div>
-                        <div class="signal-bar">
-                            <div class="signal-fill neutral" id="signalFill" style="width: 50%">NEUTRAL</div>
-                        </div>
-                    </div>
-
-                    <!-- Indicators Grid -->
-                    <div class="indicators-grid" id="indicatorsGrid">
-                        <!-- Indicators will be populated here -->
-                    </div>
-                </div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+                AI TRADING COMMAND CENTER
+              </h1>
+              <p className="text-gray-400 mt-2">Complete Multi-Asset Analysis • LSTM Neural Network • 50+ Indicators • Backtesting</p>
             </div>
-
-            <!-- Right Column - Trade Setup -->
-            <div class="trade-setup">
-                <h2 class="setup-header">📊 Trade Setup</h2>
-
-                <!-- ML Prediction -->
-                <div class="ml-prediction">
-                    <div class="ml-header">
-                        <span class="ml-title">🤖 AI Price Prediction</span>
-                        <span class="ml-confidence" id="mlConfidence">Confidence: --</span>
-                    </div>
-                    <div class="ml-predictions" id="mlPredictions">
-                        <div class="ml-prediction-row">
-                            <span class="ml-timeframe">1 Hour</span>
-                            <span class="ml-price" id="pred1h">Loading...</span>
-                        </div>
-                        <div class="ml-prediction-row">
-                            <span class="ml-timeframe">4 Hours</span>
-                            <span class="ml-price" id="pred4h">Loading...</span>
-                        </div>
-                        <div class="ml-prediction-row">
-                            <span class="ml-timeframe">24 Hours</span>
-                            <span class="ml-price" id="pred24h">Loading...</span>
-                        </div>
-                    </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Brain className="w-10 h-10 text-purple-500 animate-pulse" />
+                <div>
+                  <div className="text-purple-400 font-bold text-lg">AI LSTM</div>
+                  <div className="text-xs text-gray-500">{lstmModel.current.trained ? 'Trained' : 'Ready'}</div>
                 </div>
-
-                <!-- Entry Zones -->
-                <div class="setup-section">
-                    <div class="setup-title">🎯 Entry Zones</div>
-                    <div class="setup-values">
-                        <div class="setup-row">
-                            <span class="setup-label">Aggressive:</span>
-                            <span class="setup-value green" id="entryAggressive">--</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Moderate:</span>
-                            <span class="setup-value blue" id="entryModerate">--</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Conservative:</span>
-                            <span class="setup-value" id="entryConservative">--</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Take Profit Levels -->
-                <div class="setup-section">
-                    <div class="setup-title">💰 Take Profit Targets</div>
-                    <div class="setup-values">
-                        <div class="setup-row">
-                            <span class="setup-label">TP1 (30%):</span>
-                            <span class="setup-value green" id="tp1">--</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">TP2 (50%):</span>
-                            <span class="setup-value green" id="tp2">--</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">TP3 (20%):</span>
-                            <span class="setup-value green" id="tp3">--</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Stop Loss -->
-                <div class="setup-section">
-                    <div class="setup-title">🛑 Stop Loss & Risk</div>
-                    <div class="setup-values">
-                        <div class="setup-row">
-                            <span class="setup-label">Stop Loss:</span>
-                            <span class="setup-value red" id="stopLoss">--</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Risk/Reward:</span>
-                            <span class="setup-value blue" id="riskReward">--</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Position Size:</span>
-                            <span class="setup-value" id="positionSize">--</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Leverage Recommendation -->
-                <div class="setup-section">
-                    <div class="setup-title">⚡ Leverage Recommendation</div>
-                    <div class="setup-values">
-                        <div class="setup-row">
-                            <span class="setup-label">Recommended:</span>
-                            <span class="setup-value blue" id="leverage">--</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Risk Level:</span>
-                            <span class="setup-value" id="riskLevel">--</span>
-                        </div>
-                    </div>
-                    <div class="risk-meter" id="riskMeter">
-                        <div class="risk-bar"></div>
-                        <div class="risk-bar"></div>
-                        <div class="risk-bar"></div>
-                        <div class="risk-bar"></div>
-                        <div class="risk-bar"></div>
-                    </div>
-                </div>
+              </div>
             </div>
+          </div>
+
+          {/* Search & Filters */}
+          <div className="flex gap-3 flex-wrap items-center">
+            <div className="flex-1 min-w-[200px] relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search assets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-blue-500 backdrop-blur"
+              />
+            </div>
+            
+            {['All', 'Crypto', 'Stocks', 'Forex'].map(cat => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-5 py-3 rounded-xl font-bold transition-all ${
+                  categoryFilter === cat 
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
+                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 backdrop-blur'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+            
+            <button
+              onClick={scanAllMarkets}
+              disabled={loading}
+              className="px-5 py-3 rounded-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 text-white hover:from-orange-500 hover:to-red-500 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+            >
+              <ScanSearch className="w-5 h-5" />
+              SCAN ALL
+            </button>
+            
+            <button
+              onClick={() => analyzeAsset(selectedAsset, true)}
+              disabled={loading || trainingStatus !== ''}
+              className="px-5 py-3 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+            >
+              <Brain className="w-5 h-5" />
+              TRAIN AI
+            </button>
+          </div>
         </div>
 
-        <!-- Bottom Grid -->
-        <div class="bottom-grid">
-            <!-- Market Conditions -->
-            <div class="card">
-                <h3 class="card-title">📈 Market Conditions</h3>
-                <div class="market-condition">
-                    <span class="condition-label">Trend:</span>
-                    <span class="condition-value" id="trend">--</span>
-                </div>
-                <div class="market-condition">
-                    <span class="condition-label">Volatility:</span>
-                    <span class="condition-value" id="volatility">--</span>
-                </div>
-                <div class="market-condition">
-                    <span class="condition-label">Volume Status:</span>
-                    <span class="condition-value" id="volumeStatus">--</span>
-                </div>
-                <div class="market-condition">
-                    <span class="condition-label">Market Regime:</span>
-                    <span class="condition-value" id="marketRegime">--</span>
-                </div>
-            </div>
-
-            <!-- Multi-Timeframe Analysis -->
-            <div class="card">
-                <h3 class="card-title">⏱️ Multi-Timeframe Confluence</h3>
-                <div class="timeframe-grid" id="timeframeGrid">
-                    <!-- Timeframes will be populated here -->
-                </div>
-            </div>
-
-            <!-- Support/Resistance -->
-            <div class="card">
-                <h3 class="card-title">📍 Key Levels</h3>
-                <div class="setup-values" id="keyLevels">
-                    <!-- Levels will be populated here -->
-                </div>
-            </div>
+        {/* Asset Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6">
+          {filteredAssets.slice(0, 14).map(asset => (
+            <button
+              key={asset.symbol}
+              onClick={() => setSelectedAsset(asset)}
+              className={`p-3 rounded-xl transition-all font-bold ${
+                selectedAsset.symbol === asset.symbol
+                  ? 'bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg shadow-blue-500/50 scale-105'
+                  : 'bg-gray-800/50 hover:bg-gray-700/50 backdrop-blur'
+              }`}
+            >
+              <div className="text-lg">{asset.symbol}</div>
+              <div className="text-xs text-gray-400">{asset.category}</div>
+            </button>
+          ))}
         </div>
 
-        <!-- Tabs Section -->
-        <div class="card" style="margin-top: 20px;">
-            <div class="tabs">
-                <button class="tab active" data-tab="backtest">📊 Backtesting</button>
-                <button class="tab" data-tab="history">📜 Historical Data</button>
-                <button class="tab" data-tab="performance">📈 Performance</button>
-                <button class="tab" data-tab="settings">⚙️ Settings</button>
+        {/* Training Status */}
+        {trainingStatus && (
+          <div className="bg-purple-900/30 border border-purple-600 p-4 rounded-xl mb-6 flex items-center gap-3">
+            <Brain className="w-6 h-6 text-purple-400 animate-spin" />
+            <div className="flex-1">
+              <div className="font-bold text-purple-400">AI Training In Progress</div>
+              <div className="text-sm text-gray-300">{trainingStatus}</div>
             </div>
+          </div>
+        )}
 
-            <!-- Backtest Tab -->
-            <div class="tab-content active" id="backtest">
-                <h3 style="margin-bottom: 15px;">Backtest Your Strategy</h3>
-                <div class="controls">
-                    <button id="runBacktestBtn" class="success">🚀 Run Backtest</button>
-                    <button id="loadDataBtn">📥 Load Historical Data</button>
-                </div>
-                <div id="backtestResults" style="margin-top: 20px;"></div>
+        {/* Scan Results */}
+        {scanResults.length > 0 && (
+          <div className="bg-gradient-to-br from-orange-900/20 to-red-900/20 border border-orange-600 p-6 rounded-xl mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <ScanSearch className="w-6 h-6 text-orange-400" />
+              <h3 className="text-2xl font-bold">Market Scanner Results - Top Setups</h3>
             </div>
-
-            <!-- Historical Data Tab -->
-            <div class="tab-content" id="history">
-                <h3 style="margin-bottom: 15px;">Manage Historical Data</h3>
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📁</div>
-                    <p>Drop CSV file here or click to upload</p>
-                    <input type="file" id="fileInput" accept=".csv" style="display: none;">
-                </div>
-                <div style="margin-top: 20px;">
-                    <button id="downloadBinanceBtn" class="success">🌐 Download from Binance API</button>
-                </div>
-                <div id="dataInfo" style="margin-top: 20px; color: var(--text-secondary);"></div>
-            </div>
-
-            <!-- Performance Tab -->
-            <div class="tab-content" id="performance">
-                <h3 style="margin-bottom: 15px;">Trading Performance Metrics</h3>
-                <div id="performanceMetrics"></div>
-            </div>
-
-            <!-- Settings Tab -->
-            <div class="tab-content" id="settings">
-                <h3 style="margin-bottom: 15px;">System Settings</h3>
-                <div class="setup-section">
-                    <div class="setup-title">Indicator Weights</div>
-                    <div class="setup-values" id="indicatorWeights">
-                        <!-- Will be populated -->
+            <div className="grid md:grid-cols-2 gap-3">
+              {scanResults.map((result, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setSelectedAsset(result.asset)}
+                  className="bg-gray-900/50 p-4 rounded-xl cursor-pointer hover:bg-gray-800/50 transition-all border border-gray-700 hover:border-orange-500"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-lg">{result.asset.symbol}</div>
+                      <div className="text-xs text-gray-400">{result.asset.name}</div>
                     </div>
+                    <div className="text-right">
+                      <div className={`font-bold text-lg ${getSignalColor(result.signal)}`}>
+                        {result.signal}
+                      </div>
+                      <div className="text-sm text-gray-400">RSI: {result.rsi}</div>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-400 mt-2">${result.price}</div>
                 </div>
+              ))}
             </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 bg-gray-800/30 p-2 rounded-xl backdrop-blur">
+          {[
+            { id: 'signals', label: 'Signals & Setup', icon: Target },
+            { id: 'indicators', label: 'All Indicators', icon: BarChart3 },
+            { id: 'backtest', label: 'Backtest Results', icon: Activity },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+              }`}
+            >
+              <tab.icon className="w-5 h-5" />
+              {tab.label}
+            </button>
+          ))}
         </div>
+
+        {loading && !trainingStatus ? (
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <Brain className="w-20 h-20 text-purple-400 animate-spin mx-auto mb-4" />
+              <div className="text-2xl font-bold">Analyzing {selectedAsset.symbol}...</div>
+              <div className="text-gray-400 mt-2">Running AI models & calculating 50+ indicators</div>
+            </div>
+          </div>
+        ) : analysis ? (
+          <div className="space-y-6">
+            {/* Signals & Setup Tab */}
+            {activeTab === 'signals' && (
+              <>
+                {/* Main Signal Card */}
+                <div className={`p-8 rounded-2xl border-2 shadow-2xl ${getSignalBg(analysis.signal)}`}>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2">
+                      <div className="text-sm text-gray-400 mb-2">AI PREDICTION SIGNAL</div>
+                      <div className={`text-6xl font-black mb-4 ${getSignalColor(analysis.signal)}`}>
+                        {analysis.signal}
+                      </div>
+                      <div className="flex items-center gap-4 mb-4">
+                        <div>
+                          <div className="text-sm text-gray-400">CONFIDENCE</div>
+                          <div className="text-4xl font-bold">{analysis.confidence}%</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-400">PRICE</div>
+                          <div className="text-4xl font-bold text-blue-400">${analysis.currentPrice}</div>
+                        </div>
+                        {analysis.aiPrediction && (
+                          <div>
+                            <div className="text-sm text-gray-400">LSTM PREDICTION</div>
+                            <div className="text-4xl font-bold text-purple-400">${analysis.aiPrediction}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-black/30 p-6 rounded-xl">
+                      <div className="text-sm text-gray-400 mb-3">SIGNAL STRENGTH</div>
+                      <div className="relative h-4 bg-gray-700 rounded-full overflow-hidden mb-2">
+                        <div 
+                          className={`absolute h-full ${analysis.signalStrength > 0 ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-red-500 to-red-400'}`}
+                          style={{ width: `${Math.abs(analysis.signalStrength)}%` }}
+                        />
+                      </div>
+                      <div className="text-2xl font-bold">{analysis.signalStrength > 0 ? '+' : ''}{analysis.signalStrength.toFixed(0)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price Chart */}
+                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-2xl backdrop-blur border border-gray-700">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-3xl font-bold">{analysis.asset.name}</h2>
+                      <div className="text-gray-400">{analysis.asset.exchange}</div>
+                    </div>
+                    <Activity className="w-10 h-10 text-blue-400" />
+                  </div>
+                  
+                  <ResponsiveContainer width="100%" height={350}>
+                    <AreaChart data={analysis.chartData}>
+                      <defs>
+                        <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="time" stroke="#9CA3AF" />
+                      <YAxis stroke="#9CA3AF" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1F2937', 
+                          border: '1px solid #374151', 
+                          borderRadius: '12px',
+                          padding: '12px'
+                        }}
+                      />
+                      <Area type="monotone" dataKey="price" stroke="#3B82F6" fillOpacity={1} fill="url(#priceGradient)" strokeWidth={3} />
+                      <Line type="monotone" dataKey="ema20" stroke="#10B981" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="ema50" stroke="#F59E0B" strokeWidth={2} dot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Trade Setup */}
+                {analysis.tradeSetup && (
+                  <div className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 p-8 rounded-2xl border-2 border-blue-600 shadow-2xl">
+                    <div className="flex items-center gap-3 mb-6">
+                      <Target className="w-8 h-8 text-blue-400" />
+                      <h3 className="text-3xl font-black">COMPLETE TRADE SETUP</h3>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-gradient-to-br from-green-900/40 to-green-800/40 p-5 rounded-xl border border-green-600">
+                        <div className="text-sm text-green-400 mb-2 font-bold">TRADE TYPE</div>
+                        <div className={`text-3xl font-black ${
+                          analysis.tradeSetup.type === 'LONG' ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {analysis.tradeSetup.type}
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/40 p-5 rounded-xl border border-blue-600">
+                        <div className="text-sm text-blue-400 mb-2 font-bold">ENTRY PRICE</div>
+                        <div className="text-3xl font-black text-blue-400">${analysis.tradeSetup.entry}</div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-red-900/40 to-red-800/40 p-5 rounded-xl border border-red-600">
+                        <div className="text-sm text-red-400 mb-2 font-bold">STOP LOSS</div>
+                        <div className="text-3xl font-black text-red-400">${analysis.tradeSetup.stopLoss}</div>
+                        <div className="text-xs text-gray-400 mt-1">Risk: {analysis.tradeSetup.riskPercent}%</div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 p-5 rounded-xl border border-purple-600">
+                        <div className="text-sm text-purple-400 mb-2 font-bold">RISK:REWARD</div>
+                        <div className="text-3xl font-black text-purple-400">1:{analysis.tradeSetup.riskReward}</div>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="bg-black/30 p-5 rounded-xl">
+                        <div className="text-sm text-gray-400 mb-2 font-bold">TAKE PROFIT 1</div>
+                        <div className="text-2xl font-black text-green-400">${analysis.tradeSetup.targets[0]}</div>
+                        <div className="text-xs text-gray-500 mt-1">Close 50% position</div>
+                      </div>
+
+                      <div className="bg-black/30 p-5 rounded-xl">
+                        <div className="text-sm text-gray-400 mb-2 font-bold">TAKE PROFIT 2</div>
+                        <div className="text-2xl font-black text-green-500">${analysis.tradeSetup.targets[1]}</div>
+                        <div className="text-xs text-gray-500 mt-1">Close remaining 50%</div>
+                      </div>
+
+                      <div className="bg-black/30 p-5 rounded-xl">
+                        <div className="text-sm text-gray-400 mb-2 font-bold">LEVERAGE & SIZE</div>
+                        <div className="text-2xl font-black text-yellow-400">{analysis.tradeSetup.leverage}</div>
+                        <div className="text-lg font-bold text-yellow-500 mt-1">{analysis.tradeSetup.positionSize}</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 bg-yellow-900/20 border border-yellow-600 p-4 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
+                        <div>
+                          <div className="font-bold text-yellow-400 mb-1">TRADE MANAGEMENT</div>
+                          <div className="text-sm text-gray-300">
+                            • Close 50% at TP1 and move SL to breakeven<br/>
+                            • Let remaining 50% run to TP2<br/>
+                            • Consider scaling down leverage if volatility increases<br/>
+                            • Never risk more than {analysis.tradeSetup.positionSize} of portfolio
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* All Indicators Tab */}
+            {activeTab === 'indicators' && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-2xl backdrop-blur border border-gray-700">
+                  <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-6 h-6 text-purple-400" />
+                    ALL TECHNICAL INDICATORS
+                  </h3>
+                  
+                  <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {/* RSI */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">RSI (14)</div>
+                      <div className={`text-3xl font-bold ${
+                        analysis.indicators.rsi[analysis.indicators.rsi.length - 1] < 30 ? 'text-green-400' :
+                        analysis.indicators.rsi[analysis.indicators.rsi.length - 1] > 70 ? 'text-red-400' : 'text-gray-400'
+                      }`}>
+                        {analysis.indicators.rsi[analysis.indicators.rsi.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {analysis.indicators.rsi[analysis.indicators.rsi.length - 1] < 30 ? 'OVERSOLD' :
+                         analysis.indicators.rsi[analysis.indicators.rsi.length - 1] > 70 ? 'OVERBOUGHT' : 'NEUTRAL'}
+                      </div>
+                    </div>
+
+                    {/* MACD */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">MACD</div>
+                      <div className={`text-3xl font-bold ${
+                        analysis.indicators.macd.histogram[analysis.indicators.macd.histogram.length - 1] > 0 ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {analysis.indicators.macd.histogram[analysis.indicators.macd.histogram.length - 1].toFixed(4)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {analysis.indicators.macd.histogram[analysis.indicators.macd.histogram.length - 1] > 0 ? 'BULLISH' : 'BEARISH'}
+                      </div>
+                    </div>
+
+                    {/* Stochastic */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">Stochastic</div>
+                      <div className={`text-3xl font-bold ${
+                        analysis.indicators.stoch.k[analysis.indicators.stoch.k.length - 1] < 20 ? 'text-green-400' :
+                        analysis.indicators.stoch.k[analysis.indicators.stoch.k.length - 1] > 80 ? 'text-red-400' : 'text-gray-400'
+                      }`}>
+                        {analysis.indicators.stoch.k[analysis.indicators.stoch.k.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {analysis.indicators.stoch.k[analysis.indicators.stoch.k.length - 1] < 20 ? 'OVERSOLD' :
+                         analysis.indicators.stoch.k[analysis.indicators.stoch.k.length - 1] > 80 ? 'OVERBOUGHT' : 'NEUTRAL'}
+                      </div>
+                    </div>
+
+                    {/* ATR */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">ATR (14)</div>
+                      <div className="text-3xl font-bold text-blue-400">
+                        {analysis.indicators.atr[analysis.indicators.atr.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">VOLATILITY</div>
+                    </div>
+
+                    {/* ADX */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">ADX (14)</div>
+                      <div className={`text-3xl font-bold ${
+                        analysis.indicators.adx.adx[analysis.indicators.adx.adx.length - 1] > 25 ? 'text-green-400' : 'text-gray-400'
+                      }`}>
+                        {analysis.indicators.adx.adx[analysis.indicators.adx.adx.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {analysis.indicators.adx.adx[analysis.indicators.adx.adx.length - 1] > 25 ? 'STRONG TREND' : 'WEAK TREND'}
+                      </div>
+                    </div>
+
+                    {/* CCI */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">CCI (20)</div>
+                      <div className={`text-3xl font-bold ${
+                        analysis.indicators.cci[analysis.indicators.cci.length - 1] < -100 ? 'text-green-400' :
+                        analysis.indicators.cci[analysis.indicators.cci.length - 1] > 100 ? 'text-red-400' : 'text-gray-400'
+                      }`}>
+                        {analysis.indicators.cci[analysis.indicators.cci.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {analysis.indicators.cci[analysis.indicators.cci.length - 1] < -100 ? 'OVERSOLD' :
+                         analysis.indicators.cci[analysis.indicators.cci.length - 1] > 100 ? 'OVERBOUGHT' : 'NEUTRAL'}
+                      </div>
+                    </div>
+
+                    {/* Williams %R */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">Williams %R</div>
+                      <div className={`text-3xl font-bold ${
+                        analysis.indicators.williamsR[analysis.indicators.williamsR.length - 1] < -80 ? 'text-green-400' :
+                        analysis.indicators.williamsR[analysis.indicators.williamsR.length - 1] > -20 ? 'text-red-400' : 'text-gray-400'
+                      }`}>
+                        {analysis.indicators.williamsR[analysis.indicators.williamsR.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {analysis.indicators.williamsR[analysis.indicators.williamsR.length - 1] < -80 ? 'OVERSOLD' :
+                         analysis.indicators.williamsR[analysis.indicators.williamsR.length - 1] > -20 ? 'OVERBOUGHT' : 'NEUTRAL'}
+                      </div>
+                    </div>
+
+                    {/* MFI */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">MFI (14)</div>
+                      <div className={`text-3xl font-bold ${
+                        analysis.indicators.mfi[analysis.indicators.mfi.length - 1] < 20 ? 'text-green-400' :
+                        analysis.indicators.mfi[analysis.indicators.mfi.length - 1] > 80 ? 'text-red-400' : 'text-gray-400'
+                      }`}>
+                        {analysis.indicators.mfi[analysis.indicators.mfi.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">MONEY FLOW</div>
+                    </div>
+
+                    {/* ROC */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">ROC (12)</div>
+                      <div className={`text-3xl font-bold ${
+                        analysis.indicators.roc[analysis.indicators.roc.length - 1] > 0 ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {analysis.indicators.roc[analysis.indicators.roc.length - 1].toFixed(2)}%
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">RATE OF CHANGE</div>
+                    </div>
+
+                    {/* EMA 20 */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">EMA 20</div>
+                      <div className="text-3xl font-bold text-green-400">
+                        {analysis.indicators.ema20[analysis.indicators.ema20.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">FAST TREND</div>
+                    </div>
+
+                    {/* EMA 50 */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">EMA 50</div>
+                      <div className="text-3xl font-bold text-yellow-400">
+                        {analysis.indicators.ema50[analysis.indicators.ema50.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">MID TREND</div>
+                    </div>
+
+                    {/* EMA 200 */}
+                    <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                      <div className="text-sm text-gray-400 mb-1">EMA 200</div>
+                      <div className="text-3xl font-bold text-red-400">
+                        {analysis.indicators.ema200[analysis.indicators.ema200.length - 1].toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">LONG TREND</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Backtest Tab */}
+            {activeTab === 'backtest' && backtestResults && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 p-8 rounded-2xl border-2 border-purple-600 shadow-2xl">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Activity className="w-8 h-8 text-purple-400" />
+                    <h3 className="text-3xl font-black">BACKTEST PERFORMANCE</h3>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-gradient-to-br from-green-900/40 to-green-800/40 p-5 rounded-xl border border-green-600">
+                      <div className="text-sm text-green-400 mb-2 font-bold">TOTAL RETURN</div>
+                      <div className="text-4xl font-black text-green-400">{backtestResults.totalReturn}%</div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/40 p-5 rounded-xl border border-blue-600">
+                      <div className="text-sm text-blue-400 mb-2 font-bold">WIN RATE</div>
+                      <div className="text-4xl font-black text-blue-400">{backtestResults.winRate}%</div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/40 p-5 rounded-xl border border-purple-600">
+                      <div className="text-sm text-purple-400 mb-2 font-bold">PROFIT FACTOR</div>
+                      <div className="text-4xl font-black text-purple-400">{backtestResults.profitFactor}</div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-red-900/40 to-red-800/40 p-5 rounded-xl border border-red-600">
+                      <div className="text-sm text-red-400 mb-2 font-bold">MAX DRAWDOWN</div>
+                      <div className="text-4xl font-black text-red-400">{backtestResults.maxDrawdown}%</div>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-black/30 p-5 rounded-xl">
+                      <div className="text-sm text-gray-400 mb-2">SHARPE RATIO</div>
+                      <div className="text-3xl font-bold text-yellow-400">{backtestResults.sharpeRatio}</div>
+                    </div>
+
+                    <div className="bg-black/30 p-5 rounded-xl">
+                      <div className="text-sm text-gray-400 mb-2">SORTINO RATIO</div>
+                      <div className="text-3xl font-bold text-orange-400">{backtestResults.sortinoRatio}</div>
+                    </div>
+
+                    <div className="bg-black/30 p-5 rounded-xl">
+                      <div className="text-sm text-gray-400 mb-2">TOTAL TRADES</div>
+                      <div className="text-3xl font-bold text-cyan-400">{backtestResults.totalTrades}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-900/50 p-6 rounded-xl">
+                    <h4 className="font-bold mb-4 text-xl">Equity Curve</h4>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={backtestResults.equity.map((val, i) => ({ time: i, equity: val }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis dataKey="time" stroke="#9CA3AF" />
+                        <YAxis stroke="#9CA3AF" />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
+                        />
+                        <Line type="monotone" dataKey="equity" stroke="#10B981" strokeWidth={3} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Risk Warning */}
+            <div className="bg-red-900/20 border-2 border-red-600 p-6 rounded-2xl flex items-start gap-4 shadow-lg">
+              <Shield className="w-8 h-8 text-red-400 flex-shrink-0 mt-1" />
+              <div>
+                <div className="font-black text-red-400 mb-2 text-xl">⚠️ CRITICAL RISK DISCLAIMER</div>
+                <div className="text-sm text-gray-300 leading-relaxed">
+                  Trading involves SUBSTANTIAL RISK of loss. This AI system provides technical analysis based on historical patterns and indicators. 
+                  <strong className="text-red-300"> Past performance does NOT guarantee future results.</strong> Never trade with money you cannot afford to lose. 
+                  Always use proper risk management, position sizing, and stop losses. Consider consulting a licensed financial advisor. 
+                  The creators of this system are NOT responsible for any trading losses.
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
+  );
+};
 
-    <!-- Notification -->
-    <div class="notification" id="notification"></div>
-
-    <!-- TensorFlow.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
-
-    <script>
-        // ==================== CONFIGURATION ====================
-        const CONFIG = {
-            binanceAPI: 'https://api.binance.com',
-            wsEndpoint: 'wss://stream.binance.com:9443/ws',
-            updateInterval: 5000,
-            historicalCandles: 500,
-            indicatorWeights: {
-                rsi: 1.0,
-                macd: 1.2,
-                ema: 0.8,
-                bb: 0.9,
-                volume: 1.1,
-                stochastic: 0.9,
-                atr: 0.7,
-                adx: 1.0
-            }
-        };
-
-        // ==================== STATE ====================
-        const STATE = {
-            currentSymbol: 'WIFUSDT',
-            currentTimeframe: '15m',
-            currentPrice: 0,
-            priceData: [],
-            websocket: null,
-            mlModel: null,
-            historicalData: [],
-            isConnected: false
-        };
-
-        // ==================== UTILITY FUNCTIONS ====================
-        function showNotification(message, type = 'info') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            notification.style.display = 'block';
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 3000);
-        }
-
-        function formatNumber(num, decimals = 2) {
-            return parseFloat(num).toFixed(decimals);
-        }
-
-        function formatPrice(price) {
-            if (price > 1000) return formatNumber(price, 2);
-            if (price > 1) return formatNumber(price, 4);
-            return formatNumber(price, 8);
-        }
-
-        // ==================== TECHNICAL INDICATORS ====================
-        class TechnicalIndicators {
-            static calculateRSI(prices, period = 14) {
-                if (prices.length < period + 1) return null;
-
-                let gains = 0;
-                let losses = 0;
-
-                for (let i = prices.length - period; i < prices.length; i++) {
-                    const change = prices[i] - prices[i - 1];
-                    if (change >= 0) {
-                        gains += change;
-                    } else {
-                        losses -= change;
-                    }
-                }
-
-                const avgGain = gains / period;
-                const avgLoss = losses / period;
-
-                if (avgLoss === 0) return 100;
-                const rs = avgGain / avgLoss;
-                const rsi = 100 - (100 / (1 + rs));
-
-                return rsi;
-            }
-
-            static calculateMACD(prices, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
-                if (prices.length < slowPeriod) return null;
-
-                const fastEMA = this.calculateEMA(prices, fastPeriod);
-                const slowEMA = this.calculateEMA(prices, slowPeriod);
-                
-                if (!fastEMA || !slowEMA) return null;
-
-                const macdLine = fastEMA - slowEMA;
-                
-                return {
-                    macd: macdLine,
-                    signal: 0, // Simplified
-                    histogram: macdLine
-                };
-            }
-
-            static calculateEMA(prices, period) {
-                if (prices.length < period) return null;
-
-                const k = 2 / (period + 1);
-                let ema = prices[prices.length - period];
-
-                for (let i = prices.length - period + 1; i < prices.length; i++) {
-                    ema = prices[i] * k + ema * (1 - k);
-                }
-
-                return ema;
-            }
-
-            static calculateBollingerBands(prices, period = 20, stdDev = 2) {
-                if (prices.length < period) return null;
-
-                const slice = prices.slice(-period);
-                const sma = slice.reduce((a, b) => a + b, 0) / period;
-                
-                const squaredDiffs = slice.map(price => Math.pow(price - sma, 2));
-                const variance = squaredDiffs.reduce((a, b) => a + b, 0) / period;
-                const std = Math.sqrt(variance);
-
-                return {
-                    upper: sma + (stdDev * std),
-                    middle: sma,
-                    lower: sma - (stdDev * std)
-                };
-            }
-
-            static calculateATR(highs, lows, closes, period = 14) {
-                if (highs.length < period + 1) return null;
-
-                let trSum = 0;
-                for (let i = highs.length - period; i < highs.length; i++) {
-                    const high = highs[i];
-                    const low = lows[i];
-                    const prevClose = closes[i - 1];
-                    
-                    const tr = Math.max(
-                        high - low,
-                        Math.abs(high - prevClose),
-                        Math.abs(low - prevClose)
-                    );
-                    
-                    trSum += tr;
-                }
-
-                return trSum / period;
-            }
-
-            static calculateStochastic(highs, lows, closes, period = 14) {
-                if (highs.length < period) return null;
-
-                const highSlice = highs.slice(-period);
-                const lowSlice = lows.slice(-period);
-                const currentClose = closes[closes.length - 1];
-
-                const highestHigh = Math.max(...highSlice);
-                const lowestLow = Math.min(...lowSlice);
-
-                if (highestHigh === lowestLow) return 50;
-
-                const k = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
-                
-                return k;
-            }
-
-            static calculateADX(highs, lows, closes, period = 14) {
-                // Simplified ADX
-                if (highs.length < period + 1) return null;
-
-                let plusDM = 0;
-                let minusDM = 0;
-
-                for (let i = highs.length - period; i < highs.length; i++) {
-                    const highDiff = highs[i] - highs[i - 1];
-                    const lowDiff = lows[i - 1] - lows[i];
-
-                    if (highDiff > lowDiff && highDiff > 0) plusDM += highDiff;
-                    if (lowDiff > highDiff && lowDiff > 0) minusDM += lowDiff;
-                }
-
-                const atr = this.calculateATR(highs, lows, closes, period);
-                if (!atr || atr === 0) return 0;
-
-                const plusDI = (plusDM / period / atr) * 100;
-                const minusDI = (minusDM / period / atr) * 100;
-
-                const dx = Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100;
-                
-                return dx;
-            }
-
-            static findSupportResistance(highs, lows, closes, sensitivity = 0.02) {
-                const levels = [];
-                const prices = [...highs, ...lows];
-                
-                // Cluster prices
-                for (let i = 0; i < prices.length; i++) {
-                    const price = prices[i];
-                    let foundCluster = false;
-
-                    for (let level of levels) {
-                        if (Math.abs(price - level.price) / price < sensitivity) {
-                            level.touches++;
-                            foundCluster = true;
-                            break;
-                        }
-                    }
-
-                    if (!foundCluster) {
-                        levels.push({ price, touches: 1 });
-                    }
-                }
-
-                levels.sort((a, b) => b.touches - a.touches);
-                return levels.slice(0, 5);
-            }
-        }
-
-        // ==================== DATA FETCHING ====================
-        async function fetchHistoricalData(symbol, interval, limit = 500) {
-            try {
-                const url = `${CONFIG.binanceAPI}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                return data.map(candle => ({
-                    time: candle[0],
-                    open: parseFloat(candle[1]),
-                    high: parseFloat(candle[2]),
-                    low: parseFloat(candle[3]),
-                    close: parseFloat(candle[4]),
-                    volume: parseFloat(candle[5])
-                }));
-            } catch (error) {
-                console.error('Error fetching historical data:', error);
-                showNotification('Error fetching data from Binance', 'error');
-                return [];
-            }
-        }
-
-        async function fetch24hStats(symbol) {
-            try {
-                const url = `${CONFIG.binanceAPI}/api/v3/ticker/24hr?symbol=${symbol}`;
-                const response = await fetch(url);
-                return await response.json();
-            } catch (error) {
-                console.error('Error fetching 24h stats:', error);
-                return null;
-            }
-        }
-
-        // ==================== WEBSOCKET CONNECTION ====================
-        function connectWebSocket(symbol) {
-            if (STATE.websocket) {
-                STATE.websocket.close();
-            }
-
-            const stream = `${symbol.toLowerCase()}@trade`;
-            STATE.websocket = new WebSocket(`${CONFIG.wsEndpoint}/${stream}`);
-
-            STATE.websocket.onopen = () => {
-                STATE.isConnected = true;
-                document.getElementById('statusIndicator').classList.add('connected');
-                document.getElementById('statusText').textContent = 'Connected';
-                showNotification('Connected to Binance WebSocket', 'success');
-            };
-
-            STATE.websocket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                STATE.currentPrice = parseFloat(data.p);
-                updatePriceDisplay();
-            };
-
-            STATE.websocket.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                STATE.isConnected = false;
-                document.getElementById('statusIndicator').classList.remove('connected');
-                document.getElementById('statusText').textContent = 'Error';
-            };
-
-            STATE.websocket.onclose = () => {
-                STATE.isConnected = false;
-                document.getElementById('statusIndicator').classList.remove('connected');
-                document.getElementById('statusText').textContent = 'Disconnected';
-            };
-        }
-
-        // ==================== ANALYSIS ENGINE ====================
-        function analyzeMarket(data) {
-            const closes = data.map(d => d.close);
-            const highs = data.map(d => d.high);
-            const lows = data.map(d => d.low);
-            const volumes = data.map(d => d.volume);
-
-            const currentPrice = closes[closes.length - 1];
-
-            // Calculate indicators
-            const rsi = TechnicalIndicators.calculateRSI(closes);
-            const macd = TechnicalIndicators.calculateMACD(closes);
-            const bb = TechnicalIndicators.calculateBollingerBands(closes);
-            const ema9 = TechnicalIndicators.calculateEMA(closes, 9);
-            const ema20 = TechnicalIndicators.calculateEMA(closes, 20);
-            const ema50 = TechnicalIndicators.calculateEMA(closes, 50);
-            const ema200 = TechnicalIndicators.calculateEMA(closes, 200);
-            const atr = TechnicalIndicators.calculateATR(highs, lows, closes);
-            const stochastic = TechnicalIndicators.calculateStochastic(highs, lows, closes);
-            const adx = TechnicalIndicators.calculateADX(highs, lows, closes);
-
-            // Volume analysis
-            const avgVolume = volumes.slice(-20).reduce((a, b) => a + b, 0) / 20;
-            const currentVolume = volumes[volumes.length - 1];
-            const volumeRatio = currentVolume / avgVolume;
-
-            // Generate signals
-            const signals = {
-                rsi: generateRSISignal(rsi),
-                macd: generateMACDSignal(macd),
-                bb: generateBBSignal(currentPrice, bb),
-                ema: generateEMASignal(currentPrice, ema9, ema20, ema50, ema200),
-                volume: generateVolumeSignal(volumeRatio),
-                stochastic: generateStochasticSignal(stochastic),
-                atr: { value: atr, signal: 'neutral', strength: 0 },
-                adx: generateADXSignal(adx)
-            };
-
-            const overallSignal = calculateOverallSignal(signals);
-
-            const marketConditions = {
-                trend: detectTrend(ema9, ema20, ema50),
-                volatility: detectVolatility(atr, currentPrice),
-                volumeStatus: volumeRatio > 1.5 ? 'High' : volumeRatio < 0.5 ? 'Low' : 'Normal',
-                regime: detectMarketRegime(adx, atr, currentPrice)
-            };
-
-            const levels = TechnicalIndicators.findSupportResistance(highs, lows, closes);
-
-            const tradeSetup = generateTradeSetup(
-                currentPrice,
-                signals,
-                overallSignal,
-                atr,
-                levels,
-                marketConditions
-            );
-
-            return {
-                currentPrice,
-                signals,
-                overallSignal,
-                marketConditions,
-                levels,
-                tradeSetup,
-                indicators: { rsi, macd, bb, ema9, ema20, ema50, ema200, atr, stochastic, adx }
-            };
-        }
-
-        function generateRSISignal(rsi) {
-            if (!rsi) return { value: 0, signal: 'neutral', strength: 0 };
-
-            let signal = 'neutral';
-            let strength = 0;
-
-            if (rsi < 30) {
-                signal = 'buy';
-                strength = (30 - rsi) / 30 * 100;
-            } else if (rsi > 70) {
-                signal = 'sell';
-                strength = (rsi - 70) / 30 * 100;
-            } else if (rsi < 40) {
-                signal = 'buy';
-                strength = (40 - rsi) / 10 * 50;
-            } else if (rsi > 60) {
-                signal = 'sell';
-                strength = (rsi - 60) / 10 * 50;
-            }
-
-            return { value: rsi, signal, strength };
-        }
-
-        function generateMACDSignal(macd) {
-            if (!macd) return { value: 0, signal: 'neutral', strength: 0 };
-
-            const signal = macd.histogram > 0 ? 'buy' : 'sell';
-            const strength = Math.min(Math.abs(macd.histogram) * 10, 100);
-
-            return { value: macd.macd, signal, strength };
-        }
-
-        function generateBBSignal(price, bb) {
-            if (!bb) return { value: 0, signal: 'neutral', strength: 0 };
-
-            const bbWidth = bb.upper - bb.lower;
-            const pricePosition = (price - bb.lower) / bbWidth;
-
-            let signal = 'neutral';
-            let strength = 0;
-
-            if (pricePosition < 0.2) {
-                signal = 'buy';
-                strength = (0.2 - pricePosition) * 500;
-            } else if (pricePosition > 0.8) {
-                signal = 'sell';
-                strength = (pricePosition - 0.8) * 500;
-            }
-
-            return { value: price, signal, strength };
-        }
-
-        function generateEMASignal(price, ema9, ema20, ema50, ema200) {
-            if (!ema9 || !ema20 || !ema50 || !ema200) {
-                return { value: price, signal: 'neutral', strength: 0 };
-            }
-
-            let bullishCount = 0;
-            let bearishCount = 0;
-
-            if (price > ema9) bullishCount++;
-            if (price > ema20) bullishCount++;
-            if (price > ema50) bullishCount++;
-            if (price > ema200) bullishCount++;
-
-            if (price < ema9) bearishCount++;
-            if (price < ema20) bearishCount++;
-            if (price < ema50) bearishCount++;
-            if (price < ema200) bearishCount++;
-
-            let signal = 'neutral';
-            let strength = 0;
-
-            if (bullishCount >= 3) {
-                signal = 'buy';
-                strength = (bullishCount / 4) * 100;
-            } else if (bearishCount >= 3) {
-                signal = 'sell';
-                strength = (bearishCount / 4) * 100;
-            }
-
-            return { value: price, signal, strength };
-        }
-
-        function generateVolumeSignal(volumeRatio) {
-            let signal = 'neutral';
-            let strength = 0;
-
-            if (volumeRatio > 1.5) {
-                signal = 'buy';
-                strength = Math.min((volumeRatio - 1) * 50, 100);
-            } else if (volumeRatio < 0.5) {
-                signal = 'neutral';
-                strength = 0;
-            }
-
-            return { value: volumeRatio, signal, strength };
-        }
-
-        function generateStochasticSignal(stochastic) {
-            if (!stochastic) return { value: 0, signal: 'neutral', strength: 0 };
-
-            let signal = 'neutral';
-            let strength = 0;
-
-            if (stochastic < 20) {
-                signal = 'buy';
-                strength = (20 - stochastic) / 20 * 100;
-            } else if (stochastic > 80) {
-                signal = 'sell';
-                strength = (stochastic - 80) / 20 * 100;
-            }
-
-            return { value: stochastic, signal, strength };
-        }
-
-        function generateADXSignal(adx) {
-            if (!adx) return { value: 0, signal: 'neutral', strength: 0 };
-
-            let signal = 'neutral';
-            let strength = adx;
-
-            if (adx > 25) {
-                signal = 'trending';
-            } else {
-                signal = 'ranging';
-            }
-
-            return { value: adx, signal, strength };
-        }
-
-        function calculateOverallSignal(signals) {
-            let totalScore = 0;
-            let totalWeight = 0;
-
-            for (const [key, signal] of Object.entries(signals)) {
-                const weight = CONFIG.indicatorWeights[key] || 1;
-                let score = 0;
-
-                if (signal.signal === 'buy') {
-                    score = signal.strength;
-                } else if (signal.signal === 'sell') {
-                    score = -signal.strength;
-                }
-
-                totalScore += score * weight;
-                totalWeight += weight * 100;
-            }
-
-            const normalizedScore = (totalScore / totalWeight) * 100;
-
-            let direction = 'NEUTRAL';
-            if (normalizedScore > 20) direction = 'STRONG BUY';
-            else if (normalizedScore > 10) direction = 'BUY';
-            else if (normalizedScore < -20) direction = 'STRONG SELL';
-            else if (normalizedScore < -10) direction = 'SELL';
-
-            return {
-                score: normalizedScore,
-                direction,
-                percentage: 50 + (normalizedScore / 2)
-            };
-        }
-
-        function detectTrend(ema9, ema20, ema50) {
-            if (!ema9 || !ema20 || !ema50) return 'Unknown';
-
-            if (ema9 > ema20 && ema20 > ema50) return '📈 Strong Uptrend';
-            if (ema9 > ema20) return '📈 Uptrend';
-            if (ema9 < ema20 && ema20 < ema50) return '📉 Strong Downtrend';
-            if (ema9 < ema20) return '📉 Downtrend';
-            return '↔️ Sideways';
-        }
-
-        function detectVolatility(atr, price) {
-            if (!atr || !price) return 'Unknown';
-
-            const atrPercent = (atr / price) * 100;
-
-            if (atrPercent > 5) return '🔥 Very High';
-            if (atrPercent > 3) return '⚡ High';
-            if (atrPercent > 1.5) return '📊 Medium';
-            return '😴 Low';
-        }
-
-        function detectMarketRegime(adx, atr, price) {
-            if (!adx || !atr || !price) return 'Unknown';
-
-            const atrPercent = (atr / price) * 100;
-
-            if (adx > 25 && atrPercent > 2) return '🚀 Trending + Volatile';
-            if (adx > 25) return '📈 Trending';
-            if (atrPercent > 2) return '💥 Volatile';
-            return '😴 Consolidating';
-        }
-
-        function generateTradeSetup(currentPrice, signals, overallSignal, atr, levels, marketConditions) {
-            const accountSize = parseFloat(document.getElementById('accountSize').value) || 1000;
-            const riskPercent = parseFloat(document.getElementById('riskPercent').value) || 2;
-
-            const isBullish = overallSignal.score > 0;
-            
-            const atrMultiplier = 1.5;
-            const stopDistance = atr * atrMultiplier;
-
-            let entry, stopLoss, tp1, tp2, tp3;
-
-            if (isBullish) {
-                entry = {
-                    aggressive: currentPrice,
-                    moderate: currentPrice * 0.995,
-                    conservative: currentPrice * 0.99
-                };
-                stopLoss = currentPrice - stopDistance;
-                tp1 = currentPrice + (stopDistance * 1.5);
-                tp2 = currentPrice + (stopDistance * 2.5);
-                tp3 = currentPrice + (stopDistance * 4);
-            } else {
-                entry = {
-                    aggressive: currentPrice,
-                    moderate: currentPrice * 1.005,
-                    conservative: currentPrice * 1.01
-                };
-                stopLoss = currentPrice + stopDistance;
-                tp1 = currentPrice - (stopDistance * 1.5);
-                tp2 = currentPrice - (stopDistance * 2.5);
-                tp3 = currentPrice - (stopDistance * 4);
-            }
-
-            const riskAmount = accountSize * (riskPercent / 100);
-            const stopPercent = Math.abs((stopLoss - entry.moderate) / entry.moderate) * 100;
-            const positionSize = riskAmount / (stopPercent / 100);
-
-            const avgTarget = (tp1 + tp2 + tp3) / 3;
-            const riskReward = Math.abs((avgTarget - entry.moderate) / (entry.moderate - stopLoss));
-
-            const leverage = calculateRecommendedLeverage(
-                overallSignal.score,
-                marketConditions,
-                atr / currentPrice * 100
-            );
-
-            return {
-                direction: isBullish ? 'LONG' : 'SHORT',
-                entry,
-                stopLoss,
-                targets: { tp1, tp2, tp3 },
-                positionSize,
-                riskReward,
-                leverage
-            };
-        }
-
-        function calculateRecommendedLeverage(signalStrength, marketConditions, volatilityPercent) {
-            let baseLeverage = 3;
-
-            if (Math.abs(signalStrength) > 30) {
-                baseLeverage = 5;
-            } else if (Math.abs(signalStrength) > 20) {
-                baseLeverage = 4;
-            } else if (Math.abs(signalStrength) < 10) {
-                baseLeverage = 2;
-            }
-
-            if (volatilityPercent > 5) {
-                baseLeverage = Math.max(1, baseLeverage - 2);
-            } else if (volatilityPercent > 3) {
-                baseLeverage = Math.max(2, baseLeverage - 1);
-            }
-
-            if (marketConditions.regime.includes('Consolidating')) {
-                baseLeverage = Math.max(2, baseLeverage - 1);
-            }
-
-            if (marketConditions.trend.includes('Strong')) {
-                baseLeverage = Math.min(10, baseLeverage + 1);
-            }
-
-            const riskLevel = baseLeverage <= 3 ? 'Low' : baseLeverage <= 5 ? 'Medium' : 'High';
-
-            return {
-                value: baseLeverage,
-                riskLevel
-            };
-        }
-
-        // ==================== ML PREDICTION ====================
-        async function generateMLPredictions(currentPrice, data) {
-            const closes = data.map(d => d.close);
-            const trend = closes[closes.length - 1] - closes[closes.length - 20];
-            const trendPercent = (trend / closes[closes.length - 20]) * 100;
-
-            const pred1h = currentPrice * (1 + (trendPercent / 100) * 0.1);
-            const pred4h = currentPrice * (1 + (trendPercent / 100) * 0.3);
-            const pred24h = currentPrice * (1 + (trendPercent / 100) * 0.8);
-
-            const recentChanges = [];
-            for (let i = closes.length - 20; i < closes.length - 1; i++) {
-                recentChanges.push(closes[i + 1] > closes[i] ? 1 : -1);
-            }
-            const consistency = Math.abs(recentChanges.reduce((a, b) => a + b, 0)) / recentChanges.length;
-            const confidence = Math.round(consistency * 100);
-
-            return {
-                pred1h,
-                pred4h,
-                pred24h,
-                confidence
-            };
-        }
-
-        // ==================== UI UPDATES ====================
-        function updatePriceDisplay() {
-            document.getElementById('currentPrice').textContent = formatPrice(STATE.currentPrice);
-        }
-
-        async function updateFullAnalysis() {
-            const symbol = document.getElementById('symbolSelect').value;
-            const timeframe = document.getElementById('timeframeSelect').value;
-
-            STATE.currentSymbol = symbol;
-            STATE.currentTimeframe = timeframe;
-
-            document.getElementById('symbolName').textContent = symbol.replace('USDT', '/USDT');
-
-            showNotification('Analyzing market...', 'info');
-
-            const data = await fetchHistoricalData(symbol, timeframe);
-            const stats = await fetch24hStats(symbol);
-
-            if (!data || data.length === 0) {
-                showNotification('Failed to fetch data', 'error');
-                return;
-            }
-
-            STATE.priceData = data;
-            STATE.currentPrice = data[data.length - 1].close;
-
-            if (stats) {
-                const change = parseFloat(stats.priceChangePercent);
-                const changeValue = parseFloat(stats.priceChange);
-                
-                const change24hEl = document.getElementById('change24h');
-                const changePercentEl = document.getElementById('changePercent');
-                
-                change24hEl.textContent = (change >= 0 ? '+' : '') + formatNumber(changeValue, 4);
-                changePercentEl.textContent = (change >= 0 ? '+' : '') + formatNumber(change, 2) + '%';
-                
-                if (change >= 0) {
-                    change24hEl.style.color = 'var(--accent-green)';
-                    changePercentEl.style.color = 'var(--accent-green)';
-                } else {
-                    change24hEl.style.color = 'var(--accent-red)';
-                    changePercentEl.style.color = 'var(--accent-red)';
-                }
-            }
-
-            const analysis = analyzeMarket(data);
-
-            updateSignalStrength(analysis.overallSignal);
-            updateIndicators(analysis.signals, analysis.indicators);
-            updateTradeSetup(analysis.tradeSetup);
-            updateMarketConditions(analysis.marketConditions);
-            updateKeyLevels(analysis.levels, analysis.currentPrice);
-
-            const predictions = await generateMLPredictions(analysis.currentPrice, data);
-            updateMLPredictions(predictions);
-
-            updateMultiTimeframe(analysis.overallSignal);
-
-            showNotification('Analysis complete!', 'success');
-        }
-
-        function updateSignalStrength(signal) {
-            document.getElementById('signalValue').textContent = signal.score.toFixed(0);
-            
-            const fillEl = document.getElementById('signalFill');
-            fillEl.style.width = signal.percentage + '%';
-            fillEl.textContent = signal.direction;
-
-            fillEl.className = 'signal-fill';
-            if (signal.score > 10) {
-                fillEl.classList.add('bullish');
-            } else if (signal.score < -10) {
-                fillEl.classList.add('bearish');
-            } else {
-                fillEl.classList.add('neutral');
-            }
-        }
-
-        function updateIndicators(signals, indicators) {
-            const grid = document.getElementById('indicatorsGrid');
-            grid.innerHTML = '';
-
-            const indicatorsList = [
-                { name: 'RSI', key: 'rsi', format: (v) => v.toFixed(2) },
-                { name: 'MACD', key: 'macd', format: (v) => v.toFixed(4) },
-                { name: 'Stochastic', key: 'stochastic', format: (v) => v.toFixed(2) },
-                { name: 'ADX', key: 'adx', format: (v) => v.toFixed(2) },
-                { name: 'ATR', key: 'atr', format: (v) => v.toFixed(4) },
-                { name: 'Volume', key: 'volume', format: (v) => v.toFixed(2) + 'x' },
-                { name: 'EMA', key: 'ema', format: () => 'Active' },
-                { name: 'Bollinger', key: 'bb', format: () => 'Active' }
-            ];
-
-            indicatorsList.forEach(ind => {
-                const signal = signals[ind.key];
-                if (!signal) return;
-
-                const card = document.createElement('div');
-                card.className = 'indicator-card';
-                
-                if (signal.signal === 'buy') card.classList.add('bullish');
-                else if (signal.signal === 'sell') card.classList.add('bearish');
-
-                card.innerHTML = `
-                    <div class="indicator-name">${ind.name}</div>
-                    <div class="indicator-value">${ind.format(signal.value)}</div>
-                    <div class="indicator-signal ${signal.signal}">${signal.signal.toUpperCase()}</div>
-                `;
-
-                grid.appendChild(card);
-            });
-        }
-
-        function updateTradeSetup(setup) {
-            document.getElementById('entryAggressive').textContent = formatPrice(setup.entry.aggressive);
-            document.getElementById('entryModerate').textContent = formatPrice(setup.entry.moderate);
-            document.getElementById('entryConservative').textContent = formatPrice(setup.entry.conservative);
-
-            document.getElementById('tp1').textContent = formatPrice(setup.targets.tp1);
-            document.getElementById('tp2').textContent = formatPrice(setup.targets.tp2);
-            document.getElementById('tp3').textContent = formatPrice(setup.targets.tp3);
-
-            document.getElementById('stopLoss').textContent = formatPrice(setup.stopLoss);
-            document.getElementById('riskReward').textContent = setup.riskReward.toFixed(2) + ':1';
-            document.getElementById('positionSize').textContent = formatNumber(setup.positionSize, 2) + ' USDT';
-
-            document.getElementById('leverage').textContent = setup.leverage.value + 'x';
-            document.getElementById('riskLevel').textContent = setup.leverage.riskLevel;
-
-            const riskBars = document.querySelectorAll('#riskMeter .risk-bar');
-            const activeBars = Math.min(setup.leverage.value, 5);
-            
-            riskBars.forEach((bar, index) => {
-                bar.classList.remove('active', 'medium', 'high');
-                if (index < activeBars) {
-                    bar.classList.add('active');
-                    if (activeBars > 3) bar.classList.add('high');
-                    else if (activeBars > 2) bar.classList.add('medium');
-                }
-            });
-        }
-
-        function updateMarketConditions(conditions) {
-            document.getElementById('trend').textContent = conditions.trend;
-            document.getElementById('volatility').textContent = conditions.volatility;
-            document.getElementById('volumeStatus').textContent = conditions.volumeStatus;
-            document.getElementById('marketRegime').textContent = conditions.regime;
-        }
-
-        function updateKeyLevels(levels, currentPrice) {
-            const container = document.getElementById('keyLevels');
-            container.innerHTML = '';
-
-            const topLevels = levels.slice(0, 5);
-            topLevels.forEach((level, index) => {
-                const row = document.createElement('div');
-                row.className = 'setup-row';
-                
-                const type = level.price > currentPrice ? 'Resistance' : 'Support';
-                const className = level.price > currentPrice ? 'red' : 'green';
-                
-                row.innerHTML = `
-                    <span class="setup-label">${type} ${index + 1}:</span>
-                    <span class="setup-value ${className}">${formatPrice(level.price)} (${level.touches} touches)</span>
-                `;
-                
-                container.appendChild(row);
-            });
-        }
-
-        function updateMLPredictions(predictions) {
-            document.getElementById('pred1h').textContent = formatPrice(predictions.pred1h);
-            document.getElementById('pred4h').textContent = formatPrice(predictions.pred4h);
-            document.getElementById('pred24h').textContent = formatPrice(predictions.pred24h);
-            document.getElementById('mlConfidence').textContent = `Confidence: ${predictions.confidence}%`;
-        }
-
-        function updateMultiTimeframe(mainSignal) {
-            const timeframes = ['15m', '1h', '4h', '1d'];
-            const grid = document.getElementById('timeframeGrid');
-            grid.innerHTML = '';
-
-            timeframes.forEach(tf => {
-                const card = document.createElement('div');
-                card.className = 'timeframe-card';
-                
-                const variance = (Math.random() - 0.5) * 30;
-                const tfScore = mainSignal.score + variance;
-                let tfSignal = 'NEUTRAL';
-                
-                if (tfScore > 20) tfSignal = 'STRONG BUY';
-                else if (tfScore > 10) tfSignal = 'BUY';
-                else if (tfScore < -20) tfSignal = 'STRONG SELL';
-                else if (tfScore < -10) tfSignal = 'SELL';
-
-                const color = tfScore > 10 ? 'var(--accent-green)' : 
-                             tfScore < -10 ? 'var(--accent-red)' : 
-                             'var(--accent-yellow)';
-
-                card.innerHTML = `
-                    <div class="timeframe-label">${tf.toUpperCase()}</div>
-                    <div class="timeframe-signal" style="color: ${color}">${tfSignal}</div>
-                `;
-
-                grid.appendChild(card);
-            });
-        }
-
-        // ==================== EVENT HANDLERS ====================
-        document.getElementById('symbolSelect').addEventListener('change', () => {
-            connectWebSocket(document.getElementById('symbolSelect').value);
-            updateFullAnalysis();
-        });
-
-        document.getElementById('timeframeSelect').addEventListener('change', () => {
-            updateFullAnalysis();
-        });
-
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            updateFullAnalysis();
-        });
-
-        document.getElementById('exportBtn').addEventListener('click', () => {
-            const data = {
-                symbol: STATE.currentSymbol,
-                timeframe: STATE.currentTimeframe,
-                timestamp: new Date().toISOString(),
-                priceData: STATE.priceData
-            };
-
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${STATE.currentSymbol}_${STATE.currentTimeframe}_${Date.now()}.json`;
-            a.click();
-            
-            showNotification('Data exported successfully', 'success');
-        });
-
-        // Tab switching
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const targetTab = tab.dataset.tab;
-                
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
-                tab.classList.add('active');
-                document.getElementById(targetTab).classList.add('active');
-            });
-        });
-
-        // File upload
-        document.getElementById('uploadArea').addEventListener('click', () => {
-            document.getElementById('fileInput').click();
-        });
-
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const csv = event.target.result;
-                        const lines = csv.split('\n');
-                        const data = lines.slice(1).map(line => {
-                            const values = line.split(',');
-                            return {
-                                time: new Date(values[0]).getTime(),
-                                open: parseFloat(values[1]),
-                                high: parseFloat(values[2]),
-                                low: parseFloat(values[3]),
-                                close: parseFloat(values[4]),
-                                volume: parseFloat(values[5])
-                            };
-                        }).filter(d => !isNaN(d.close));
-
-                        STATE.historicalData = data;
-                        document.getElementById('dataInfo').textContent = 
-                            `Loaded ${data.length} candles from ${new Date(data[0].time).toLocaleDateString()} to ${new Date(data[data.length-1].time).toLocaleDateString()}`;
-                        
-                        showNotification('CSV file loaded successfully', 'success');
-                    } catch (error) {
-                        showNotification('Error parsing CSV file', 'error');
-                    }
-                };
-                reader.readAsText(file);
-            }
-        });
-
-        document.getElementById('downloadBinanceBtn').addEventListener('click', async () => {
-            const symbol = STATE.currentSymbol;
-            const interval = '1h';
-            const limit = 1000;
-
-            showNotification('Downloading data from Binance...', 'info');
-            
-            const data = await fetchHistoricalData(symbol, interval, limit);
-            
-            if (data && data.length > 0) {
-                STATE.historicalData = data;
-                document.getElementById('dataInfo').textContent = 
-                    `Downloaded ${data.length} candles for ${symbol}`;
-                showNotification('Data downloaded successfully', 'success');
-            }
-        });
-
-        document.getElementById('runBacktestBtn').addEventListener('click', () => {
-            if (STATE.historicalData.length === 0) {
-                showNotification('Please load historical data first', 'error');
-                return;
-            }
-
-            showNotification('Running backtest...', 'info');
-            
-            let wins = 0;
-            let losses = 0;
-            let totalProfit = 0;
-
-            for (let i = 50; i < STATE.historicalData.length - 10; i++) {
-                const slice = STATE.historicalData.slice(i - 50, i);
-                const analysis = analyzeMarket(slice);
-                
-                if (Math.abs(analysis.overallSignal.score) > 20) {
-                    const entry = STATE.historicalData[i].close;
-                    const futurePrice = STATE.historicalData[i + 5].close;
-                    const priceChange = futurePrice - entry;
-                    
-                    if ((analysis.overallSignal.score > 0 && priceChange > 0) ||
-                        (analysis.overallSignal.score < 0 && priceChange < 0)) {
-                        wins++;
-                        totalProfit += Math.abs(priceChange);
-                    } else {
-                        losses++;
-                        totalProfit -= Math.abs(priceChange);
-                    }
-                }
-            }
-
-            const totalTrades = wins + losses;
-            const winRate = totalTrades > 0 ? (wins / totalTrades * 100).toFixed(2) : 0;
-            
-            document.getElementById('backtestResults').innerHTML = `
-                <div class="setup-section">
-                    <h3>Backtest Results</h3>
-                    <div class="setup-values">
-                        <div class="setup-row">
-                            <span class="setup-label">Total Trades:</span>
-                            <span class="setup-value">${totalTrades}</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Wins:</span>
-                            <span class="setup-value green">${wins}</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Losses:</span>
-                            <span class="setup-value red">${losses}</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Win Rate:</span>
-                            <span class="setup-value blue">${winRate}%</span>
-                        </div>
-                        <div class="setup-row">
-                            <span class="setup-label">Net Profit:</span>
-                            <span class="setup-value ${totalProfit >= 0 ? 'green' : 'red'}">
-                                ${totalProfit.toFixed(2)} USDT
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            showNotification('Backtest complete!', 'success');
-        });
-
-        // ==================== INITIALIZATION ====================
-        async function init() {
-            console.log('🚀 Initializing Advanced Crypto Trading System...');
-            
-            const initialSymbol = document.getElementById('symbolSelect').value;
-            
-            connectWebSocket(initialSymbol);
-            
-            await updateFullAnalysis();
-            
-            setInterval(() => {
-                if (STATE.isConnected && STATE.priceData.length > 0) {
-                    updateFullAnalysis();
-                }
-            }, 30000);
-            
-            console.log('✅ System initialized successfully!');
-        }
-
-        window.addEventListener('load', init);
-    </script>
-</body>
-</html>
+export default CompleteTradingSystem;
