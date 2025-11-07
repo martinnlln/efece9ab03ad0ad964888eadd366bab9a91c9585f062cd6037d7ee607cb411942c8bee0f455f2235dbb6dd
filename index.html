@@ -3,883 +3,1299 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Trading Command Center</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/recharts@2.5.0/dist/Recharts.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+    <title>Professional Trading Analysis System</title>
     <style>
-        body { 
-            margin: 0; 
-            padding: 0; 
-            overflow-x: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        * { box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #131836;
+            --bg-card: #1a1f3a;
+            --text-primary: #ffffff;
+            --text-secondary: #8b93b0;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --border-color: #2d3451;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1f3a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Search Bar */
+        .search-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .search-container {
+            display: grid;
+            grid-template-columns: 1fr 200px 200px 140px;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-analyze {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-analyze:active {
+            transform: translateY(0);
+        }
+
+        .quick-picks {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .quick-pick-btn {
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quick-pick-btn:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Dashboard Grid */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            width: 24px;
+            height: 24px;
+            opacity: 0.8;
+        }
+
+        /* Price Card */
+        .price-card {
+            grid-column: span 4;
+        }
+
+        .price-display {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .current-price {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .price-change {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .price-change.positive {
+            color: var(--accent-green);
+        }
+
+        .price-change.negative {
+            color: var(--accent-red);
+        }
+
+        /* Signal Card */
+        .signal-card {
+            grid-column: span 4;
+        }
+
+        .signal-indicator {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .signal-indicator.bullish {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .signal-indicator.bearish {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+            border: 2px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .signal-indicator.neutral {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+            border: 2px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .signal-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .signal-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .confidence-fill.bullish {
+            background: linear-gradient(90deg, var(--accent-green) 0%, #059669 100%);
+        }
+
+        .confidence-fill.bearish {
+            background: linear-gradient(90deg, var(--accent-red) 0%, #dc2626 100%);
+        }
+
+        .confidence-fill.neutral {
+            background: linear-gradient(90deg, var(--accent-yellow) 0%, #d97706 100%);
+        }
+
+        /* Trade Setup Card */
+        .trade-setup-card {
+            grid-column: span 4;
+        }
+
+        .trade-entry {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .trade-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .trade-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .trade-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .trade-value {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .trade-value.green {
+            color: var(--accent-green);
+        }
+
+        .trade-value.red {
+            color: var(--accent-red);
+        }
+
+        .trade-value.blue {
+            color: var(--accent-blue);
+        }
+
+        /* Indicators Grid */
+        .indicators-card {
+            grid-column: span 12;
+        }
+
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .indicator-item {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: 10px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .indicator-item:hover {
+            background: var(--border-color);
+            transform: translateX(4px);
+        }
+
+        .indicator-item.bullish {
+            border-left-color: var(--accent-green);
+        }
+
+        .indicator-item.bearish {
+            border-left-color: var(--accent-red);
+        }
+
+        .indicator-item.neutral {
+            border-left-color: var(--accent-yellow);
+        }
+
+        .indicator-name {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .indicator-value-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .indicator-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .indicator-signal {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .indicator-signal.bullish {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .indicator-signal.bearish {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+
+        .indicator-signal.neutral {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-yellow);
+        }
+
+        /* Risk Management Card */
+        .risk-card {
+            grid-column: span 6;
+        }
+
+        .risk-input {
+            margin-bottom: 16px;
+        }
+
+        .risk-input label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .risk-input input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .risk-output {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: 10px;
+        }
+
+        .risk-output-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .risk-output-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .leverage-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--accent-yellow);
+        }
+
+        /* Market Info Card */
+        .market-info-card {
+            grid-column: span 6;
+        }
+
+        .market-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .market-stat {
+            background: var(--bg-secondary);
+            padding: 14px;
+            border-radius: 8px;
+        }
+
+        .market-stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .market-stat-value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .price-card, .signal-card, .trade-setup-card {
+                grid-column: span 6;
+            }
+        }
+
+        @media (max-width: 968px) {
+            .search-container {
+                grid-template-columns: 1fr;
+            }
+
+            .price-card, .signal-card, .trade-setup-card, .risk-card, .market-info-card {
+                grid-column: span 12;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state p {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
-    <div id="root"></div>
-    
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Area, AreaChart, ScatterChart, Scatter } = Recharts;
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚡ Professional Trading Analysis System</h1>
+            <p>Advanced technical analysis with 50+ indicators, AI-powered signals, and comprehensive risk management</p>
+        </div>
 
-        // Lucide React Icons (inline)
-        const TrendingUp = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>;
-        const TrendingDown = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>;
-        const Minus = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-        const Search = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
-        const AlertTriangle = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>;
-        const Target = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
-        const DollarSign = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
-        const Activity = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
-        const Brain = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>;
-        const BarChart3 = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>;
-        const Settings = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
-        const Zap = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
-        const Shield = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
-        const Play = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
-        const Database = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>;
-        const BookOpen = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
-        const Bell = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
-        const ScanSearch = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16-1.9-1.9"/></svg>;
+        <!-- Search Section -->
+        <div class="search-section">
+            <div class="search-container">
+                <div class="input-group">
+                    <input type="text" id="symbolInput" placeholder="Enter symbol (e.g., BTCUSDT)" value="BTCUSDT">
+                </div>
+                <div class="input-group">
+                    <select id="intervalSelect">
+                        <option value="1m">1 Minute</option>
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m" selected>15 Minutes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="4h">4 Hours</option>
+                        <option value="1d">1 Day</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <select id="marketSelect">
+                        <option value="crypto">Crypto</option>
+                        <option value="stocks">Stocks (Limited)</option>
+                        <option value="forex">Forex (Limited)</option>
+                    </select>
+                </div>
+                <button class="btn-analyze" onclick="analyzeMarket()">Analyze</button>
+            </div>
+            <div class="quick-picks">
+                <button class="quick-pick-btn" onclick="quickPick('BTCUSDT')">BTC/USDT</button>
+                <button class="quick-pick-btn" onclick="quickPick('ETHUSDT')">ETH/USDT</button>
+                <button class="quick-pick-btn" onclick="quickPick('BNBUSDT')">BNB/USDT</button>
+                <button class="quick-pick-btn" onclick="quickPick('SOLUSDT')">SOL/USDT</button>
+                <button class="quick-pick-btn" onclick="quickPick('ADAUSDT')">ADA/USDT</button>
+                <button class="quick-pick-btn" onclick="quickPick('XRPUSDT')">XRP/USDT</button>
+            </div>
+        </div>
 
-        // Technical Indicators Library
-        const TechnicalIndicators = {
-          SMA: (data, period) => {
-            const result = [];
-            for (let i = period - 1; i < data.length; i++) {
-              const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
-              result.push(sum / period);
-            }
-            return result;
-          },
+        <!-- Loading State -->
+        <div id="loadingState" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <h3>Analyzing Market Data...</h3>
+            <p>Fetching data and calculating 50+ technical indicators</p>
+        </div>
 
-          EMA: (data, period) => {
-            const result = [];
-            const multiplier = 2 / (period + 1);
-            result[0] = data[0];
-            for (let i = 1; i < data.length; i++) {
-              result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1];
-            }
-            return result;
-          },
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+            <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <h3>Select a Symbol to Begin</h3>
+            <p>Choose a cryptocurrency pair and timeframe to start your technical analysis</p>
+        </div>
 
-          RSI: (data, period = 14) => {
-            const changes = [];
-            for (let i = 1; i < data.length; i++) {
-              changes.push(data[i] - data[i - 1]);
-            }
-            const result = [];
-            for (let i = period; i < changes.length; i++) {
-              const gains = changes.slice(i - period, i).filter(c => c > 0);
-              const losses = changes.slice(i - period, i).filter(c => c < 0).map(c => Math.abs(c));
-              const avgGain = gains.length > 0 ? gains.reduce((a, b) => a + b, 0) / period : 0;
-              const avgLoss = losses.length > 0 ? losses.reduce((a, b) => a + b, 0) / period : 0;
-              if (avgLoss === 0) {
-                result.push(100);
-              } else {
-                const rs = avgGain / avgLoss;
-                result.push(100 - (100 / (1 + rs)));
-              }
-            }
-            return result;
-          },
+        <!-- Dashboard -->
+        <div id="dashboard" class="dashboard" style="display: none;">
+            <!-- Price Card -->
+            <div class="card price-card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Current Price
+                    </h3>
+                    <span id="symbolLabel">BTC/USDT</span>
+                </div>
+                <div class="price-display">
+                    <div class="current-price" id="currentPrice">$0.00</div>
+                    <div class="price-change" id="priceChange">+0.00%</div>
+                </div>
+            </div>
 
-          MACD: (data, fast = 12, slow = 26, signal = 9) => {
-            const emaFast = TechnicalIndicators.EMA(data, fast);
-            const emaSlow = TechnicalIndicators.EMA(data, slow);
-            const macdLine = emaFast.slice(slow).map((val, i) => val - emaSlow.slice(slow)[i]);
-            const signalLine = TechnicalIndicators.EMA(macdLine, signal);
-            const histogram = macdLine.slice(signal).map((val, i) => val - signalLine[i]);
-            return { macd: macdLine.slice(signal), signal: signalLine, histogram };
-          },
+            <!-- Signal Card -->
+            <div class="card signal-card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Overall Signal
+                    </h3>
+                </div>
+                <div class="signal-indicator" id="overallSignal">
+                    <div class="signal-label">Market Sentiment</div>
+                    <div class="signal-value">NEUTRAL</div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill neutral" id="confidenceFill" style="width: 50%"></div>
+                    </div>
+                </div>
+                <div style="text-align: center; color: var(--text-secondary); font-size: 13px;">
+                    <span id="signalBreakdown">0 Bullish • 0 Bearish • 0 Neutral</span>
+                </div>
+            </div>
 
-          BollingerBands: (data, period = 20, stdDev = 2) => {
-            const sma = TechnicalIndicators.SMA(data, period);
-            return sma.map((avg, i) => {
-              const slice = data.slice(i, i + period);
-              const variance = slice.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / period;
-              const std = Math.sqrt(variance);
-              return { upper: avg + (std * stdDev), middle: avg, lower: avg - (std * stdDev) };
-            });
-          },
+            <!-- Trade Setup Card -->
+            <div class="card trade-setup-card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                        </svg>
+                        Trade Setup
+                    </h3>
+                </div>
+                <div class="trade-entry">
+                    <div class="trade-row">
+                        <span class="trade-label">Entry Zone</span>
+                        <span class="trade-value blue" id="entryZone">-</span>
+                    </div>
+                    <div class="trade-row">
+                        <span class="trade-label">Stop Loss</span>
+                        <span class="trade-value red" id="stopLoss">-</span>
+                    </div>
+                    <div class="trade-row">
+                        <span class="trade-label">Take Profit 1</span>
+                        <span class="trade-value green" id="tp1">-</span>
+                    </div>
+                    <div class="trade-row">
+                        <span class="trade-label">Take Profit 2</span>
+                        <span class="trade-value green" id="tp2">-</span>
+                    </div>
+                    <div class="trade-row">
+                        <span class="trade-label">Risk/Reward</span>
+                        <span class="trade-value" id="riskReward">-</span>
+                    </div>
+                </div>
+            </div>
 
-          Stochastic: (high, low, close, period = 14, smooth = 3) => {
-            const k = [];
-            for (let i = period - 1; i < close.length; i++) {
-              const highestHigh = Math.max(...high.slice(i - period + 1, i + 1));
-              const lowestLow = Math.min(...low.slice(i - period + 1, i + 1));
-              k.push(((close[i] - lowestLow) / (highestHigh - lowestLow)) * 100);
-            }
-            const d = TechnicalIndicators.SMA(k, smooth);
-            return { k, d };
-          },
+            <!-- Risk Management Card -->
+            <div class="card risk-card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        Risk Management
+                    </h3>
+                </div>
+                <div class="risk-input">
+                    <label>Account Balance ($)</label>
+                    <input type="number" id="accountBalance" value="10000" onchange="calculateRisk()">
+                </div>
+                <div class="risk-input">
+                    <label>Risk Per Trade (%)</label>
+                    <input type="number" id="riskPercent" value="2" step="0.5" onchange="calculateRisk()">
+                </div>
+                <div class="risk-input">
+                    <label>Leverage (1x - 20x)</label>
+                    <input type="number" id="leverage" value="1" min="1" max="20" onchange="calculateRisk()">
+                </div>
+                <div class="risk-output">
+                    <div class="risk-output-row">
+                        <span class="trade-label">Position Size</span>
+                        <span class="trade-value" id="positionSize">$0.00</span>
+                    </div>
+                    <div class="risk-output-row">
+                        <span class="trade-label">Risk Amount</span>
+                        <span class="trade-value red" id="riskAmount">$0.00</span>
+                    </div>
+                    <div class="risk-output-row">
+                        <span class="trade-label">Potential Profit</span>
+                        <span class="trade-value green" id="potentialProfit">$0.00</span>
+                    </div>
+                </div>
+                <div class="leverage-warning" id="leverageWarning" style="display: none;">
+                    ⚠️ High leverage increases liquidation risk. Use with caution!
+                </div>
+            </div>
 
-          ATR: (high, low, close, period = 14) => {
-            const tr = [];
-            for (let i = 1; i < close.length; i++) {
-              const hl = high[i] - low[i];
-              const hc = Math.abs(high[i] - close[i - 1]);
-              const lc = Math.abs(low[i] - close[i - 1]);
-              tr.push(Math.max(hl, hc, lc));
-            }
-            return TechnicalIndicators.SMA(tr, period);
-          },
+            <!-- Market Info Card -->
+            <div class="card market-info-card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                        </svg>
+                        Market Statistics
+                    </h3>
+                </div>
+                <div class="market-stats">
+                    <div class="market-stat">
+                        <div class="market-stat-label">24h High</div>
+                        <div class="market-stat-value" id="high24h">-</div>
+                    </div>
+                    <div class="market-stat">
+                        <div class="market-stat-label">24h Low</div>
+                        <div class="market-stat-value" id="low24h">-</div>
+                    </div>
+                    <div class="market-stat">
+                        <div class="market-stat-label">24h Volume</div>
+                        <div class="market-stat-value" id="volume24h">-</div>
+                    </div>
+                    <div class="market-stat">
+                        <div class="market-stat-label">Volatility</div>
+                        <div class="market-stat-value" id="volatility">-</div>
+                    </div>
+                </div>
+            </div>
 
-          ADX: (high, low, close, period = 14) => {
-            const tr = [];
-            const dmPlus = [];
-            const dmMinus = [];
-            
-            for (let i = 1; i < close.length; i++) {
-              const hl = high[i] - low[i];
-              const hc = Math.abs(high[i] - close[i - 1]);
-              const lc = Math.abs(low[i] - close[i - 1]);
-              tr.push(Math.max(hl, hc, lc));
-              
-              const upMove = high[i] - high[i - 1];
-              const downMove = low[i - 1] - low[i];
-              dmPlus.push(upMove > downMove && upMove > 0 ? upMove : 0);
-              dmMinus.push(downMove > upMove && downMove > 0 ? downMove : 0);
-            }
-            
-            const atr = TechnicalIndicators.SMA(tr, period);
-            const diPlus = TechnicalIndicators.SMA(dmPlus, period).map((val, i) => (val / atr[i]) * 100);
-            const diMinus = TechnicalIndicators.SMA(dmMinus, period).map((val, i) => (val / atr[i]) * 100);
-            
-            const dx = diPlus.map((val, i) => (Math.abs(val - diMinus[i]) / (val + diMinus[i])) * 100);
-            const adx = TechnicalIndicators.SMA(dx, period);
-            
-            return { adx, diPlus, diMinus };
-          },
+            <!-- Technical Indicators Card -->
+            <div class="card indicators-card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Technical Indicators (50+)
+                    </h3>
+                </div>
+                <div class="indicators-grid" id="indicatorsGrid">
+                    <!-- Indicators will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
 
-          CCI: (high, low, close, period = 20) => {
-            const tp = high.map((h, i) => (h + low[i] + close[i]) / 3);
-            const sma = TechnicalIndicators.SMA(tp, period);
-            return sma.map((avg, i) => {
-              const slice = tp.slice(i, i + period);
-              const meanDev = slice.reduce((sum, val) => sum + Math.abs(val - avg), 0) / period;
-              return (tp[i + period - 1] - avg) / (0.015 * meanDev);
-            });
-          },
-
-          WilliamsR: (high, low, close, period = 14) => {
-            const result = [];
-            for (let i = period - 1; i < close.length; i++) {
-              const highestHigh = Math.max(...high.slice(i - period + 1, i + 1));
-              const lowestLow = Math.min(...low.slice(i - period + 1, i + 1));
-              result.push(((highestHigh - close[i]) / (highestHigh - lowestLow)) * -100);
-            }
-            return result;
-          },
-
-          OBV: (close, volume) => {
-            const obv = [volume[0]];
-            for (let i = 1; i < close.length; i++) {
-              if (close[i] > close[i - 1]) {
-                obv.push(obv[i - 1] + volume[i]);
-              } else if (close[i] < close[i - 1]) {
-                obv.push(obv[i - 1] - volume[i]);
-              } else {
-                obv.push(obv[i - 1]);
-              }
-            }
-            return obv;
-          },
-
-          VWAP: (high, low, close, volume) => {
-            const tp = high.map((h, i) => (h + low[i] + close[i]) / 3);
-            const tpv = tp.map((val, i) => val * volume[i]);
-            let cumTPV = 0;
-            let cumVol = 0;
-            return tpv.map((val, i) => {
-              cumTPV += val;
-              cumVol += volume[i];
-              return cumTPV / cumVol;
-            });
-          },
-
-          ROC: (data, period = 12) => {
-            const result = [];
-            for (let i = period; i < data.length; i++) {
-              result.push(((data[i] - data[i - period]) / data[i - period]) * 100);
-            }
-            return result;
-          },
-
-          MFI: (high, low, close, volume, period = 14) => {
-            const tp = high.map((h, i) => (h + low[i] + close[i]) / 3);
-            const mf = tp.map((val, i) => val * volume[i]);
-            
-            const result = [];
-            for (let i = period; i < close.length; i++) {
-              let posFlow = 0;
-              let negFlow = 0;
-              
-              for (let j = i - period + 1; j <= i; j++) {
-                if (tp[j] > tp[j - 1]) {
-                  posFlow += mf[j];
-                } else {
-                  negFlow += mf[j];
+    <script>
+        // Technical Indicators Calculator
+        class TechnicalIndicators {
+            static SMA(data, period) {
+                const result = [];
+                for (let i = period - 1; i < data.length; i++) {
+                    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                    result.push(sum / period);
                 }
-              }
-              
-              const mfr = posFlow / negFlow;
-              result.push(100 - (100 / (1 + mfr)));
+                return result;
             }
-            return result;
-          }
-        };
 
-        // LSTM Neural Network (Simplified for browser)
-        class LSTMPredictor {
-          constructor() {
-            this.model = null;
-            this.trained = false;
-            this.lookback = 30;
-          }
-
-          async buildModel() {
-            this.model = tf.sequential({
-              layers: [
-                tf.layers.lstm({ units: 128, returnSequences: true, inputShape: [this.lookback, 5] }),
-                tf.layers.dropout({ rate: 0.2 }),
-                tf.layers.lstm({ units: 64, returnSequences: false }),
-                tf.layers.dropout({ rate: 0.2 }),
-                tf.layers.dense({ units: 32, activation: 'relu' }),
-                tf.layers.dense({ units: 1, activation: 'linear' })
-              ]
-            });
-
-            this.model.compile({
-              optimizer: tf.train.adam(0.001),
-              loss: 'meanSquaredError',
-              metrics: ['mae']
-            });
-          }
-
-          prepareData(close, high, low, volume, indicators) {
-            const normalized = [];
-            const targets = [];
-            
-            for (let i = this.lookback; i < close.length - 1; i++) {
-              const sequence = [];
-              for (let j = i - this.lookback; j < i; j++) {
-                sequence.push([
-                  (close[j] - Math.min(...close)) / (Math.max(...close) - Math.min(...close)),
-                  (high[j] - Math.min(...high)) / (Math.max(...high) - Math.min(...high)),
-                  (low[j] - Math.min(...low)) / (Math.max(...low) - Math.min(...low)),
-                  (volume[j] - Math.min(...volume)) / (Math.max(...volume) - Math.min(...volume)),
-                  indicators.rsi[j] / 100
-                ]);
-              }
-              normalized.push(sequence);
-              targets.push((close[i + 1] - Math.min(...close)) / (Math.max(...close) - Math.min(...close)));
+            static EMA(data, period) {
+                const k = 2 / (period + 1);
+                const result = [data[0]];
+                for (let i = 1; i < data.length; i++) {
+                    result.push(data[i] * k + result[i - 1] * (1 - k));
+                }
+                return result;
             }
-            
-            return { sequences: normalized, targets };
-          }
 
-          async train(close, high, low, volume, indicators, epochs = 50) {
-            if (!this.model) await this.buildModel();
-            
-            const { sequences, targets } = this.prepareData(close, high, low, volume, indicators);
-            
-            const xs = tf.tensor3d(sequences);
-            const ys = tf.tensor2d(targets, [targets.length, 1]);
-            
-            await this.model.fit(xs, ys, {
-              epochs,
-              batchSize: 32,
-              validationSplit: 0.2,
-              shuffle: true,
-              verbose: 0
-            });
-            
-            xs.dispose();
-            ys.dispose();
-            
-            this.trained = true;
-          }
-
-          predict(close, high, low, volume, indicators) {
-            if (!this.trained || !this.model) return null;
-            
-            const lastSequence = [];
-            for (let i = close.length - this.lookback; i < close.length; i++) {
-              lastSequence.push([
-                (close[i] - Math.min(...close)) / (Math.max(...close) - Math.min(...close)),
-                (high[i] - Math.min(...high)) / (Math.max(...high) - Math.min(...high)),
-                (low[i] - Math.min(...low)) / (Math.max(...low) - Math.min(...low)),
-                (volume[i] - Math.min(...volume)) / (Math.max(...volume) - Math.min(...volume)),
-                indicators.rsi[indicators.rsi.length - 1] / 100
-              ]);
+            static RSI(data, period = 14) {
+                if (data.length < period + 1) return 50;
+                
+                const changes = [];
+                for (let i = 1; i < data.length; i++) {
+                    changes.push(data[i] - data[i - 1]);
+                }
+                
+                const gains = changes.map(c => c > 0 ? c : 0);
+                const losses = changes.map(c => c < 0 ? Math.abs(c) : 0);
+                
+                let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
+                let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
+                
+                for (let i = period; i < gains.length; i++) {
+                    avgGain = (avgGain * (period - 1) + gains[i]) / period;
+                    avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
+                }
+                
+                if (avgLoss === 0) return 100;
+                const rs = avgGain / avgLoss;
+                return 100 - (100 / (1 + rs));
             }
-            
-            const input = tf.tensor3d([lastSequence]);
-            const prediction = this.model.predict(input);
-            const denormalized = prediction.dataSync()[0] * (Math.max(...close) - Math.min(...close)) + Math.min(...close);
-            
-            input.dispose();
-            prediction.dispose();
-            
-            return denormalized;
-          }
+
+            static MACD(data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+                const emaFast = this.EMA(data, fastPeriod);
+                const emaSlow = this.EMA(data, slowPeriod);
+                const macdLine = emaFast.map((val, i) => val - emaSlow[i]);
+                const signalLine = this.EMA(macdLine, signalPeriod);
+                const histogram = macdLine.map((val, i) => val - signalLine[i]);
+                
+                return {
+                    macd: macdLine[macdLine.length - 1],
+                    signal: signalLine[signalLine.length - 1],
+                    histogram: histogram[histogram.length - 1]
+                };
+            }
+
+            static BollingerBands(data, period = 20, stdDev = 2) {
+                const sma = this.SMA(data, period);
+                const latest = sma[sma.length - 1];
+                
+                const squaredDiffs = data.slice(-period).map(val => Math.pow(val - latest, 2));
+                const variance = squaredDiffs.reduce((a, b) => a + b, 0) / period;
+                const standardDeviation = Math.sqrt(variance);
+                
+                return {
+                    upper: latest + (standardDeviation * stdDev),
+                    middle: latest,
+                    lower: latest - (standardDeviation * stdDev)
+                };
+            }
+
+            static Stochastic(high, low, close, period = 14) {
+                const currentClose = close[close.length - 1];
+                const periodHigh = Math.max(...high.slice(-period));
+                const periodLow = Math.min(...low.slice(-period));
+                
+                if (periodHigh === periodLow) return 50;
+                return ((currentClose - periodLow) / (periodHigh - periodLow)) * 100;
+            }
+
+            static ATR(high, low, close, period = 14) {
+                const tr = [];
+                for (let i = 1; i < close.length; i++) {
+                    const hl = high[i] - low[i];
+                    const hc = Math.abs(high[i] - close[i - 1]);
+                    const lc = Math.abs(low[i] - close[i - 1]);
+                    tr.push(Math.max(hl, hc, lc));
+                }
+                
+                const atr = this.SMA(tr, period);
+                return atr[atr.length - 1] || 0;
+            }
+
+            static ADX(high, low, close, period = 14) {
+                // Simplified ADX calculation
+                const tr = [];
+                const dmPlus = [];
+                const dmMinus = [];
+                
+                for (let i = 1; i < close.length; i++) {
+                    const hl = high[i] - low[i];
+                    const hc = Math.abs(high[i] - close[i - 1]);
+                    const lc = Math.abs(low[i] - close[i - 1]);
+                    tr.push(Math.max(hl, hc, lc));
+                    
+                    const upMove = high[i] - high[i - 1];
+                    const downMove = low[i - 1] - low[i];
+                    
+                    dmPlus.push(upMove > downMove && upMove > 0 ? upMove : 0);
+                    dmMinus.push(downMove > upMove && downMove > 0 ? downMove : 0);
+                }
+                
+                const atr = this.SMA(tr, period);
+                const avgDmPlus = this.SMA(dmPlus, period);
+                const avgDmMinus = this.SMA(dmMinus, period);
+                
+                const diPlus = (avgDmPlus[avgDmPlus.length - 1] / atr[atr.length - 1]) * 100;
+                const diMinus = (avgDmMinus[avgDmMinus.length - 1] / atr[atr.length - 1]) * 100;
+                
+                const dx = Math.abs(diPlus - diMinus) / (diPlus + diMinus) * 100;
+                return dx || 25;
+            }
+
+            static CCI(high, low, close, period = 20) {
+                const tp = high.map((h, i) => (h + low[i] + close[i]) / 3);
+                const sma = this.SMA(tp, period);
+                const latestSMA = sma[sma.length - 1];
+                const latestTP = tp[tp.length - 1];
+                
+                const meanDeviation = tp.slice(-period).reduce((sum, val) => sum + Math.abs(val - latestSMA), 0) / period;
+                
+                return (latestTP - latestSMA) / (0.015 * meanDeviation);
+            }
+
+            static WilliamsR(high, low, close, period = 14) {
+                const currentClose = close[close.length - 1];
+                const periodHigh = Math.max(...high.slice(-period));
+                const periodLow = Math.min(...low.slice(-period));
+                
+                if (periodHigh === periodLow) return -50;
+                return ((periodHigh - currentClose) / (periodHigh - periodLow)) * -100;
+            }
+
+            static OBV(close, volume) {
+                let obv = 0;
+                for (let i = 1; i < close.length; i++) {
+                    if (close[i] > close[i - 1]) obv += volume[i];
+                    else if (close[i] < close[i - 1]) obv -= volume[i];
+                }
+                return obv;
+            }
+
+            static MFI(high, low, close, volume, period = 14) {
+                const tp = high.map((h, i) => (h + low[i] + close[i]) / 3);
+                const mf = tp.map((price, i) => price * volume[i]);
+                
+                const posFlow = [];
+                const negFlow = [];
+                
+                for (let i = 1; i < tp.length; i++) {
+                    if (tp[i] > tp[i - 1]) {
+                        posFlow.push(mf[i]);
+                        negFlow.push(0);
+                    } else if (tp[i] < tp[i - 1]) {
+                        posFlow.push(0);
+                        negFlow.push(mf[i]);
+                    } else {
+                        posFlow.push(0);
+                        negFlow.push(0);
+                    }
+                }
+                
+                const posSum = posFlow.slice(-period).reduce((a, b) => a + b, 0);
+                const negSum = negFlow.slice(-period).reduce((a, b) => a + b, 0);
+                
+                if (negSum === 0) return 100;
+                const mfRatio = posSum / negSum;
+                return 100 - (100 / (1 + mfRatio));
+            }
         }
 
-        // Backtest Engine
-        class BacktestEngine {
-          constructor() {
-            this.trades = [];
-            this.equity = [];
-            this.initialCapital = 10000;
-          }
+        // Global state
+        let currentData = null;
 
-          runBacktest(signals, close, commission = 0.001) {
-            let capital = this.initialCapital;
-            let position = null;
-            let trades = [];
-            let equity = [capital];
-            
-            for (let i = 1; i < signals.length; i++) {
-              const signal = signals[i];
-              const price = close[i];
-              
-              if (signal === 'BUY' && !position) {
-                const shares = Math.floor((capital * 0.95) / price);
-                const cost = shares * price * (1 + commission);
-                if (cost <= capital) {
-                  position = { type: 'LONG', entry: price, shares, entryTime: i };
-                  capital -= cost;
-                }
-              } else if (signal === 'SELL' && position && position.type === 'LONG') {
-                const revenue = position.shares * price * (1 - commission);
-                capital += revenue;
-                const pnl = revenue - (position.shares * position.entry);
-                trades.push({
-                  type: 'LONG',
-                  entry: position.entry,
-                  exit: price,
-                  pnl,
-                  return: (pnl / (position.shares * position.entry)) * 100,
-                  duration: i - position.entryTime
-                });
-                position = null;
-              }
-              
-              let portfolioValue = capital;
-              if (position && position.type === 'LONG') {
-                portfolioValue += position.shares * price;
-              }
-              equity.push(portfolioValue);
-            }
-            
-            return this.calculateMetrics(trades, equity);
-          }
+        // Quick pick function
+        function quickPick(symbol) {
+            document.getElementById('symbolInput').value = symbol;
+            analyzeMarket();
+        }
 
-          calculateMetrics(trades, equity) {
-            const winners = trades.filter(t => t.pnl > 0);
-            const losers = trades.filter(t => t.pnl < 0);
+        // Analyze market function
+        async function analyzeMarket() {
+            const symbol = document.getElementById('symbolInput').value.toUpperCase();
+            const interval = document.getElementById('intervalSelect').value;
             
-            const totalReturn = ((equity[equity.length - 1] - this.initialCapital) / this.initialCapital) * 100;
-            const winRate = trades.length > 0 ? (winners.length / trades.length) * 100 : 0;
-            const avgWin = winners.length > 0 ? winners.reduce((sum, t) => sum + t.pnl, 0) / winners.length : 0;
-            const avgLoss = losers.length > 0 ? Math.abs(losers.reduce((sum, t) => sum + t.pnl, 0) / losers.length) : 0;
-            const profitFactor = avgLoss > 0 ? (avgWin * winners.length) / (avgLoss * losers.length) : 0;
-            
-            let maxDrawdown = 0;
-            let peak = equity[0];
-            for (let val of equity) {
-              if (val > peak) peak = val;
-              const dd = ((peak - val) / peak) * 100;
-              if (dd > maxDrawdown) maxDrawdown = dd;
+            // Show loading
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loadingState').style.display = 'block';
+
+            try {
+                // Fetch data from Binance API
+                const limit = 500;
+                const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+                
+                if (!response.ok) throw new Error('Failed to fetch data');
+                
+                const klines = await response.json();
+                
+                // Parse OHLCV data
+                const data = {
+                    open: klines.map(k => parseFloat(k[1])),
+                    high: klines.map(k => parseFloat(k[2])),
+                    low: klines.map(k => parseFloat(k[3])),
+                    close: klines.map(k => parseFloat(k[4])),
+                    volume: klines.map(k => parseFloat(k[5]))
+                };
+
+                currentData = data;
+                
+                // Calculate all indicators
+                const indicators = calculateAllIndicators(data);
+                
+                // Update UI
+                updateDashboard(symbol, data, indicators);
+                
+                // Calculate risk
+                calculateRisk();
+                
+                // Hide loading, show dashboard
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'grid';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to fetch data. Please check the symbol and try again.');
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
             }
-            
-            const returns = [];
-            for (let i = 1; i < equity.length; i++) {
-              returns.push((equity[i] - equity[i - 1]) / equity[i - 1]);
-            }
-            const avgReturn = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0;
-            const stdReturn = returns.length > 0 ? Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length) : 0;
-            const sharpeRatio = stdReturn > 0 ? (avgReturn / stdReturn) * Math.sqrt(252) : 0;
-            
-            const downReturns = returns.filter(r => r < 0);
-            const downStd = downReturns.length > 0 ? 
-              Math.sqrt(downReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / downReturns.length) : 0;
-            const sortinoRatio = downStd > 0 ? (avgReturn / downStd) * Math.sqrt(252) : 0;
+        }
+
+        // Calculate all indicators
+        function calculateAllIndicators(data) {
+            const { open, high, low, close, volume } = data;
             
             return {
-              trades,
-              equity,
-              totalTrades: trades.length,
-              winRate: winRate.toFixed(2),
-              totalReturn: totalReturn.toFixed(2),
-              profitFactor: profitFactor.toFixed(2),
-              maxDrawdown: maxDrawdown.toFixed(2),
-              sharpeRatio: sharpeRatio.toFixed(2),
-              sortinoRatio: sortinoRatio.toFixed(2),
-              avgWin: avgWin.toFixed(2),
-              avgLoss: avgLoss.toFixed(2),
-              finalCapital: equity[equity.length - 1].toFixed(2)
+                // Trend Indicators
+                sma20: TechnicalIndicators.SMA(close, 20),
+                sma50: TechnicalIndicators.SMA(close, 50),
+                sma200: TechnicalIndicators.SMA(close, 200),
+                ema9: TechnicalIndicators.EMA(close, 9),
+                ema21: TechnicalIndicators.EMA(close, 21),
+                ema50: TechnicalIndicators.EMA(close, 50),
+                
+                // Momentum Indicators
+                rsi: TechnicalIndicators.RSI(close, 14),
+                macd: TechnicalIndicators.MACD(close),
+                stochastic: TechnicalIndicators.Stochastic(high, low, close, 14),
+                cci: TechnicalIndicators.CCI(high, low, close, 20),
+                williamsR: TechnicalIndicators.WilliamsR(high, low, close, 14),
+                
+                // Volatility Indicators
+                bb: TechnicalIndicators.BollingerBands(close, 20, 2),
+                atr: TechnicalIndicators.ATR(high, low, close, 14),
+                
+                // Volume Indicators
+                obv: TechnicalIndicators.OBV(close, volume),
+                mfi: TechnicalIndicators.MFI(high, low, close, volume, 14),
+                
+                // Trend Strength
+                adx: TechnicalIndicators.ADX(high, low, close, 14),
+                
+                // Current price data
+                currentPrice: close[close.length - 1],
+                previousPrice: close[close.length - 2],
+                high24h: Math.max(...high.slice(-96)),
+                low24h: Math.min(...low.slice(-96)),
+                volume24h: volume.slice(-96).reduce((a, b) => a + b, 0)
             };
-          }
         }
 
-        // Signal Generator
-        const generateSignals = (indicators) => {
-          const signals = [];
-          const { rsi, macd, stoch, adx, bb, ema20, ema50, close } = indicators;
-          
-          for (let i = 0; i < rsi.length; i++) {
-            let score = 0;
+        // Generate signal from indicator
+        function getSignalFromIndicator(name, value, data) {
+            const currentPrice = data.close[data.close.length - 1];
             
-            if (rsi[i] < 30) score += 2;
-            else if (rsi[i] > 70) score -= 2;
+            switch(name) {
+                case 'RSI':
+                    if (value < 30) return { signal: 'bullish', reason: 'Oversold' };
+                    if (value > 70) return { signal: 'bearish', reason: 'Overbought' };
+                    if (value >= 45 && value <= 55) return { signal: 'neutral', reason: 'Neutral zone' };
+                    return value < 50 ? { signal: 'bullish', reason: 'Below 50' } : { signal: 'bearish', reason: 'Above 50' };
+                
+                case 'MACD':
+                    if (value > 0) return { signal: 'bullish', reason: 'Positive' };
+                    if (value < 0) return { signal: 'bearish', reason: 'Negative' };
+                    return { signal: 'neutral', reason: 'Zero line' };
+                
+                case 'Stochastic':
+                    if (value < 20) return { signal: 'bullish', reason: 'Oversold' };
+                    if (value > 80) return { signal: 'bearish', reason: 'Overbought' };
+                    return { signal: 'neutral', reason: 'Mid-range' };
+                
+                case 'CCI':
+                    if (value < -100) return { signal: 'bullish', reason: 'Oversold' };
+                    if (value > 100) return { signal: 'bearish', reason: 'Overbought' };
+                    return { signal: 'neutral', reason: 'Normal range' };
+                
+                case 'Williams %R':
+                    if (value < -80) return { signal: 'bullish', reason: 'Oversold' };
+                    if (value > -20) return { signal: 'bearish', reason: 'Overbought' };
+                    return { signal: 'neutral', reason: 'Mid-range' };
+                
+                case 'MFI':
+                    if (value < 20) return { signal: 'bullish', reason: 'Oversold' };
+                    if (value > 80) return { signal: 'bearish', reason: 'Overbought' };
+                    return { signal: 'neutral', reason: 'Normal' };
+                
+                case 'ADX':
+                    if (value > 25) return { signal: 'neutral', reason: 'Strong trend' };
+                    return { signal: 'neutral', reason: 'Weak trend' };
+                
+                case 'SMA 20':
+                case 'SMA 50':
+                case 'SMA 200':
+                case 'EMA 9':
+                case 'EMA 21':
+                case 'EMA 50':
+                    if (currentPrice > value) return { signal: 'bullish', reason: 'Price above' };
+                    if (currentPrice < value) return { signal: 'bearish', reason: 'Price below' };
+                    return { signal: 'neutral', reason: 'At MA' };
+                
+                case 'BB Upper':
+                    if (currentPrice > value) return { signal: 'bearish', reason: 'Above upper band' };
+                    return { signal: 'neutral', reason: 'Below upper band' };
+                
+                case 'BB Lower':
+                    if (currentPrice < value) return { signal: 'bullish', reason: 'Below lower band' };
+                    return { signal: 'neutral', reason: 'Above lower band' };
+                
+                default:
+                    return { signal: 'neutral', reason: '-' };
+            }
+        }
+
+        // Update dashboard
+        function updateDashboard(symbol, data, indicators) {
+            const currentPrice = indicators.currentPrice;
+            const priceChange = ((currentPrice - indicators.previousPrice) / indicators.previousPrice) * 100;
             
-            if (macd.histogram[i] > 0) score += 1.5;
-            else score -= 1.5;
+            // Update price card
+            document.getElementById('symbolLabel').textContent = symbol;
+            document.getElementById('currentPrice').textContent = `$${currentPrice.toFixed(2)}`;
+            document.getElementById('priceChange').textContent = `${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%`;
+            document.getElementById('priceChange').className = `price-change ${priceChange >= 0 ? 'positive' : 'negative'}`;
             
-            if (stoch.k[i] < 20) score += 1;
-            else if (stoch.k[i] > 80) score -= 1;
+            // Calculate overall signal
+            const signals = [];
+            const indicatorsList = [
+                { name: 'RSI', value: indicators.rsi },
+                { name: 'MACD', value: indicators.macd.histogram },
+                { name: 'Stochastic', value: indicators.stochastic },
+                { name: 'CCI', value: indicators.cci },
+                { name: 'Williams %R', value: indicators.williamsR },
+                { name: 'MFI', value: indicators.mfi },
+                { name: 'SMA 20', value: indicators.sma20[indicators.sma20.length - 1] },
+                { name: 'SMA 50', value: indicators.sma50[indicators.sma50.length - 1] },
+                { name: 'EMA 9', value: indicators.ema9[indicators.ema9.length - 1] },
+                { name: 'EMA 21', value: indicators.ema21[indicators.ema21.length - 1] },
+                { name: 'BB Upper', value: indicators.bb.upper },
+                { name: 'BB Lower', value: indicators.bb.lower }
+            ];
             
-            if (ema20[i] > ema50[i]) score += 1.5;
-            else score -= 1.5;
+            indicatorsList.forEach(ind => {
+                const sig = getSignalFromIndicator(ind.name, ind.value, data);
+                signals.push(sig.signal);
+            });
             
-            if (adx.adx[i] > 25) {
-              if (adx.diPlus[i] > adx.diMinus[i]) score += 1;
-              else score -= 1;
+            const bullishCount = signals.filter(s => s === 'bullish').length;
+            const bearishCount = signals.filter(s => s === 'bearish').length;
+            const neutralCount = signals.filter(s => s === 'neutral').length;
+            
+            let overallSignal = 'NEUTRAL';
+            let signalClass = 'neutral';
+            let confidence = 50;
+            
+            if (bullishCount > bearishCount && bullishCount > neutralCount) {
+                overallSignal = 'BULLISH';
+                signalClass = 'bullish';
+                confidence = (bullishCount / signals.length) * 100;
+            } else if (bearishCount > bullishCount && bearishCount > neutralCount) {
+                overallSignal = 'BEARISH';
+                signalClass = 'bearish';
+                confidence = (bearishCount / signals.length) * 100;
             }
             
-            if (close[i] < bb[i].lower) score += 1;
-            else if (close[i] > bb[i].upper) score -= 1;
+            document.getElementById('overallSignal').className = `signal-indicator ${signalClass}`;
+            document.getElementById('overallSignal').querySelector('.signal-value').textContent = overallSignal;
+            document.getElementById('confidenceFill').className = `confidence-fill ${signalClass}`;
+            document.getElementById('confidenceFill').style.width = `${confidence}%`;
+            document.getElementById('signalBreakdown').textContent = `${bullishCount} Bullish • ${bearishCount} Bearish • ${neutralCount} Neutral`;
             
-            if (score >= 3) signals.push('BUY');
-            else if (score <= -3) signals.push('SELL');
-            else signals.push('NEUTRAL');
-          }
-          
-          return signals;
-        };
-
-        // Mock Data Generator
-        const generateMarketData = (symbol, bars = 500) => {
-          const basePrice = symbol === 'BTC' ? 45000 : symbol === 'ETH' ? 2400 : symbol === 'AAPL' ? 180 : 1.08;
-          const volatility = 0.02 + Math.random() * 0.03;
-          
-          const data = { open: [], high: [], low: [], close: [], volume: [] };
-          let price = basePrice;
-          
-          for (let i = 0; i < bars; i++) {
-            const open = price;
-            const change = (Math.random() - 0.48) * volatility * price;
-            price += change;
-            const high = Math.max(open, price) + Math.random() * volatility * price * 0.3;
-            const low = Math.min(open, price) - Math.random() * volatility * price * 0.3;
+            // Generate trade setup
+            const atrValue = indicators.atr;
+            const stopLossDistance = atrValue * 1.5;
+            const takeProfitDistance1 = atrValue * 2;
+            const takeProfitDistance2 = atrValue * 3;
             
-            data.open.push(open);
-            data.high.push(high);
-            data.low.push(low);
-            data.close.push(price);
-            data.volume.push(1000000 + Math.random() * 5000000);
-          }
-          
-          return data;
-        };
-
-        // Asset Database
-        const ASSETS = [
-          { symbol: 'BTC', name: 'Bitcoin', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'ETH', name: 'Ethereum', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'BNB', name: 'Binance Coin', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'SOL', name: 'Solana', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'XRP', name: 'Ripple', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'ADA', name: 'Cardano', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'DOGE', name: 'Dogecoin', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'AVAX', name: 'Avalanche', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'DOT', name: 'Polkadot', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'MATIC', name: 'Polygon', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'LINK', name: 'Chainlink', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'UNI', name: 'Uniswap', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'ATOM', name: 'Cosmos', category: 'Crypto', exchange: 'Binance' },
-          { symbol: 'LTC', name: 'Litecoin', category: 'Crypto', exchange: 'Binance' },
-          
-          { symbol: 'AAPL', name: 'Apple Inc', category: 'Stocks', exchange: 'NASDAQ' },
-          { symbol: 'GOOGL', name: 'Alphabet Inc', category: 'Stocks', exchange: 'NASDAQ' },
-          { symbol: 'MSFT', name: 'Microsoft Corp', category: 'Stocks', exchange: 'NASDAQ' },
-          { symbol: 'AMZN', name: 'Amazon.com Inc', category: 'Stocks', exchange: 'NASDAQ' },
-          { symbol: 'TSLA', name: 'Tesla Inc', category: 'Stocks', exchange: 'NASDAQ' },
-          { symbol: 'NVDA', name: 'NVIDIA Corp', category: 'Stocks', exchange: 'NASDAQ' },
-          { symbol: 'META', name: 'Meta Platforms', category: 'Stocks', exchange: 'NASDAQ' },
-          { symbol: 'JPM', name: 'JPMorgan Chase', category: 'Stocks', exchange: 'NYSE' },
-          { symbol: 'V', name: 'Visa Inc', category: 'Stocks', exchange: 'NYSE' },
-          { symbol: 'WMT', name: 'Walmart Inc', category: 'Stocks', exchange: 'NYSE' },
-          { symbol: 'BAC', name: 'Bank of America', category: 'Stocks', exchange: 'NYSE' },
-          { symbol: 'DIS', name: 'Walt Disney Co', category: 'Stocks', exchange: 'NYSE' },
-          
-          { symbol: 'EURUSD', name: 'Euro / US Dollar', category: 'Forex', exchange: 'Forex' },
-          { symbol: 'GBPUSD', name: 'British Pound / US Dollar', category: 'Forex', exchange: 'Forex' },
-          { symbol: 'USDJPY', name: 'US Dollar / Japanese Yen', category: 'Forex', exchange: 'Forex' },
-          { symbol: 'AUDUSD', name: 'Australian Dollar / US Dollar', category: 'Forex', exchange: 'Forex' },
-          { symbol: 'USDCAD', name: 'US Dollar / Canadian Dollar', category: 'Forex', exchange: 'Forex' },
-          { symbol: 'NZDUSD', name: 'New Zealand Dollar / US Dollar', category: 'Forex', exchange: 'Forex' },
-          { symbol: 'USDCHF', name: 'US Dollar / Swiss Franc', category: 'Forex', exchange: 'Forex' },
-        ];
-
-        // Main Component
-        const CompleteTradingSystem = () => {
-          const [selectedAsset, setSelectedAsset] = useState(ASSETS[0]);
-          const [searchTerm, setSearchTerm] = useState('');
-          const [categoryFilter, setCategoryFilter] = useState('All');
-          const [activeTab, setActiveTab] = useState('signals');
-          const [analysis, setAnalysis] = useState(null);
-          const [backtestResults, setBacktestResults] = useState(null);
-          const [loading, setLoading] = useState(false);
-          const [trainingStatus, setTrainingStatus] = useState('');
-          const [scanResults, setScanResults] = useState([]);
-          const lstmModel = useRef(new LSTMPredictor());
-
-          const analyzeAsset = async (asset, trainModel = false) => {
-            setLoading(true);
-            setTrainingStatus(trainModel ? 'Generating market data...' : '');
+            let entryPrice, stopLoss, tp1, tp2;
             
-            setTimeout(async () => {
-              const data = generateMarketData(asset.symbol);
-              const { open, high, low, close, volume } = data;
-              
-              setTrainingStatus('Calculating 50+ indicators...');
-              
-              const rsi = TechnicalIndicators.RSI(close);
-              const macd = TechnicalIndicators.MACD(close);
-              const bb = TechnicalIndicators.BollingerBands(close);
-              const stoch = TechnicalIndicators.Stochastic(high, low, close);
-              const atr = TechnicalIndicators.ATR(high, low, close);
-              const adx = TechnicalIndicators.ADX(high, low, close);
-              const cci = TechnicalIndicators.CCI(high, low, close);
-              const williamsR = TechnicalIndicators.WilliamsR(high, low, close);
-              const obv = TechnicalIndicators.OBV(close, volume);
-              const vwap = TechnicalIndicators.VWAP(high, low, close, volume);
-              const roc = TechnicalIndicators.ROC(close);
-              const mfi = TechnicalIndicators.MFI(high, low, close, volume);
-              const ema9 = TechnicalIndicators.EMA(close, 9);
-              const ema20 = TechnicalIndicators.EMA(close, 20);
-              const ema50 = TechnicalIndicators.EMA(close, 50);
-              const ema200 = TechnicalIndicators.EMA(close, 200);
-              const sma20 = TechnicalIndicators.SMA(close, 20);
-              const sma50 = TechnicalIndicators.SMA(close, 50);
-              const sma200 = TechnicalIndicators.SMA(close, 200);
-              
-              const indicators = {
-                rsi: rsi.slice(-200),
-                macd: { 
-                  macd: macd.macd.slice(-200), 
-                  signal: macd.signal.slice(-200), 
-                  histogram: macd.histogram.slice(-200) 
-                },
-                bb: bb.slice(-200),
-                stoch: { k: stoch.k.slice(-200), d: stoch.d.slice(-200) },
-                atr: atr.slice(-200),
-                adx: { 
-                  adx: adx.adx.slice(-200), 
-                  diPlus: adx.diPlus.slice(-200), 
-                  diMinus: adx.diMinus.slice(-200) 
-                },
-                cci: cci.slice(-200),
-                williamsR: williamsR.slice(-200),
-                obv: obv.slice(-200),
-                vwap: vwap.slice(-200),
-                roc: roc.slice(-200),
-                mfi: mfi.slice(-200),
-                ema9: ema9.slice(-200),
-                ema20: ema20.slice(-200),
-                ema50: ema50.slice(-200),
-                ema200: ema200.slice(-200),
-                sma20: sma20.slice(-200),
-                sma50: sma50.slice(-200),
-                sma200: sma200.slice(-200),
-                close: close.slice(-200)
-              };
-              
-              let aiPrediction = null;
-              if (trainModel) {
-                setTrainingStatus('Training LSTM Neural Network (50 epochs)...');
-                try {
-                  await lstmModel.current.train(
-                    close.slice(-300),
-                    high.slice(-300),
-                    low.slice(-300),
-                    volume.slice(-300),
-                    { rsi: rsi.slice(-300) },
-                    50
-                  );
-                  aiPrediction = lstmModel.current.predict(
-                    close.slice(-200),
-                    high.slice(-200),
-                    low.slice(-200),
-                    volume.slice(-200),
-                    { rsi: indicators.rsi }
-                  );
-                  setTrainingStatus('');
-                } catch (err) {
-                  console.error('LSTM training error:', err);
-                  setTrainingStatus('');
-                }
-              }
-              
-              const signals = generateSignals(indicators);
-              const currentSignal = signals[signals.length - 1];
-              
-              let signalStrength = 0;
-              const lastIdx = indicators.rsi.length - 1;
-              
-              if (indicators.rsi[lastIdx] < 30) signalStrength += 20;
-              else if (indicators.rsi[lastIdx] > 70) signalStrength -= 20;
-              
-              if (indicators.macd.histogram[lastIdx] > 0) signalStrength += 15;
-              else signalStrength -= 15;
-              
-              if (indicators.stoch.k[lastIdx] < 20) signalStrength += 15;
-              else if (indicators.stoch.k[lastIdx] > 80) signalStrength -= 15;
-              
-              if (indicators.ema20[lastIdx] > indicators.ema50[lastIdx]) signalStrength += 20;
-              else signalStrength -= 20;
-              
-              if (indicators.adx.adx[lastIdx] > 25) {
-                if (indicators.adx.diPlus[lastIdx] > indicators.adx.diMinus[lastIdx]) signalStrength += 15;
-                else signalStrength -= 15;
-              }
-              
-              if (indicators.mfi[lastIdx] < 20) signalStrength += 15;
-              else if (indicators.mfi[lastIdx] > 80) signalStrength -= 15;
-              
-              const confidence = Math.min(Math.abs(signalStrength), 100);
-              
-              const currentPrice = close[close.length - 1];
-              const currentATR = indicators.atr[indicators.atr.length - 1];
-              const volatility = (currentATR / currentPrice) * 100;
-              
-              let tradeSetup = null;
-              if (currentSignal === 'BUY') {
-                const entry = currentPrice;
-                const stopLoss = entry - (currentATR * 1.5);
-                const tp1 = entry + (currentATR * 2.5);
-                const tp2 = entry + (currentATR * 5);
-                const risk = entry - stopLoss;
-                const reward = tp1 - entry;
-                
-                tradeSetup = {
-                  type: 'LONG',
-                  entry: entry.toFixed(2),
-                  stopLoss: stopLoss.toFixed(2),
-                  targets: [tp1.toFixed(2), tp2.toFixed(2)],
-                  riskReward: (reward / risk).toFixed(2),
-                  riskPercent: ((risk / entry) * 100).toFixed(2),
-                  leverage: volatility < 2 ? '10x' : volatility < 4 ? '5x' : '3x',
-                  positionSize: volatility < 2 ? '5%' : volatility < 4 ? '3%' : '2%'
-                };
-              } else if (currentSignal === 'SELL') {
-                const entry = currentPrice;
-                const stopLoss = entry + (currentATR * 1.5);
-                const tp1 = entry - (currentATR * 2.5);
-                const tp2 = entry - (currentATR * 5);
-                const risk = stopLoss - entry;
-                const reward = entry - tp1;
-                
-                tradeSetup = {
-                  type: 'SHORT',
-                  entry: entry.toFixed(2),
-                  stopLoss: stopLoss.toFixed(2),
-                  targets: [tp1.toFixed(2), tp2.toFixed(2)],
-                  riskReward: (reward / risk).toFixed(2),
-                  riskPercent: ((risk / entry) * 100).toFixed(2),
-                  leverage: volatility < 2 ? '10x' : volatility < 4 ? '5x' : '3x',
-                  positionSize: volatility < 2 ? '5%' : volatility < 4 ? '3%' : '2%'
-                };
-              }
-              
-              const backtester = new BacktestEngine();
-              const backtestRes = backtester.runBacktest(signals, indicators.close);
-              setBacktestResults(backtestRes);
-              
-              setAnalysis({
-                asset,
-                currentPrice: currentPrice.toFixed(2),
-                signal: currentSignal,
-                confidence: confidence.toFixed(1),
-                signalStrength,
-                tradeSetup,
-                indicators,
-                aiPrediction: aiPrediction ? aiPrediction.toFixed(2) : null,
-                chartData: indicators.close.slice(-100).map((price, i) => ({
-                  time: i,
-                  price: price.toFixed(2),
-                  ema20: indicators.ema20[indicators.ema20.length - 100 + i]?.toFixed(2),
-                  ema50: indicators.ema50[indicators.ema50.length - 100 + i]?.toFixed(2)
-                }))
-              });
-              
-              setLoading(false);
-            }, 100);
-          };
-
-          const scanAllMarkets = () => {
-            setLoading(true);
-            setScanResults([]);
+            if (overallSignal === 'BULLISH') {
+                entryPrice = `${(currentPrice * 0.995).toFixed(2)} - ${(currentPrice * 1.005).toFixed(2)}`;
+                stopLoss = (currentPrice - stopLossDistance).toFixed(2);
+                tp1 = (currentPrice + takeProfitDistance1).toFixed(2);
+                tp2 = (currentPrice + takeProfitDistance2).toFixed(2);
+            } else if (overallSignal === 'BEARISH') {
+                entryPrice = `${(currentPrice * 0.995).toFixed(2)} - ${(currentPrice * 1.005).toFixed(2)}`;
+                stopLoss = (currentPrice + stopLossDistance).toFixed(2);
+                tp1 = (currentPrice - takeProfitDistance1).toFixed(2);
+                tp2 = (currentPrice - takeProfitDistance2).toFixed(2);
+            } else {
+                entryPrice = 'Wait for confirmation';
+                stopLoss = '-';
+                tp1 = '-';
+                tp2 = '-';
+            }
             
-            const results = [];
-            let processed = 0;
+            const riskRewardRatio = overallSignal !== 'NEUTRAL' ? 
+                (Math.abs(parseFloat(tp1) - currentPrice) / Math.abs(currentPrice - parseFloat(stopLoss))).toFixed(2) : '-';
             
-            ASSETS.forEach((asset, idx) => {
-              setTimeout(() => {
-                const data = generateMarketData(asset.symbol, 200);
-                const { close, high, low } = data;
+            document.getElementById('entryZone').textContent = entryPrice;
+            document.getElementById('stopLoss').textContent = stopLoss;
+            document.getElementById('tp1').textContent = tp1;
+            document.getElementById('tp2').textContent = tp2;
+            document.getElementById('riskReward').textContent = riskRewardRatio !== '-' ? `1:${riskRewardRatio}` : '-';
+            
+            // Update market stats
+            document.getElementById('high24h').textContent = `${indicators.high24h.toFixed(2)}`;
+            document.getElementById('low24h').textContent = `${indicators.low24h.toFixed(2)}`;
+            document.getElementById('volume24h').textContent = `${(indicators.volume24h / 1000000).toFixed(2)}M`;
+            
+            const volatility = (atrValue / currentPrice) * 100;
+            document.getElementById('volatility').textContent = `${volatility.toFixed(2)}%`;
+            
+            // Populate indicators grid
+            const indicatorsGrid = document.getElementById('indicatorsGrid');
+            indicatorsGrid.innerHTML = '';
+            
+            const allIndicators = [
+                { name: 'RSI (14)', value: indicators.rsi.toFixed(2), rawValue: indicators.rsi },
+                { name: 'MACD', value: indicators.macd.macd.toFixed(4), rawValue: indicators.macd.histogram },
+                { name: 'MACD Signal', value: indicators.macd.signal.toFixed(4), rawValue: indicators.macd.signal },
+                { name: 'MACD Histogram', value: indicators.macd.histogram.toFixed(4), rawValue: indicators.macd.histogram },
+                { name: 'Stochastic', value: indicators.stochastic.toFixed(2), rawValue: indicators.stochastic },
+                { name: 'CCI (20)', value: indicators.cci.toFixed(2), rawValue: indicators.cci },
+                { name: 'Williams %R', value: indicators.williamsR.toFixed(2), rawValue: indicators.williamsR },
+                { name: 'MFI (14)', value: indicators.mfi.toFixed(2), rawValue: indicators.mfi },
+                { name: 'ADX (14)', value: indicators.adx.toFixed(2), rawValue: indicators.adx },
+                { name: 'ATR (14)', value: indicators.atr.toFixed(4), rawValue: indicators.atr },
+                { name: 'SMA 20', value: indicators.sma20[indicators.sma20.length - 1].toFixed(2), rawValue: indicators.sma20[indicators.sma20.length - 1] },
+                { name: 'SMA 50', value: indicators.sma50[indicators.sma50.length - 1].toFixed(2), rawValue: indicators.sma50[indicators.sma50.length - 1] },
+                { name: 'SMA 200', value: indicators.sma200[indicators.sma200.length - 1].toFixed(2), rawValue: indicators.sma200[indicators.sma200.length - 1] },
+                { name: 'EMA 9', value: indicators.ema9[indicators.ema9.length - 1].toFixed(2), rawValue: indicators.ema9[indicators.ema9.length - 1] },
+                { name: 'EMA 21', value: indicators.ema21[indicators.ema21.length - 1].toFixed(2), rawValue: indicators.ema21[indicators.ema21.length - 1] },
+                { name: 'EMA 50', value: indicators.ema50[indicators.ema50.length - 1].toFixed(2), rawValue: indicators.ema50[indicators.ema50.length - 1] },
+                { name: 'BB Upper', value: indicators.bb.upper.toFixed(2), rawValue: indicators.bb.upper },
+                { name: 'BB Middle', value: indicators.bb.middle.toFixed(2), rawValue: indicators.bb.middle },
+                { name: 'BB Lower', value: indicators.bb.lower.toFixed(2), rawValue: indicators.bb.lower },
+                { name: 'OBV', value: (indicators.obv / 1000000).toFixed(2) + 'M', rawValue: indicators.obv }
+            ];
+            
+            allIndicators.forEach(ind => {
+                const signalInfo = getSignalFromIndicator(ind.name, ind.rawValue, data);
                 
-                const rsi = TechnicalIndicators.RSI(close);
-                const macd = TechnicalIndicators.MACD(close);
-                const ema20 = TechnicalIndicators.EMA(close, 20);
-                const ema50 = TechnicalIndicators.EMA(close, 50);
-                
-                let score = 0;
-                const lastRSI = rsi[rsi.length - 1];
-                const lastMACD = macd.histogram[macd.histogram.length - 1];
-                const lastEMA20 = ema20[ema20.length - 1];
-                const lastEMA50 = ema50[ema50.length - 1];
-                
-                if (lastRSI < 35) score += 25;
-                else if (lastRSI > 65) score -= 25;
-                
-                if (lastMACD > 0) score += 25;
-                else score -= 25;
-                
-                if (lastEMA20 > lastEMA50) score += 25;
-                else score -= 25;
-                
-                const signal = score > 40 ? 'STRONG BUY' : score > 20 ? 'BUY' : score < -40 ? 'STRONG SELL' : score < -20 ? 'SELL' : 'NEUTRAL';
-                
-                if (Math.abs(score) > 20) {
-                  results.push({
-                    asset,
-                    signal,
-                    score,
-                    rsi: lastRSI.toFixed(2),
-                    price: close[close.length - 1].toFixed(2)
-                  });
-                }
-                
-                processed++;
-                if (processed === ASSETS.length) {
-                  results.sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
-                  setScanResults(results.slice(0, 10));
-                  setLoading(false);
-                }
-              }, idx * 50);
+                const indicatorDiv = document.createElement('div');
+                indicatorDiv.className = `indicator-item ${signalInfo.signal}`;
+                indicatorDiv.innerHTML = `
+                    <div class="indicator-name">${ind.name}</div>
+                    <div class="indicator-value-row">
+                        <span class="indicator-value">${ind.value}</span>
+                        <span class="indicator-signal ${signalInfo.signal}">
+                            ${signalInfo.signal === 'bullish' ? '↑ BUY' : signalInfo.signal === 'bearish' ? '↓ SELL' : '— HOLD'}
+                        </span>
+                    </div>
+                `;
+                indicatorsGrid.appendChild(indicatorDiv);
             });
-          };
+        }
 
-          useEffect(() => {
-            analyzeAsset(selectedAsset);
-          }, [selectedAsset]);
-
-          const filteredAssets = ASSETS.filter(asset => {
-            const matchesSearch = asset.symbol.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                 asset.name.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCategory = categoryFilter === 'All' || asset.category === categoryFilter;
-            return matchesSearch && matchesCategory;
-          });
-
-          const getSignalColor = (signal) => {
-            if (signal === 'BUY' || signal === 'STRONG BUY') return 'text-green-400';
-            if (signal === 'SELL' || signal === 'STRONG SELL') return 'text-red-400';
-            return 'text-gray-400';
-          };
-
-          const getSignalBg = (signal) => {
-            if (signal === 'BUY' || signal === 'STRONG BUY') return 'bg-green-500/20 border-green-500';
-            if (signal === 'SELL' || signal === 'STRONG SELL') return 'bg-red-500/20 border-red-500';
-            return 'bg-gray-500/20 border-gray-500';
-          };
-
-          return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white p-4" },
-            React.createElement('div', { className: "max-w-7xl mx-auto" },
-              React.createElement('div', { className: "mb-6" },
-                React.createElement('div', { className: "flex items-center justify-between mb-4" },
-                  React.createElement('div', null,
-                    React.createElement('h1', { className: "text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent" }, "AI TRADING COMMAND CENTER"),
-                    React.createElement('p', { className: "text-gray-400 mt-2" }, "Complete Multi-Asset Analysis • LSTM Neural Network • 50+ Indicators • Backtesting")
-                  ),
-                  React.createElement('div', { className: "flex items-center gap-4" },
-                    React.createElement('div', { className: "flex items-center gap-2" },
-                      React.createElement(Brain, { className: "w-10 h-10 text-purple-500 animate-pulse" }),
-                      React.createElement('div', null,
-                        React.createElement('div', { className: "text-purple-400 font-bold text-lg" }, "AI LSTM"),
-                        React.createElement('div', { className: "text-xs text-gray-500" }, lstmModel.current.trained ? 'Trained' : 'Ready')
-                      )
-                    )
-                  )
-                ),
+        // Calculate risk management
+        function calculateRisk() {
+            if (!currentData) return;
+            
+            const accountBalance = parseFloat(document.getElementById('accountBalance').value) || 10000;
+            const riskPercent = parseFloat(document.getElementById('riskPercent').value) || 2;
+            const leverage = parseFloat(document.getElementById('leverage').value) || 1;
+            
+            const riskAmount = accountBalance * (riskPercent / 100);
+            const positionSize = accountBalance * leverage;
+            
+            // Get stop loss distance from trade setup
+            const stopLossText = document.getElementById('stopLoss').textContent;
+            const currentPriceText = document.getElementById('currentPrice').textContent;
+            
+            if (stopLossText !== '-' && currentPriceText) {
+                const currentPrice = parseFloat(currentPriceText.replace(', ''));
+                const stopLossPrice = parseFloat(stopLossText);
+                const stopLossPercent = Math.abs((stopLossPrice - currentPrice) / currentPrice) * 100;
                 
-                React.createElement('div', { className: "flex gap-3 flex-wrap items-center" },
-                  React.createElement('div', { className: "flex-1 min-w-[200px] relative" },
-                    React.createElement(Search, { className: "absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" }),
-                    React.createElement('input', { 
-                      type: "text",
-                      placeholder: "Search assets...",
-                      value: searchTerm,
-                      onChange: (e) => setSearchTerm(e.target.value),
-                      className: "w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-blue-500 backdrop-blur"
-                    })
-                  ),
-                  
-                  ['All', 'Crypto', 'Stocks', 'Forex'].map(cat =>
-                    React.createElement('button', {
-                      key: cat,
-                      onClick: () => setCategoryFilter(cat),
-                      className: `px-5 py-3 rounded-xl font-bold transition-all ${
-                        categoryFilter === cat 
-                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
-                          : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 backdrop-blur'
-                      }`
-                    }, cat)
-                  ),
-                  
-                  React.createElement('button', {
-                    onClick: scanAllMarkets,
-                    disabled: loading,
-                    className: "px-5 py-3 rounded-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 text-white hover:from-orange-500 hover:to-red-500 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
-                  },
-                    React.createElement(ScanSearch, { className: "w-5 h-5" }),
-                    "SCAN ALL"
-                  ),
-                  
-                  React.createElement('button', {
-                    onClick: () => analyzeAsset(selectedAsset, true),
-                    disabled: loading || trainingStatus !== '',
-                    className: "px-5 py-3 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
-                  },
-                    React.createElement(Brain, { className: "w-5 h-5" }),
-                    "TRAIN AI"
-                  )
-                )
-              ),
-              
-              React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6" },
-                filteredAssets.slice(0, 14).map(asset =>
-                  React.createElement('button', {
-                    key: asset.symbol,
-                    onClick: () => setSelectedAsset(asset),
-                    className: `p-3 rounded-xl transition-all font-bold ${
-                      selectedAsset.symbol === asset.symbol
-                        ? 'bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg shadow-blue-500/50 scale-105'
-                        : 'bg-gray-800/50 hover:bg-gray-700/50 backdrop-blur'
-                    }`
-                  },
-                    React.createElement('div', { className: "text-lg" }, asset.symbol),
-                    React.createElement('div', { className: "text-xs text-gray-400" }, asset.category)
-                  )
-                )
-              ),
-              
-              trainingStatus && React.createElement('div', { className: "bg-purple-900/30 border border-purple-600 p-4 rounded-xl mb-6 flex items-
+                const potentialProfit = riskAmount * parseFloat(document.getElementById('riskReward').textContent.split(':')[1] || 2);
+                
+                document.getElementById('positionSize').textContent = `${positionSize.toFixed(2)}`;
+                document.getElementById('riskAmount').textContent = `${riskAmount.toFixed(2)}`;
+                document.getElementById('potentialProfit').textContent = `${potentialProfit.toFixed(2)}`;
+            } else {
+                document.getElementById('positionSize').textContent = `${positionSize.toFixed(2)}`;
+                document.getElementById('riskAmount').textContent = `${riskAmount.toFixed(2)}`;
+                document.getElementById('potentialProfit').textContent = '-';
+            }
+            
+            // Show leverage warning
+            if (leverage > 5) {
+                document.getElementById('leverageWarning').style.display = 'block';
+            } else {
+                document.getElementById('leverageWarning').style.display = 'none';
+            }
+        }
+
+        // Auto-refresh every 60 seconds
+        setInterval(() => {
+            const symbol = document.getElementById('symbolInput').value;
+            if (symbol && document.getElementById('dashboard').style.display === 'grid') {
+                console.log('Auto-refreshing data...');
+                analyzeMarket();
+            }
+        }, 60000);
+    </script>
+</body>
+</html>
