@@ -1,0 +1,459 @@
+# AI-Powered Crypto Trading Analysis System
+
+## Project Overview
+Build a cutting-edge, institutional-grade trading analysis system for cryptocurrency markets. The system analyzes ONE selected symbol at a time with deep ML/AI analysis, providing actionable trading signals across multiple timeframes (scalping, day trading, swing trading, position trading).
+
+## System Architecture
+
+### Technology Stack
+- **Backend**: Python FastAPI with WebSocket support
+- **Frontend**: React + TypeScript + TailwindCSS + Framer Motion (for quantum/institutional animations)
+- **Database**: PostgreSQL (historical data, trades, model performance)
+- **Cache**: Redis (real-time data, API rate limiting)
+- **ML/AI**: PyTorch, scikit-learn, TensorFlow (ensemble models)
+- **Technical Analysis**: TA-Lib, pandas-ta
+- **Data Processing**: pandas, numpy, asyncio for concurrent operations
+
+### Core Features Required
+
+#### 1. Data Collection Engine
+**APIs to Integrate** (keys provided):
+- Alpha Vantage: Stock data (`LUE2287QCNO79LA1`)
+- NewsAPI: News sentiment (`9eab28c9e9454008aabd8b62c3579700`)
+- Reddit API: Social sentiment (`client_id: a6ep8VPGaHUCnNnOEefTtw`, `secret: oDA5cnJFniy5qtwatk8_FnQrPurwcA`)
+- FRED: Macroeconomic data (`b281230080a614317d921049d860f573`)
+- Etherscan: On-chain Ethereum data (`FUR6947XZPYEMXYYU4NJIZUXGTUEXCTMIW`)
+- CryptoCompare: Crypto OHLCV, orderbook, blockchain data (`32b1ed995e9388c23b02c85a052a1ff0e0e52032b95c8ca9f84d26a2459a2e30`)
+
+**Data to Fetch Per Symbol**:
+- OHLCV data (1m, 5m, 15m, 1h, 4h, 1d timeframes)
+- Order book depth (bid/ask walls)
+- Trading volume analysis
+- On-chain metrics (for crypto): whale movements, exchange inflows/outflows, active addresses
+- News sentiment (symbol-specific + general market)
+- Social media sentiment (Reddit, Twitter mentions/sentiment)
+- Correlation with BTC/ETH (for altcoins)
+- Funding rates (for futures)
+- Fear & Greed Index
+- Macro indicators: DXY, interest rates, inflation expectations
+
+**Symbol Management**:
+- Fetch ALL available crypto symbols from CryptoCompare
+- Searchable dropdown with categories (DeFi, Layer1, Layer2, Meme, etc.)
+- User selects ONE symbol at a time
+- System saves analysis per symbol
+- Can switch between symbols - loads previous analysis if available
+
+#### 2. Technical Analysis Layer
+Implement comprehensive technical indicators:
+
+**Trend Indicators**:
+- Moving Averages (SMA, EMA, WMA) - multiple periods
+- MACD (with histogram)
+- ADX (trend strength)
+- Parabolic SAR
+- Ichimoku Cloud
+
+**Momentum Indicators**:
+- RSI (multiple timeframes)
+- Stochastic Oscillator
+- CCI (Commodity Channel Index)
+- Williams %R
+- ROC (Rate of Change)
+
+**Volatility Indicators**:
+- Bollinger Bands
+- ATR (Average True Range)
+- Keltner Channels
+- Standard Deviation
+
+**Volume Indicators**:
+- OBV (On-Balance Volume)
+- Volume Profile
+- VWAP
+- MFI (Money Flow Index)
+- Accumulation/Distribution
+
+**Support/Resistance**:
+- Fibonacci retracements/extensions
+- Pivot points
+- Dynamic support/resistance levels
+- Volume-based levels
+
+**Chart Patterns** (ML-based detection):
+- Head & Shoulders, Inverse H&S
+- Double/Triple tops and bottoms
+- Triangles (ascending, descending, symmetrical)
+- Wedges (rising, falling)
+- Flags and pennants
+- Cup and handle
+
+#### 3. Machine Learning Models (Ensemble Approach)
+
+**Model 1: LSTM Neural Network**
+- Input: Multi-timeframe OHLCV + indicators
+- Output: Price direction probability (next 1h, 4h, 24h)
+- Architecture: Stacked LSTM layers with attention mechanism
+- Training: Rolling window, last 6 months data
+
+**Model 2: Transformer Model**
+- Input: Sequential price data + volume
+- Output: Trend prediction
+- Use: Pattern recognition across timeframes
+
+**Model 3: Random Forest Classifier**
+- Input: 100+ technical indicators
+- Output: Buy/Sell/Hold signal with confidence
+- Feature importance ranking
+
+**Model 4: Gradient Boosting (XGBoost)**
+- Input: Market microstructure data
+- Output: Short-term price movement probability
+- Optimized for imbalanced data
+
+**Model 5: Sentiment Analysis Model**
+- Input: News headlines + Reddit/Twitter posts
+- Output: Sentiment score (-1 to +1)
+- Fine-tuned FinBERT or similar
+
+**Model 6: Anomaly Detection (Autoencoder)**
+- Detects unusual market behavior
+- Flags potential pump/dump schemes
+- Identifies volatility regime changes
+
+**Ensemble Strategy**:
+- Combine all models with weighted voting
+- Meta-learner (neural network) to optimize weights
+- Real-time confidence scoring
+- Track individual model performance over time
+
+#### 4. Risk Management System
+
+**Position Sizing Calculator**:
+- Kelly Criterion (adjustable)
+- Fixed percentage risk (user configurable, default 2%)
+- Volatility-adjusted sizing (ATR-based)
+- Max position size limits
+
+**Stop-Loss Strategies**:
+- ATR-based stops
+- Support/resistance based stops
+- Trailing stops (multiple algorithms)
+- Time-based stops
+
+**Risk Metrics Display**:
+- Risk/Reward ratio for each signal
+- Win rate (historical)
+- Sharpe ratio
+- Maximum drawdown
+- Expected value per trade
+
+**Portfolio Risk**:
+- Correlation analysis (if multiple positions)
+- Total portfolio exposure
+- Diversification score
+
+#### 5. Signal Generation System
+
+**Signal Types**:
+- **STRONG BUY**: 80%+ model confidence, multiple confirmations
+- **BUY**: 65-80% confidence
+- **WEAK BUY**: 55-65% confidence (for aggressive traders)
+- **NEUTRAL**: 45-55% confidence, no clear edge
+- **WEAK SELL, SELL, STRONG SELL**: Mirror of buy signals
+
+**Signal Components** (display all):
+- Primary signal (BUY/SELL/HOLD)
+- Confidence score (0-100%)
+- Timeframe suitability (scalp/day/swing/position)
+- Entry price range
+- Take-profit levels (TP1, TP2, TP3)
+- Stop-loss level
+- Risk/Reward ratio
+- Supporting evidence:
+  - Technical indicators alignment
+  - ML model consensus
+  - Sentiment score
+  - Volume confirmation
+  - Trend alignment across timeframes
+- Conflicting signals (transparency is key)
+
+**Multi-Timeframe Analysis**:
+- Show alignment across 5m, 15m, 1h, 4h, 1d
+- Highlight when all timeframes agree (strongest signals)
+- Flag divergences
+
+#### 6. Frontend Design (Cutting-Edge UI/UX)
+
+**Design Philosophy**: Institutional + Quantum aesthetics
+- Dark theme with neon accents (cyan, purple, electric blue)
+- Glassmorphism effects
+- Smooth animations (Framer Motion)
+- Real-time data streaming (numbers update live)
+- Micro-interactions on hover/click
+
+**Main Dashboard Layout**:
+
+**Top Bar**:
+- Symbol selector (searchable dropdown with categories)
+- Current price (large, animated on change)
+- 24h change (colored: green/red)
+- Market status indicator
+
+**Left Sidebar**:
+- Navigation
+- Settings gear icon
+- Model retrain scheduler
+- Historical performance stats
+
+**Center Panel** (Primary):
+- **TradingView-style Chart** (use lightweight-charts library)
+  - Multi-timeframe selector
+  - Drawing tools
+  - Indicator overlays
+  - Support/resistance levels marked
+  - Pattern recognition overlays
+
+**Right Panel** (Signal Dashboard):
+- **Signal Card** (prominent, glowing border when signal active):
+  - Signal type (BUY/SELL) with confidence bar
+  - Entry/SL/TP prices
+  - Risk/Reward visualization
+  - Countdown timer (signal expiry if applicable)
+  
+- **Model Consensus Section**:
+  - 6 mini cards (one per ML model)
+  - Each shows: model name, prediction, confidence
+  - Color-coded agreement/disagreement
+  
+- **Indicator Alignment Matrix**:
+  - Grid showing bullish/bearish indicators
+  - Visual heatmap of agreement
+  
+- **Sentiment Gauge**:
+  - Animated semicircle gauge
+  - News + Social sentiment scores
+  - Recent headlines ticker
+
+**Bottom Panel** (Collapsible):
+- **Advanced Analytics**:
+  - Correlation matrix
+  - Volume profile
+  - Order book depth chart
+  - On-chain metrics (crypto)
+  - Funding rates
+
+**Additional Screens**:
+- **Backtesting Dashboard**: Test signals on historical data
+- **Model Performance**: Track accuracy of each ML model
+- **Trade Journal**: Log trades and outcomes
+- **Settings**: Everything configurable
+
+**Animations & Effects**:
+- Signal appearance: fade-in + scale with glow pulse
+- Price updates: number morph animation
+- Chart: smooth pan/zoom
+- Loading states: skeleton screens with shimmer
+- Success/Error: toast notifications with haptic feedback
+- Confidence bars: animated fill on load
+- Background: subtle particle effect or animated gradient
+
+#### 7. Settings Panel (User Control)
+
+**Data Settings**:
+- API key management (encrypted storage)
+- Data refresh intervals (per API)
+- Historical data range to keep
+- Cache duration
+
+**Model Settings**:
+- Scheduled retraining time (user selects hour, e.g., "3 AM daily")
+- Model ensemble weights (advanced users)
+- Confidence threshold for signals
+- Enable/disable individual models
+- Backtesting parameters
+
+**Risk Settings**:
+- Risk per trade (%)
+- Max concurrent positions
+- Stop-loss strategy preference
+- Risk/Reward minimum ratio
+
+**UI Settings**:
+- Theme customization
+- Chart preferences
+- Notification settings
+- Default timeframe
+
+**Strategy Settings**:
+- Trading style weights (scalp/day/swing/position)
+- Preferred indicators
+- Signal aggressiveness (conservative/balanced/aggressive)
+
+#### 8. Background Processes
+
+**Automated Tasks**:
+- Data fetching (every 1-5 min depending on timeframe)
+- Model predictions update (every analysis cycle)
+- Sentiment analysis refresh (every 15 min)
+- Model retraining (user-scheduled, default 3 AM)
+- Database cleanup (old data beyond retention period)
+- Performance metrics calculation
+
+**Retraining Process**:
+- Runs at user-specified time
+- Fetches latest data
+- Retrains all 6 ML models
+- Validates on holdout set
+- Updates model weights if improved
+- Logs performance metrics
+- Sends notification on completion
+
+#### 9. Performance Tracking
+
+**Metrics to Track**:
+- Signal win rate (per timeframe, per model)
+- Average R:R achieved
+- Sharpe ratio
+- Max drawdown
+- Consecutive wins/losses
+- Model accuracy over time
+- Best performing hours/days
+- Market condition classification (trending/ranging)
+
+**Visualization**:
+- Equity curve
+- Win rate over time
+- Model performance comparison
+- Strategy heatmap (best conditions)
+
+#### 10. Data Storage Strategy
+
+**PostgreSQL Tables**:
+- `symbols`: All available trading pairs
+- `ohlcv_data`: Price data (partitioned by timeframe)
+- `indicators`: Calculated indicators
+- `predictions`: Model outputs with timestamps
+- `signals`: Generated signals with outcomes
+- `trades`: User trade log
+- `model_performance`: Accuracy metrics
+- `sentiment_data`: News/social sentiment scores
+- `settings`: User preferences
+
+**Redis Cache**:
+- Current price (1s TTL)
+- Active signals (5min TTL)
+- API rate limit counters
+- WebSocket connection pool
+
+#### 11. API Endpoints (FastAPI)
+
+**REST Endpoints**:
+- `GET /api/symbols` - List all symbols with search/filter
+- `GET /api/symbol/{symbol}` - Get current analysis
+- `GET /api/signal/{symbol}` - Get active signal
+- `POST /api/analyze/{symbol}` - Trigger new analysis
+- `GET /api/backtest` - Run backtest
+- `POST /api/settings` - Update user settings
+- `GET /api/performance` - Get metrics
+- `POST /api/retrain` - Manually trigger retrain
+
+**WebSocket Endpoints**:
+- `/ws/price/{symbol}` - Real-time price updates
+- `/ws/signals` - Signal notifications
+- `/ws/sentiment` - Sentiment updates
+
+#### 12. Development Priorities
+
+**Phase 1: Core Infrastructure** (Week 1)
+- Project setup with FastAPI + React
+- Database schema + Redis setup
+- API integration (fetch data successfully)
+- Basic symbol selector UI
+
+**Phase 2: Technical Analysis** (Week 2)
+- Implement all indicators
+- Chart visualization
+- Pattern recognition basics
+
+**Phase 3: ML Models** (Week 2-3)
+- Build and train all 6 models
+- Ensemble system
+- Prediction pipeline
+
+**Phase 4: Signal System** (Week 3)
+- Signal generation logic
+- Risk calculations
+- Multi-timeframe analysis
+
+**Phase 5: Frontend Polish** (Week 4)
+- Complete UI with animations
+- Settings panel
+- Performance dashboard
+
+**Phase 6: Automation** (Week 4)
+- Background tasks
+- Scheduled retraining
+- Notifications
+
+**Phase 7: Testing & Optimization** (Week 5)
+- Backtesting system
+- Performance optimization
+- Bug fixes
+
+## Technical Specifications
+
+**System Requirements**:
+- MacBook Pro M2 Pro, 16GB RAM, 512GB SSD
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 15+
+- Redis 7+
+
+**Performance Targets**:
+- Analysis completion: < 5 seconds
+- UI response time: < 100ms
+- Data refresh: Real-time (< 1s latency)
+- Model inference: < 500ms
+- Retrain duration: < 30 minutes
+
+**Code Quality**:
+- Type hints throughout (Python + TypeScript)
+- Comprehensive error handling
+- Logging (structured JSON logs)
+- Unit tests for critical functions
+- API documentation (auto-generated)
+
+## Key Principles
+
+1. **Accuracy Over Speed** (but optimize both)
+2. **Transparency**: Show WHY a signal was generated
+3. **Configurability**: User controls everything
+4. **Robustness**: Handle API failures gracefully
+5. **Scalability**: Easy to add more symbols/models later
+6. **Edge Focus**: Build for actual market edge, not complexity for its own sake
+
+## Final Notes
+
+- Start with Bitcoin (BTC/USDT) as test symbol
+- Use paper trading data to validate signals initially
+- Log EVERYTHING for debugging
+- Build modular - each component should work independently
+- Version control the ML models
+- Create comprehensive README and documentation
+- Consider adding alerts (Telegram/email) in future phase
+
+## Success Criteria
+
+The system is successful if:
+1. ✅ Generates signals with >55% win rate (proven via backtest)
+2. ✅ UI is responsive and beautiful
+3. ✅ Models retrain automatically without issues
+4. ✅ All data sources integrate successfully
+5. ✅ Risk management prevents catastrophic losses
+6. ✅ User can switch symbols seamlessly
+7. ✅ System runs stable 24/7
+
+---
+
+**BUILD THIS SYSTEM WITH PRODUCTION-QUALITY CODE. THIS IS NOT A PROTOTYPE - IT'S A PROFESSIONAL TRADING TOOL.**
